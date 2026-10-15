@@ -1,0 +1,983 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>검수 스캔</title>
+<!--
+  검수 스캔 — 텔레그램 미니 앱 한 파일(서버 · 외부 자료 없음 — telegram-web-app.js 만, 없으면 시험 모드)
+  · 봇이 답장 자판의 web_app 단추로 연다(sendData 는 이 단추로 연 앱에서만 된다).
+  · 단추 링크 #c=<base64url(UTF-8 JSON)> 에 차 예정 — #조각은 호스팅 서버로 가지 않는다.
+      {순번, 차4, 날, sid, 예정:[[번호, 바코드|'', 단?] …], 이미:[번호 …], 받음:[보낸 id …]}
+      순번-차4 · 예정 바코드 · 파이프 번호(· 단)만 — 도착지 · 차량번호 전체 · 무게 · 고객은 넣지 않는다(봇 inspect_miniapp.조각)
+      이미 = 봇이 이 검수에서 벌써 ✓ 로 아는 번호(M3 · 앞서 보낸 것) · 받음 = 봇이 받은 sendData 의 id
+  · 관 QR 을 showScanQrPopup 로 연달아 읽고 예정 바코드 · 번호와 견줘 화면에만 ✓ · ⚠ · 기타 · 이미 를 보인다(판정 · 기록은 봇).
+  · [📨 봇에 보내기](MainButton) → 보내기만 / 보내고 검수 끝 → sendData(JSON ≤ 4096바이트)
+      {k:'검수', v, id, 검수:'7-6610', 날, sid, 끝, qr:[QR 글 그대로 · 찍은 차례], 눈:[번호], 손:[번호], 기타:[글], n, 때}
+  · QR 글 가르기(위에서부터): '*P…' 관 · 'N-차4' · 'N_차4_…' 상차요청서(차 확인만, 안 보냄) · 첫 낱말이 번호 꼴 → 번호 · 그 밖 기타
+  · 찍은 차례는 폰(localStorage)에 차마다 — 보낸 뒤에도 봇이 받았다고(받음) 알려 올 때까지, 길어야 12시간.
+  · 텔레그램 밖에서 열면 시험 모드(예시 차 · 🧪 가짜 QR 창). #shot=open|scan 은 시안 그림용.
+  · 저장소 web/inspect/index.html — 올리는 법 docs/설계_검수_미니앱_올리기.md(GitHub Pages). 봇 쪽은 inspect_miniapp.py(바닥) · telegram_inspect.미니앱받기.
+  함수  셈: 해시읽기 · b64url풀기 · b64url짓기 · 계획다듬기 · 번호꼴 · 가르기 · 관찾기 · 새판 · 찍기셈 · 눈셈 · 손셈 · 빼기셈 ·
+            다시돌리기 · 셈 · 보낼것 · 받은만큼
+        화면: 그리기 · 목록그리기 · 받은글 · 찍기열기 · 고르기 · 보내기누름 · 시작
+-->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root {
+    /* 텔레그램 밖(시험)에서 쓰는 값 — 텔레그램 안에서는 --tg-theme-* 가 덮는다 */
+    --f-bg: #ffffff; --f-bg2: #eff1f5; --f-text: #15191e; --f-hint: #858c96; --f-link: #2a7bd1;
+    --f-btn: #2f8ae5; --f-btn-text: #ffffff; --f-sep: rgba(20, 30, 45, .09); --f-danger: #d6403a;
+    --ok: #1d9a52; --ok-bg: #e6f6ec; --warn: #c26f00; --warn-bg: #fff2dc; --eye: #2c6bd4; --eye-bg: #e7effd;
+    --unk: #7653c9; --unk-bg: #efe9fb; --m3: #0d8487; --m3-bg: #e0f3f3; --empty: #b9c0c9;
+    --cam: #14181d;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --f-bg: #1f2630; --f-bg2: #141a21; --f-text: #eef1f5; --f-hint: #8d97a4; --f-link: #6ab2f2;
+      --f-btn: #3e8fdc; --f-btn-text: #ffffff; --f-sep: rgba(255, 255, 255, .09); --f-danger: #ff6b63;
+      --ok: #4cc77d; --ok-bg: rgba(76, 199, 125, .15); --warn: #f2a33a; --warn-bg: rgba(242, 163, 58, .15);
+      --eye: #7aa8ff; --eye-bg: rgba(122, 168, 255, .15); --unk: #b49bff; --unk-bg: rgba(180, 155, 255, .15);
+      --m3: #4fc6c8; --m3-bg: rgba(79, 198, 200, .15); --empty: #56606c;
+    }
+  }
+  :root[data-theme="dark"] {
+    --f-bg: #1f2630; --f-bg2: #141a21; --f-text: #eef1f5; --f-hint: #8d97a4; --f-link: #6ab2f2;
+    --f-btn: #3e8fdc; --f-btn-text: #ffffff; --f-sep: rgba(255, 255, 255, .09); --f-danger: #ff6b63;
+    --ok: #4cc77d; --ok-bg: rgba(76, 199, 125, .15); --warn: #f2a33a; --warn-bg: rgba(242, 163, 58, .15);
+    --eye: #7aa8ff; --eye-bg: rgba(122, 168, 255, .15); --unk: #b49bff; --unk-bg: rgba(180, 155, 255, .15);
+    --m3: #4fc6c8; --m3-bg: rgba(79, 198, 200, .15); --empty: #56606c;
+  }
+  :root {
+    --bg: var(--tg-theme-secondary-bg-color, var(--f-bg2));
+    --card: var(--tg-theme-section-bg-color, var(--tg-theme-bg-color, var(--f-bg)));
+    --text: var(--tg-theme-text-color, var(--f-text));
+    --hint: var(--tg-theme-hint-color, var(--f-hint));
+    --link: var(--tg-theme-link-color, var(--f-link));
+    --btn: var(--tg-theme-button-color, var(--f-btn));
+    --btn-text: var(--tg-theme-button-text-color, var(--f-btn-text));
+    --sep: var(--tg-theme-section-separator-color, var(--f-sep));
+    --danger: var(--tg-theme-destructive-text-color, var(--f-danger));
+    --head: var(--tg-theme-section-header-text-color, var(--link));
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 15px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+    -webkit-font-smoothing: antialiased; overflow-x: hidden;
+  }
+  button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; }
+  .wrap { max-width: 520px; margin: 0 auto; padding: 10px 12px 96px; }
+  .num { font-variant-numeric: tabular-nums; letter-spacing: .2px; }
+
+  /* 시험 띠 */
+  .test-strip { display: flex; align-items: center; gap: 8px; margin: -2px 0 10px; padding: 7px 10px; border-radius: 10px;
+    background: var(--unk-bg); color: var(--unk); font-size: 12.5px; }
+  .test-strip b { font-weight: 700; }
+  .test-strip .sp { flex: 1; }
+  .test-strip button { white-space: nowrap; padding: 3px 8px; border-radius: 7px; background: var(--card); color: var(--unk); font-size: 12px; }
+
+  /* 머리 카드 */
+  .head { position: sticky; top: 0; z-index: 30; background: var(--card); border-radius: 14px; padding: 12px 14px 11px;
+    box-shadow: 0 1px 0 var(--sep), 0 4px 14px rgba(0, 0, 0, .05); }
+  .title { display: flex; align-items: baseline; gap: 6px; font-size: 18px; font-weight: 700; }
+  .title .dest { font-weight: 600; color: var(--hint); font-size: 15px; }
+  .sub { margin-top: 2px; color: var(--hint); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .big { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+  .big .n { font-size: 26px; font-weight: 800; line-height: 1; }
+  .big .n small { font-size: 15px; font-weight: 600; color: var(--hint); }
+  .bar { flex: 1; height: 8px; border-radius: 6px; background: var(--sep); overflow: hidden; display: flex; }
+  .bar i { display: block; height: 100%; }
+  .bar .b-qr { background: var(--ok); } .bar .b-eye { background: var(--eye); } .bar .b-m3 { background: var(--m3); }
+  .chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 9px; }
+  .chip { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; border-radius: 999px; font-size: 12.5px;
+    font-weight: 600; background: var(--bg); color: var(--hint); }
+  .chip.ok { background: var(--ok-bg); color: var(--ok); } .chip.eye { background: var(--eye-bg); color: var(--eye); }
+  .chip.warn { background: var(--warn-bg); color: var(--warn); } .chip.unk { background: var(--unk-bg); color: var(--unk); }
+  .chip.m3 { background: var(--m3-bg); color: var(--m3); } .chip.zero { opacity: .55; }
+  .last { margin-top: 9px; padding: 7px 10px; border-radius: 10px; font-size: 13.5px; font-weight: 600; background: var(--bg); }
+  .last small { display: block; margin-top: 2px; font-size: 12px; font-weight: 500; opacity: .9; }
+  .last.ok { background: var(--ok-bg); color: var(--ok); } .last.warn { background: var(--warn-bg); color: var(--warn); }
+  .last.unk { background: var(--unk-bg); color: var(--unk); } .last.eye { background: var(--eye-bg); color: var(--eye); }
+  .last.info { color: var(--hint); font-weight: 500; }
+
+  /* 보낸 것 — 봇이 받았나 */
+  .sent { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding: 8px 10px; border-radius: 12px; font-size: 12.5px;
+    line-height: 1.4; }
+  .sent span { flex: 1; }
+  .sent.ok { background: var(--ok-bg); color: var(--ok); }
+  .sent.warn { background: var(--warn-bg); color: var(--warn); font-weight: 600; }
+  .sent button { flex: 0 0 auto; padding: 7px 10px; border-radius: 9px; background: var(--btn); color: var(--btn-text); font-weight: 700;
+    font-size: 13px; white-space: nowrap; }
+
+  /* 단추 */
+  .actions { display: grid; grid-template-columns: 1fr; gap: 8px; margin: 12px 0 4px; }
+  .btn-scan { display: flex; align-items: center; justify-content: center; gap: 8px; height: 54px; border-radius: 14px;
+    background: var(--btn); color: var(--btn-text); font-size: 17px; font-weight: 700; box-shadow: 0 2px 6px rgba(0, 0, 0, .12); }
+  .btn-scan:active { transform: translateY(1px); }
+  .hint { text-align: center; color: var(--hint); font-size: 12px; margin: 2px 0 0; }
+  .btn-eye { height: 44px; border-radius: 12px; background: var(--card); color: var(--eye); font-weight: 700; font-size: 15px;
+    border: 1.5px solid transparent; }
+  .btn-eye.on { background: var(--eye-bg); border-color: var(--eye); }
+
+  /* 목록 */
+  .sec { margin-top: 14px; }
+  .sec-h { display: flex; align-items: baseline; gap: 6px; padding: 0 4px 6px; color: var(--head); font-size: 13px;
+    font-weight: 700; text-transform: none; }
+  .sec-h .r { margin-left: auto; color: var(--hint); font-weight: 500; font-size: 12px; }
+  .card { background: var(--card); border-radius: 14px; overflow: hidden; }
+  .eye-guide { padding: 10px 12px; background: var(--eye-bg); color: var(--eye); font-size: 13px; line-height: 1.45; }
+  .out-hint { padding: 8px 12px; border-top: 1px solid var(--sep); background: var(--eye-bg); color: var(--eye); font-size: 12.5px; }
+  .tier { padding: 6px 12px 4px; font-size: 12px; font-weight: 700; color: var(--hint); background: var(--bg);
+    border-top: 1px solid var(--sep); }
+  .tier:first-child { border-top: 0; }
+  .tier .top { color: var(--eye); }
+  .row { display: flex; align-items: center; gap: 10px; min-height: 46px; padding: 6px 12px; border-top: 1px solid var(--sep); }
+  .row:first-child, .tier + .row { border-top: 0; }
+  .row .ic { flex: 0 0 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; font-size: 15px;
+    font-weight: 800; }
+  .row .ic.todo { border: 2px solid var(--empty); background: transparent; }
+  .row .ic.ok { background: var(--ok-bg); color: var(--ok); } .row .ic.eye { background: var(--eye-bg); color: var(--eye); }
+  .row .ic.m3 { background: var(--m3-bg); color: var(--m3); } .row .ic.warn { background: var(--warn-bg); color: var(--warn); }
+  .row .ic.unk { background: var(--unk-bg); color: var(--unk); }
+  .row .p { font-size: 16.5px; font-weight: 700; }
+  .row .p.done { color: var(--ok); } .row .p.eyed { color: var(--eye); } .row .p.m3d { color: var(--m3); }
+  .row .meta { margin-left: auto; text-align: right; color: var(--hint); font-size: 12px; line-height: 1.25; }
+  .tag { display: inline-block; padding: 1px 6px; border-radius: 6px; font-size: 11.5px; font-weight: 700; background: var(--bg);
+    color: var(--hint); }
+  .tag.eye { background: var(--eye-bg); color: var(--eye); } .tag.ok { background: var(--ok-bg); color: var(--ok); }
+  .tag.m3 { background: var(--m3-bg); color: var(--m3); } .tag.nobc { background: var(--warn-bg); color: var(--warn); }
+  .row.tap { cursor: pointer; }
+  .row.tap:active { background: var(--eye-bg); }
+  .eye-mode .row.todo-row .ic.todo { border-color: var(--eye); border-style: dashed; }
+  .eye-mode .row.todo-row .meta::after { content: "눌러서 ✓(눈)"; display: block; color: var(--eye); font-weight: 600; }
+  .row .grow { min-width: 0; flex: 1; }
+  .row .grow .p, .row .grow .d { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row .d { color: var(--hint); font-size: 12px; }
+  .row .x { padding: 6px 10px; border-radius: 8px; background: var(--bg); color: var(--danger); font-size: 12.5px; font-weight: 700; }
+  .type { display: flex; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--sep); }
+  .type input { flex: 1; min-width: 0; height: 40px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--sep);
+    background: var(--bg); color: var(--text); font: inherit; font-size: 16px; text-transform: uppercase; }
+  .type button { padding: 0 14px; border-radius: 10px; background: var(--eye); color: #fff; font-weight: 700; }
+  .notes { margin: 14px 4px 0; color: var(--hint); font-size: 12px; line-height: 1.55; }
+  .notes b { color: var(--text); font-weight: 600; }
+  details.dev { margin-top: 14px; background: var(--card); border-radius: 12px; padding: 8px 12px; font-size: 12px; }
+  details.dev summary { color: var(--unk); font-weight: 700; cursor: pointer; }
+  details.dev pre { white-space: pre-wrap; word-break: break-all; background: var(--bg); border-radius: 8px; padding: 8px;
+    font: 11.5px/1.4 ui-monospace, Consolas, "Cascadia Mono", monospace; max-height: 220px; overflow: auto; }
+
+  /* 텔레그램 MainButton 흉내(텔레그램 밖) */
+  .fake-main { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; padding: 8px 12px calc(10px + env(safe-area-inset-bottom));
+    background: var(--card); box-shadow: 0 -1px 0 var(--sep); }
+  .fake-main button { display: block; width: 100%; max-width: 496px; margin: 0 auto; height: 48px; border-radius: 12px;
+    background: var(--btn); color: var(--btn-text); font-size: 16px; font-weight: 700; }
+  .fake-main button[disabled] { opacity: .5; }
+
+  /* QR 창 흉내(시험 · 시안) — 실제는 텔레그램이 띄운다 */
+  .qr { position: fixed; left: 0; right: 0; bottom: 0; top: var(--qr-top, 0px); z-index: 25; background: var(--cam); color: #fff;
+    display: flex; flex-direction: column; border-radius: 16px 16px 0 0; overflow: hidden;
+    box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .35); }
+  .qr[hidden] { display: none; }
+  .qr-top { display: flex; align-items: center; padding: 12px 14px 0; }
+  .qr-top b { font-size: 17px; flex: 1; text-align: center; }
+  .qr-top button { width: 34px; height: 34px; border-radius: 50%; background: rgba(255, 255, 255, .14); color: #fff; font-size: 16px; }
+  .qr-top .lamp { opacity: .9; }
+  .qr-sub { text-align: center; font-size: 13px; color: rgba(255, 255, 255, .78); padding: 4px 20px 0; }
+  .qr-cam { position: relative; flex: 1; overflow: hidden; margin-top: 8px;
+    background:
+      radial-gradient(ellipse 60% 40% at 30% 30%, rgba(255, 255, 255, .06), transparent 70%),
+      linear-gradient(180deg, #2a3038 0%, #1a1f25 60%, #22272e 100%); }
+  .pipe { position: absolute; left: 50%; top: 50%; width: 300px; height: 300px; margin: -150px 0 0 -150px; border-radius: 50%;
+    background: radial-gradient(circle, #0c0f13 0 56%, #6f7781 57%, #9aa3ad 61%, #5f666f 66%, #3a4048 70%, transparent 71%); }
+  .pipe.l { left: -40px; top: 18%; width: 210px; height: 210px; margin: 0; opacity: .55; }
+  .pipe.r { left: auto; right: -60px; top: 64%; width: 210px; height: 210px; margin: 0; opacity: .5; }
+  .label { position: absolute; left: 50%; top: 50%; width: 176px; margin: -46px 0 0 -88px; background: #fbfbf7; color: #111;
+    border-radius: 4px; padding: 7px 8px; display: flex; gap: 7px; align-items: center; transform: rotate(-2deg);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .5); }
+  .label .t { flex: 1; font: 700 9px/1.35 Arial, sans-serif; letter-spacing: .1px; }
+  .label .t .pn { font-size: 11.5px; }
+  .label canvas { width: 58px; height: 58px; image-rendering: pixelated; display: block; }
+  .finder { position: absolute; left: 50%; top: 50%; width: 200px; height: 200px; margin: -100px 0 0 -100px; }
+  .finder i { position: absolute; width: 34px; height: 34px; border: 4px solid #fff; }
+  .finder i:nth-child(1) { left: 0; top: 0; border-right: 0; border-bottom: 0; border-radius: 12px 0 0 0; }
+  .finder i:nth-child(2) { right: 0; top: 0; border-left: 0; border-bottom: 0; border-radius: 0 12px 0 0; }
+  .finder i:nth-child(3) { left: 0; bottom: 0; border-right: 0; border-top: 0; border-radius: 0 0 0 12px; }
+  .finder i:nth-child(4) { right: 0; bottom: 0; border-left: 0; border-top: 0; border-radius: 0 0 12px 0; }
+  .flash { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); padding: 8px 14px; border-radius: 12px;
+    font-weight: 700; font-size: 15px; white-space: nowrap; background: rgba(29, 154, 82, .92); max-width: 92%; }
+  .flash.warn { background: rgba(194, 111, 0, .95); } .flash.unk { background: rgba(118, 83, 201, .95); }
+  .flash.info { background: rgba(255, 255, 255, .18); }
+  .flash[hidden] { display: none; }
+  .flash small { display: block; font-weight: 500; font-size: 11px; opacity: .85; text-align: center; white-space: normal; }
+  .qr-test { padding: 10px 12px 14px; display: grid; grid-template-columns: 1fr auto; gap: 8px; background: #0c0f13; }
+  .qr-test[hidden] { display: none; }
+  .qr-test button { height: 42px; border-radius: 10px; background: #7653c9; color: #fff; font-weight: 700; padding: 0 12px; }
+  .qr-test input { grid-column: 1 / -1; height: 38px; border-radius: 10px; border: 1px solid #39414b; background: #1b2128; color: #fff;
+    padding: 0 10px; font: inherit; font-size: 14px; }
+  .qr-test .muted { grid-column: 1 / -1; color: #8d97a4; font-size: 11.5px; }
+
+  /* 쪽 안의 창(텔레그램 밖 · 옛 판) — 고르기 · 시험용 보내기 */
+  .sheet-bg { position: fixed; inset: 0; z-index: 60; background: rgba(0, 0, 0, .45); display: flex; align-items: flex-end; }
+  .sheet-bg[hidden] { display: none; }
+  .sheet { width: 100%; max-width: 520px; margin: 0 auto; background: var(--card); border-radius: 16px 16px 0 0; padding: 14px 14px 18px;
+    max-height: 86vh; overflow: auto; }
+  .sheet h3 { margin: 0 0 4px; font-size: 16px; }
+  .sheet p { margin: 0 0 10px; color: var(--hint); font-size: 12.5px; white-space: pre-line; }
+  .sheet pre { white-space: pre-wrap; word-break: break-all; background: var(--bg); border-radius: 10px; padding: 10px;
+    font: 12px/1.45 ui-monospace, Consolas, "Cascadia Mono", monospace; margin: 0 0 10px; }
+  .sheet button { width: 100%; height: 44px; border-radius: 12px; background: var(--btn); color: var(--btn-text); font-weight: 700; }
+  .sheet .btns { display: grid; gap: 8px; }
+  .sheet .btns .ghost { background: var(--bg); color: var(--danger); }
+  .center-msg { margin: 40px 16px; padding: 18px; background: var(--card); border-radius: 14px; text-align: center; line-height: 1.6; }
+</style>
+</head>
+<body>
+<div class="wrap" id="wrap">
+  <div class="test-strip" id="testStrip" hidden>
+    <span>🧪</span><span><b>시험 모드</b> — 예시 차로 돌아요</span><span class="sp"></span>
+    <button id="btnTheme" type="button">🌗</button><button id="btnReset" type="button">비우기</button>
+  </div>
+
+  <div id="main" hidden>
+    <div class="head" id="head">
+      <div class="title"><span>🔍</span><span id="tTitle" class="num"></span><span class="dest" id="tDest"></span></div>
+      <div class="sub" id="tSub"></div>
+      <div class="big"><div class="n num" id="tBig"></div><div class="bar" id="tBar"></div></div>
+      <div class="chips" id="tChips"></div>
+      <div class="last" id="tLast"></div>
+    </div>
+    <div class="sent" id="sent" hidden></div>
+
+    <div class="actions">
+      <button class="btn-scan" id="btnScan" type="button"><span>📷</span><span id="btnScanText">관 QR 찍기</span></button>
+      <div class="hint" id="scanHint">연달아 찍어요 · ✓ 면 떨림 한 번 · ⚠ 면 멈춰요</div>
+      <button class="btn-eye" id="btnEye" type="button">👁 눈으로 확인</button>
+    </div>
+
+    <div class="sec">
+      <div class="sec-h"><span id="planH">예정</span><span class="r" id="planR"></span></div>
+      <div class="card" id="planCard"></div>
+    </div>
+    <div class="sec" id="outSec" hidden>
+      <div class="sec-h" style="color:var(--warn)"><span id="outH">⚠ 예정 아님</span><span class="r">봇이 가려요 — 다른 차 몫 · 바코드 없음 …</span></div>
+      <div class="card" id="outCard"></div>
+    </div>
+    <div class="sec" id="unkSec" hidden>
+      <div class="sec-h" style="color:var(--unk)"><span id="unkH">기타</span><span class="r">관 라벨 QR 아님 · 세기만</span></div>
+      <div class="card" id="unkCard"></div>
+    </div>
+
+    <div class="notes" id="notes">
+      두 번 찍음 → <b>이미</b> · 상차요청서 QR → <b>차 확인만</b><br>
+      위 단은 망원으로 라벨 'PIPE NO' 를 보고 <b>👁 눈으로 확인</b><br>
+      ⚠ 줄이 잘못 읽힌 것이면 <b>빼기</b> — 봇에 안 가요(다시 찍으면 들어와요)<br>
+      M3 와 같이 찍는 차면 <b>📨 보내기만</b> — [✅ 검수 끝] 은 봇 목록에서 한 번<br>
+      보낸 뒤에도 폰에 남아요 — 봇이 받았다고 알려 오면 지우고, 아니면 <b>다시 보내기</b>
+    </div>
+    <details class="dev" id="dev" hidden>
+      <summary>봇 쪽 참고(시험 모드에만)</summary>
+      <div id="devBody"></div>
+    </details>
+  </div>
+
+  <div class="center-msg" id="noPlan" hidden></div>
+</div>
+
+<div class="fake-main" id="fakeMain" hidden><button id="btnFakeMain" type="button">📨 봇에 보내기</button></div>
+
+<div class="qr" id="qr" hidden>
+  <div class="qr-top"><button type="button" class="lamp" aria-label="손전등">🔦</button><b>QR 코드 스캔</b><button type="button" id="qrClose" aria-label="닫기">✕</button></div>
+  <div class="qr-sub" id="qrSub"></div>
+  <div class="qr-cam">
+    <div class="pipe l"></div><div class="pipe r"></div><div class="pipe"></div>
+    <div class="label"><div class="t">SHIPPING MARK<br><span class="pn" id="qrPn">PIPE NO : 26J0306</span><br><span id="qrSz">28" × 12M</span></div><canvas id="qrCanvas" width="29" height="29"></canvas></div>
+    <div class="finder"><i></i><i></i><i></i><i></i></div>
+    <div class="flash" id="qrFlash" hidden></div>
+  </div>
+  <div class="qr-test" id="qrTest" hidden>
+    <button type="button" id="qrNext">🧪 다음 예시 QR 넣기</button><button type="button" id="qrType">글 넣기</button>
+    <input id="qrInput" placeholder="QR 글을 직접 — 예 *P2026093003051 1  3207.5" autocomplete="off">
+    <div class="muted" id="qrMuted"></div>
+  </div>
+</div>
+
+<div class="sheet-bg" id="pickBg" hidden>
+  <div class="sheet">
+    <h3 id="pickT"></h3>
+    <p id="pickP"></p>
+    <div class="btns" id="pickBtns"></div>
+  </div>
+</div>
+
+<div class="sheet-bg" id="sheetBg" hidden>
+  <div class="sheet">
+    <h3>🧪 봇에 갈 자료</h3>
+    <p id="sheetP"></p>
+    <pre id="sheetPre"></pre>
+    <button type="button" id="sheetClose">닫기</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ── 셈(화면 없음) ─────────────────────────────────────────────────────── */
+var 앱판 = 1;
+var 같은글초 = 2.5;
+var 보낼한도 = 4096;
+var 남길초 = 12 * 3600;
+var 팝업글 = '관 QR 을 차례로 비추세요 · ✓ 떨림 한 번 · ⚠ 면 멈춰요';   // showScanQrPopup text — 64자까지
+
+var 예시계획 = {
+  순번: '7', 차4: '6610', 날: '', sid: 'test',
+  예정: [
+    { p: '26J0303', b: '202609300303', 단: 1 }, { p: '26J0304', b: '202609300304', 단: 1 },
+    { p: '26J0305', b: '202609300305', 단: 1 }, { p: '26J0306', b: '202609300306', 단: 2 },
+    { p: '26J0307', b: '202609300307', 단: 2 }, { p: '26J0308', b: '', 단: 3 }
+  ],
+  이미: [], 받음: []
+};
+var 예시QR = [
+  '*P2026093003031 1  3207.95904', '*P2026093003041 1  3208.11', '*P2026093003111 1  3206.88',
+  '*P2026093003061 1  3207.5', '*P2026093003041 1  3208.11', '26J0307 711 X 12.7 X 12M',
+  '7-6610', 'WIFI:S:TEST;T:WPA;;', '*P2026093003051 1  3207.31', '8-5030'
+];
+
+function 해시읽기() {
+  var h = '';
+  try { h = String(location.hash || ''); } catch (e) { h = ''; }
+  h = h.replace(/^#/, '');
+  var out = {};
+  h.split(/[&?]/).forEach(function (kv) {
+    var i = kv.indexOf('=');
+    if (i > 0) { var k = kv.slice(0, i); if (!(k in out)) out[k] = kv.slice(i + 1); }
+  });
+  return out;
+}
+function b64url풀기(s) {
+  s = String(s || '').replace(/-/g, '+').replace(/_/g, '/');
+  while (s.length % 4) s += '=';
+  var bin = atob(s), bytes = new Uint8Array(bin.length);
+  for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder('utf-8').decode(bytes);
+}
+function b64url짓기(글) {
+  var bytes = new TextEncoder().encode(글), bin = '';
+  for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function 바이트(글) { return new TextEncoder().encode(글).length; }
+function _s(v) { return v == null ? '' : String(v).trim(); }
+function 지금() { var d = new Date(); return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
+function 오늘() { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+function 새id() { return Date.now().toString(36).slice(-5) + Math.random().toString(36).slice(2, 6); }
+
+function 계획다듬기(x) {
+  if (!x || typeof x !== 'object') throw new Error('차 정보 꼴이 아님');
+  var 예정 = (x.예정 || []).map(function (e) {
+    if (Array.isArray(e)) e = { p: e[0], b: e[1], 단: e[2] };
+    var 단 = parseInt(e.단, 10);
+    return { p: _s(e.p).toUpperCase(), b: _s(e.b), 단: isNaN(단) ? null : 단 };
+  }).filter(function (e) { return e.p; });
+  var 순번 = _s(x.순번).toUpperCase(), 차4 = _s(x.차4);
+  if (!순번 || !차4) throw new Error('순번 · 차4 없음');
+  return { 순번: 순번, 차4: 차4, 날: _s(x.날), sid: _s(x.sid),      // 차 머리는 '7번 6610' 만(차번호 · 도착지는 안 받는다)
+           예정: 예정, 이미: (x.이미 || []).map(function (p) { return _s(p).toUpperCase(); }).filter(Boolean),
+           받음: (x.받음 || []).map(_s).filter(Boolean) };
+}
+
+var 파이프꼴 = /^[0-9A-Za-z]{6,9}(?:-\d{1,2})?$/;
+var 규격조각 = /\d\s*[Xx×]\s*\d/;
+var 맨꼴 = /^\s*([1-9]\d{0,2}[A-Za-z]?)\s*-\s*(\d{3,4})\s*$/;
+var 큰꼴 = /^\s*([1-9]\d{0,2}[A-Za-z]?)(?:\.0)?_(\d{3,4})(?:\.0)?_/;
+var 날꼴 = /_(20\d{2})(\d{2})(\d{2})\s*$/;
+function 번호꼴(t) { t = _s(t); return 파이프꼴.test(t) && /\d/.test(t) && !규격조각.test(t); }
+
+/** QR 글 → {꼴: 관 | 차 | 번호 | 모름(기타), …} — 봇의 줄풀기 · 시작읽기 와 같은 차례 */
+function 가르기(raw) {
+  var t = _s(raw);
+  if (!t) return { 꼴: '모름', raw: t };
+  if (t.slice(0, 2).toUpperCase() === '*P') {
+    var 통 = t.slice(2).trim().split(/\s+/)[0] || '';
+    var 숫 = (통.match(/^\d*/) || [''])[0];
+    return { 꼴: '관', raw: t, 통: 통, 바코드: 숫.length >= 12 ? 통.slice(0, 12) : 통 };
+  }
+  var m = 맨꼴.exec(t);
+  if (m) return { 꼴: '차', raw: t, 순번: m[1].toUpperCase(), 차4: m[2], 날: '' };
+  m = 큰꼴.exec(t);
+  if (m) { var d = 날꼴.exec(t); return { 꼴: '차', 큰: true, raw: t, 순번: m[1].toUpperCase(), 차4: m[2], 날: d ? d[1] + '-' + d[2] + '-' + d[3] : '' }; }
+  var 조각 = t.split(/[\s,;/]+/).filter(Boolean);
+  if (조각.length && 번호꼴(조각[0])) return { 꼴: '번호', raw: t, p: 조각[0].toUpperCase() };
+  return { 꼴: '모름', raw: t };
+}
+
+/** 관 QR → 예정 한 줄 | null. 12자리로 하나만 맞으면 그것, 아니면 덩어리 앞에 붙는 예정 바코드(뒤는 숫자만 · 가장 긴 것 하나) */
+function 관찾기(계획, x) {
+  var 맞 = 계획.예정.filter(function (e) { return e.b && e.b === x.바코드; });
+  if (맞.length === 1) return 맞[0];
+  if (맞.length > 1) return null;
+  var best = null, n = 0, 겹 = false;
+  계획.예정.forEach(function (e) {
+    if (!e.b || e.b.length > x.통.length || x.통.indexOf(e.b) !== 0 || !/^\d*$/.test(x.통.slice(e.b.length))) return;
+    if (e.b.length > n) { best = e; n = e.b.length; 겹 = false; } else if (e.b.length === n) 겹 = true;
+  });
+  return 겹 ? null : best;
+}
+
+function 새판(계획) {
+  var 판 = { 계획: 계획, 끝냄: {}, 밖: [], 모름: [], 순서: [], 사건: [] };
+  계획.이미.forEach(function (p) { if (계획.예정.some(function (e) { return e.p === p; })) 판.끝냄[p] = { how: '봇', at: '' }; });
+  return 판;
+}
+function 예정에(판, p) { return 판.계획.예정.some(function (e) { return e.p === p; }); }
+function 밖찾기(판, key) { return 판.밖.filter(function (o) { return o.key === key && !o.뺌; })[0] || null; }
+/** 아직 확인 안 된 예정 가운데 재고표 바코드가 없는 관 — 앱이 QR 로 못 맞추는 관 */
+function 바코드모름(판) { return 판.계획.예정.filter(function (e) { return !e.b && !판.끝냄[e.p]; }).map(function (e) { return e.p; }); }
+function 바코드모름말(판) {
+  var m = 바코드모름(판);
+  return m.length ? '바코드 모르는 예정 관(' + m.slice(0, 3).join(', ') + (m.length > 3 ? ' …' : '') + ')일 수 있어요 — 라벨 보고 👁 로'
+                  : '봇이 가려요 — 다른 차 몫 · 재고표에 바코드 없음 …';
+}
+
+/** QR 하나 → {결과: ✓ | 이미 | ⚠ | 기타 | 차 | 딴차, 말, 덧, 닫기, 바뀜} — 판을 고친다(바뀜이면 사건으로 남길 것) */
+function 찍기셈(판, raw) {
+  var 계획 = 판.계획, x = 가르기(raw), at = 지금();
+  if (x.꼴 === '차') {
+    if (x.순번 === 계획.순번 && x.차4 === 계획.차4) {
+      if (x.큰 && x.날 && 계획.날 && x.날 !== 계획.날)
+        return { 결과: '딴차', 말: '⚠ ' + x.날.slice(5) + ' 상차요청서예요 — 오늘 것이 아님', 닫기: true };
+      return { 결과: '차', 말: '🚚 이 차 상차요청서 — 맞아요(차 확인만)', 닫기: false };
+    }
+    return { 결과: '딴차', 말: '⚠ 다른 차 QR(' + x.순번 + '-' + x.차4 + ') — 이 검수는 ' + 계획.순번 + '-' + 계획.차4, 닫기: true };
+  }
+  if (x.꼴 === '모름') {
+    if (판.모름.some(function (u) { return u.raw === x.raw; })) return { 결과: '이미', 말: '· 기타 QR — 이미 찍음', 닫기: false };
+    판.모름.push({ raw: x.raw, at: at });
+    return { 결과: '기타', 말: '기타 — 관 라벨 QR 이 아니에요(안 보냄)', 닫기: true, 바뀜: true };
+  }
+  var e = null, key, 보일;
+  if (x.꼴 === '관') { e = 관찾기(계획, x); key = 'b:' + (e ? e.p : x.바코드); 보일 = x.바코드; }
+  else { e = 예정에(판, x.p) ? { p: x.p } : null; key = e ? 'b:' + e.p : 'p:' + x.p; 보일 = x.p; }
+  if (e) {
+    var 앞 = 판.끝냄[e.p];
+    if (앞 && 앞.how === '눈') {
+      판.끝냄[e.p] = { how: 'QR', at: at, raw: x.raw };
+      판.순서.push({ raw: x.raw, key: key });
+      return { 결과: '✓', 말: '✓ ' + e.p + ' (눈 → QR)', 닫기: false, 바뀜: true, p: e.p };
+    }
+    if (앞) return { 결과: '이미', 말: '· ' + e.p + (앞.how === '봇' ? ' 봇에 이미 ✓' : ' 이미 찍음'), 닫기: false };
+    판.끝냄[e.p] = { how: 'QR', at: at, raw: x.raw };
+    판.순서.push({ raw: x.raw, key: key });
+    return { 결과: '✓', 말: '✓ ' + e.p, 닫기: false, 바뀜: true, p: e.p };
+  }
+  var 관 = x.꼴 === '관';
+  if (밖찾기(판, key)) return { 결과: '이미', 말: '· ' + (관 ? '바코드 ' + 보일 : 보일) + ' — 이미 찍음(예정 아님)', 닫기: false };
+  판.밖.push({ key: key, raw: x.raw, 꼴: x.꼴, 바코드: 관 ? x.바코드 : '', p: 관 ? '' : x.p, how: 'QR', at: at, 뺌: false });
+  판.순서.push({ raw: x.raw, key: key });
+  if (관) return { 결과: '⚠', 말: '⚠ 예정 바코드 아님 — ' + 보일 + ' (멈췄어요)', 덧: 바코드모름말(판), 닫기: true, 바뀜: true };
+  return { 결과: '⚠', 말: '⚠ ' + 보일 + ' 예정 아님 (멈췄어요)', 덧: '봇이 어디 것인지 가려요', 닫기: true, 바뀜: true };
+}
+
+function 눈셈(판, p, 켬) {
+  if (!예정에(판, p)) return false;
+  var 앞 = 판.끝냄[p];
+  if (켬) { if (앞) return false; 판.끝냄[p] = { how: '눈', at: 지금() }; return true; }
+  if (!앞 || 앞.how !== '눈') return false;
+  delete 판.끝냄[p]; return true;
+}
+function 손셈(판, p) {
+  p = _s(p).toUpperCase();
+  if (!번호꼴(p)) return { 결과: '기타', 말: '번호 꼴이 아니에요 — 예 26J0311' };
+  if (예정에(판, p)) {
+    if (판.끝냄[p]) return { 결과: '이미', 말: '· ' + p + ' 이미 확인' };
+    판.끝냄[p] = { how: '손', at: 지금() };
+    return { 결과: '✓', 말: '✓ ' + p + ' (손)', 바뀜: true };
+  }
+  if (밖찾기(판, 'p:' + p)) return { 결과: '이미', 말: '· ' + p + ' 이미 넣음' };
+  판.밖.push({ key: 'p:' + p, raw: '', 꼴: '번호', 바코드: '', p: p, how: '손', at: 지금(), 뺌: false });
+  return { 결과: '⚠', 말: '⚠ ' + p + ' (손) 예정 아님', 바뀜: true };
+}
+function 빼기셈(판, key) {
+  var o = 밖찾기(판, key);
+  if (!o) return false;
+  o.뺌 = true; return true;
+}
+
+/** 사건(찍은 차례)을 다시 돌려 판을 만든다 — 되살리기 · 예정이 바뀐 뒤에도 같은 셈(봇이 이미 아는 것은 '이미' 로 빠진다) */
+function 다시돌리기(계획, 사건들) {
+  var 판 = 새판(계획);
+  (사건들 || []).forEach(function (ev) {
+    var 바뀜 = false;
+    if (ev.t === 'qr') 바뀜 = !!찍기셈(판, ev.raw).바뀜;
+    else if (ev.t === '눈') 바뀜 = 눈셈(판, ev.p, true);
+    else if (ev.t === '눈취소') 바뀜 = 눈셈(판, ev.p, false);
+    else if (ev.t === '손') 바뀜 = !!손셈(판, ev.p).바뀜;
+    else if (ev.t === '빼기') 바뀜 = 빼기셈(판, ev.key);
+    if (바뀜) 판.사건.push(ev);
+  });
+  return 판;
+}
+
+function 셈(판) {
+  var c = { 예정: 판.계획.예정.length, QR: 0, 눈: 0, 손: 0, 봇: 0, 밖: 0, 모름: 판.모름.length };
+  판.계획.예정.forEach(function (e) { var d = 판.끝냄[e.p]; if (d) c[d.how] = (c[d.how] || 0) + 1; });
+  판.밖.forEach(function (o) { if (!o.뺌) c.밖++; });
+  c.확인 = c.QR + c.눈 + c.손 + c.봇;
+  c.남음 = c.예정 - c.확인;
+  return c;
+}
+function 남은번호(판) { return 판.계획.예정.filter(function (e) { return !판.끝냄[e.p]; }).map(function (e) { return e.p; }); }
+function 새것있나(판) { return 판.사건.length > 0; }
+
+/** sendData JSON — 날 QR 글 · 눈 · 손 · 기타 · 순번 · 차4 · 끝(보내고 검수 끝) · id(봇이 받음으로 되돌려 줌) */
+function 보낼것(판, 끝, id, 기타빼기) {
+  var 계획 = 판.계획, 뺀 = {};
+  판.밖.forEach(function (o) { 뺀[o.key] = o.뺌; });          // 같은 키는 마지막 줄 상태 — 빼고 다시 찍으면 다시 간다
+  var qr = [], 본 = {};
+  판.순서.forEach(function (s) { if (!뺀[s.key] && !본[s.raw]) { 본[s.raw] = 1; qr.push(s.raw); } });
+  var 눈 = [], 손 = [];
+  계획.예정.forEach(function (e) { var d = 판.끝냄[e.p]; if (d && d.how === '눈') 눈.push(e.p); if (d && d.how === '손') 손.push(e.p); });
+  판.밖.forEach(function (o) { if (!o.뺌 && o.how === '손') 손.push(o.p); });
+  var o = { k: '검수', v: 앱판, id: id || '', 검수: 계획.순번 + '-' + 계획.차4, 날: 계획.날 || 오늘(), sid: 계획.sid, 끝: !!끝,
+            qr: qr, 눈: 눈, 손: 손,
+            기타: 기타빼기 ? [] : 판.모름.slice(0, 10).map(function (u) { return u.raw.slice(0, 80); }), n: qr.length, 때: 지금() };
+  return JSON.stringify(o);
+}
+
+/** 봇이 받았다고 알려 온 만큼(링크의 받음 id) 폰 기록을 덜어 낸다. 보냄 = [{id, 때, n: 그때까지의 기록 수}].
+ *  → {기록: 남은 것, 보냄들: 아직 받았다는 표시가 없는 보냄, 받은때: 받은 것 가운데 마지막 보낸 때 | ''} */
+function 받은만큼(기록, 보냄들, 받음) {
+  var 받은 = null;
+  (보냄들 || []).forEach(function (b) { if (받음.indexOf(b.id) >= 0 && (!받은 || b.n >= 받은.n)) 받은 = b; });
+  if (!받은) return { 기록: 기록, 보냄들: 보냄들 || [], 받은때: '' };
+  var k = 받은.n;
+  return { 기록: 기록.slice(k),
+           보냄들: 보냄들.filter(function (b) { return b.n > k; }).map(function (b) { return { id: b.id, 때: b.때, n: b.n - k }; }),
+           받은때: 받은.때 };
+}
+
+/* ── 화면 ─────────────────────────────────────────────────────────────── */
+var tg = (window.Telegram && window.Telegram.WebApp) || null;
+var 해시 = 해시읽기();
+var 텔레그램안 = !!(tg && tg.platform && tg.platform !== 'unknown');
+var 시안 = 텔레그램안 ? '' : (해시.shot || '');
+var 시험 = !텔레그램안 && !시안;
+var 판 = null, 기록 = [], 보냄들 = [], 받은때 = '', 묻는중 = false;
+var 눈켬 = false, 스캔중 = false, 마지막 = { raw: '', t: 0 }, 시험차례 = 0, 막말 = null, 고르기끝 = null;
+var $ = function (id) { return document.getElementById(id); };
+
+function 판짓기(v) { return tg && tg.isVersionAtLeast ? tg.isVersionAtLeast(v) : false; }
+function 열쇠(계획) { return 'isp|' + (계획.날 || 오늘()) + '|' + 계획.순번 + '-' + 계획.차4; }
+function 저장() {
+  if (!판 || 시안 || 묻는중) return;
+  try {
+    if (!기록.length && !보냄들.length) localStorage.removeItem(열쇠(판.계획));
+    else localStorage.setItem(열쇠(판.계획), JSON.stringify({ 때: Date.now(), sid: 판.계획.sid, 기록: 기록, 보냄: 보냄들 }));
+  } catch (e) {}
+  if (텔레그램안 && 판짓기('6.2')) { try { 새것있나(판) ? tg.enableClosingConfirmation() : tg.disableClosingConfirmation(); } catch (e) {} }
+}
+function 옛기록(계획) {
+  try {
+    var s = JSON.parse(localStorage.getItem(열쇠(계획)) || 'null');
+    if (!s) return null;
+    if (Date.now() - (s.때 || 0) > 남길초 * 1000) { localStorage.removeItem(열쇠(계획)); return null; }
+    return { sid: _s(s.sid), 기록: Array.isArray(s.기록) ? s.기록 : [], 보냄: Array.isArray(s.보냄) ? s.보냄 : [] };
+  } catch (e) { return null; }
+}
+function 묵은것치우기() {
+  try {
+    for (var i = localStorage.length - 1; i >= 0; i--) {
+      var k = localStorage.key(i);
+      if (!k || k.indexOf('isp|') !== 0) continue;
+      var s = null;
+      try { s = JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) {}
+      if (!s || Date.now() - (s.때 || 0) > 남길초 * 1000) localStorage.removeItem(k);
+    }
+  } catch (e) {}
+}
+function 남기기(ev) { 판.사건.push(ev); 기록.push(ev); }
+
+function 떨림(결과) {
+  if (!tg || !tg.HapticFeedback || !판짓기('6.1')) return;
+  try {
+    if (결과 === '✓') tg.HapticFeedback.notificationOccurred('success');
+    else if (결과 === '⚠' || 결과 === '딴차') tg.HapticFeedback.notificationOccurred('warning');
+    else if (결과 === '기타') tg.HapticFeedback.notificationOccurred('error');
+    else if (결과 === '이미') tg.HapticFeedback.impactOccurred('light');
+    else tg.HapticFeedback.selectionChanged();
+  } catch (e) {}
+}
+function 묻기(말) {
+  return new Promise(function (ok) {
+    if (텔레그램안 && 판짓기('6.2')) { try { tg.showConfirm(말, function (y) { ok(!!y); }); return; } catch (e) {} }
+    ok(window.confirm(말));
+  });
+}
+function 알리기(말) {
+  if (텔레그램안 && 판짓기('6.2')) { try { tg.showAlert(말); return; } catch (e) {} }
+  window.alert(말);
+}
+/** 단추 둘 + 취소 — 텔레그램 showPopup(6.2), 밖이면 쪽 안의 창. → 고른 id('' · 'no' = 취소) */
+function 고르기(제목, 말, 단추들) {
+  return new Promise(function (ok) {
+    if (텔레그램안 && 판짓기('6.2')) {
+      try {
+        tg.showPopup({ title: 제목, message: 말.slice(0, 256),
+                       buttons: 단추들.map(function (b) { return { id: b[0], type: 'default', text: b[1] }; }).concat([{ id: 'no', type: 'cancel' }]) },
+                     function (id) { ok(id || ''); });
+        return;
+      } catch (e) {}
+    }
+    $('pickT').textContent = 제목; $('pickP').textContent = 말;
+    $('pickBtns').innerHTML = 단추들.map(function (b) { return '<button type="button" data-pick="' + esc(b[0]) + '">' + esc(b[1]) + '</button>'; }).join('') +
+      '<button type="button" class="ghost" data-pick="no">취소</button>';
+    $('pickBg').hidden = false;
+    고르기끝 = function (id) { $('pickBg').hidden = true; 고르기끝 = null; ok(id); };
+  });
+}
+
+var 결과칸 = { '✓': 'ok', '이미': 'info', '⚠': 'warn', '딴차': 'warn', '기타': 'unk', '차': 'info', '눈': 'eye' };
+function 알림(말, 결과, 덧) { 막말 = { 말: 말, 칸: 결과칸[결과] || 'info', 덧: 덧 || '' }; }
+
+function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+function 그리기() {
+  var 계획 = 판.계획, c = 셈(판);
+  $('tTitle').textContent = 계획.순번 + '번 ' + 계획.차4;
+  $('tDest').textContent = '';
+  $('tSub').textContent = '예정 ' + c.예정 + '본';
+  $('tBig').innerHTML = c.확인 + ' <small>/ ' + c.예정 + ' 확인</small>';
+  var w = function (n) { return c.예정 ? (100 * n / c.예정).toFixed(2) + '%' : '0'; };
+  $('tBar').innerHTML = '<i class="b-qr" style="width:' + w(c.QR + c.손) + '"></i><i class="b-eye" style="width:' + w(c.눈) +
+    '"></i><i class="b-m3" style="width:' + w(c.봇) + '"></i>';
+  var chips = [
+    ['ok', '✓ ' + c.QR, true], ['eye', '👁 ' + c.눈, true], ['ok', '✋ 손 ' + c.손, c.손 > 0], ['m3', '봇 ✓ ' + c.봇, c.봇 > 0],
+    ['warn', '⚠ ' + c.밖, true], ['unk', '기타 ' + c.모름, c.모름 > 0], ['', '남음 ' + c.남음, true]
+  ];
+  $('tChips').innerHTML = chips.filter(function (x) { return x[2]; }).map(function (x) {
+    var zero = /\s0$/.test(x[1]) && x[0] ? ' zero' : '';
+    return '<span class="chip ' + x[0] + zero + ' num">' + esc(x[1]) + '</span>';
+  }).join('');
+  var last = $('tLast');
+  if (막말) { last.className = 'last ' + 막말.칸; last.innerHTML = esc('방금: ' + 막말.말) + (막말.덧 ? '<small>' + esc(막말.덧) + '</small>' : ''); }
+  else if (c.남음 === 0 && c.예정) { last.className = 'last ok'; last.textContent = '다 확인했어요 — 아래 [📨 봇에 보내기]'; }
+  else { last.className = 'last info'; last.textContent = c.확인 || c.밖 ? '관 QR 을 이어서 찍으세요' : '이제 관 QR 을 차례로 찍으세요'; }
+
+  보냄그리기();
+  $('btnScan').firstElementChild.textContent = 시험 ? '🧪' : '📷';
+  $('btnScanText').textContent = 시험 ? '시험 스캔(가짜 QR 창)' : (판.사건.length ? '관 QR 이어 찍기' : '관 QR 찍기');
+  $('btnEye').classList.toggle('on', 눈켬);
+  $('btnEye').textContent = 눈켬 ? '👁 눈으로 확인 중 — 다 됐으면 누르기' : '👁 눈으로 확인';
+  목록그리기(c);
+  메인단추();
+  if (시험) 개발그리기();
+}
+
+function 보냄그리기() {
+  var el = $('sent');
+  if (보냄들.length) {
+    var b = 보냄들[보냄들.length - 1];
+    el.className = 'sent warn'; el.hidden = false;
+    el.innerHTML = '<span>' + esc(b.때) + ' 에 보낸 것을 봇이 받았다는 표시가 아직 없어요 — 봇 대화에 답이 없으면</span>' +
+      '<button type="button" data-resend="1">📨 다시 보내기</button>';
+  } else if (받은때) {
+    el.className = 'sent ok'; el.hidden = false;
+    el.innerHTML = '<span>✓ ' + esc(받은때) + ' 에 보낸 것을 봇이 받았어요' + (판.사건.length ? ' — 아래 표시는 그 뒤 찍은 것까지' : '') + '</span>';
+  } else el.hidden = true;
+}
+
+function 목록그리기(c) {
+  var 계획 = 판.계획, html = '';
+  $('planH').textContent = '예정 ' + c.예정 + '본';
+  $('planR').textContent = c.남음 ? '남음 ' + c.남음 : '다 확인';
+  $('planCard').classList.toggle('eye-mode', 눈켬);
+  if (눈켬) html += '<div class="eye-guide">망원으로 라벨 <b>PIPE NO</b> 를 읽고 맞는 번호를 누르면 <b>✓(눈)</b> — 다시 누르면 취소</div>';
+  var 단들 = {}, 차례 = [];
+  계획.예정.forEach(function (e) { var k = e.단 == null ? '?' : e.단; if (!단들[k]) { 단들[k] = []; 차례.push(k); } 단들[k].push(e); });
+  var 숫단 = 차례.filter(function (k) { return k !== '?'; }).sort(function (a, b) { return b - a; });
+  if (차례.indexOf('?') >= 0) 숫단.push('?');
+  var 위 = 숫단.length && 숫단[0] !== '?' ? 숫단[0] : null;
+  var 단있음 = !(숫단.length === 1 && 숫단[0] === '?');
+  숫단.forEach(function (k) {
+    if (단있음) html += '<div class="tier">' + (k === '?' ? '단 모름' : k + '단' + (k === 위 && 숫단.length > 1 ? ' <span class="top">(위 — 망원 · 👁)</span>' : '')) + '</div>';
+    단들[k].forEach(function (e) {
+      var d = 판.끝냄[e.p], ic, pc = '', meta = '';
+      if (!d) { ic = '<span class="ic todo"></span>'; meta = e.b ? '' : '<span class="tag nobc">바코드 없음 · 눈으로</span>'; }
+      else if (d.how === 'QR') { ic = '<span class="ic ok">✓</span>'; pc = 'done'; meta = '<span class="tag ok">QR</span> ' + esc(d.at); }
+      else if (d.how === '눈') { ic = '<span class="ic eye">👁</span>'; pc = 'eyed'; meta = '<span class="tag eye">눈</span> ' + esc(d.at); }
+      else if (d.how === '손') { ic = '<span class="ic ok">✓</span>'; pc = 'done'; meta = '<span class="tag ok">손</span> ' + esc(d.at); }
+      else { ic = '<span class="ic m3">✓</span>'; pc = 'm3d'; meta = '<span class="tag m3">봇에 있음</span>'; }
+      var tap = 눈켬 && (!d || d.how === '눈');
+      html += '<div class="row' + (tap ? ' tap' : '') + (!d ? ' todo-row' : '') + '"' + (tap ? ' data-eye="' + esc(e.p) + '"' : '') + '>' + ic +
+        '<span class="p num ' + pc + '">' + esc(e.p) + '</span><span class="meta">' + meta + '</span></div>';
+    });
+  });
+  if (눈켬) html += '<div class="type"><input id="typeIn" placeholder="예정에 없는 번호 치기 — 26J0311" autocomplete="off" inputmode="text"><button type="button" id="typeBtn">넣기</button></div>';
+  $('planCard').innerHTML = html;
+
+  var 밖 = 판.밖.filter(function (o) { return !o.뺌; });
+  $('outSec').hidden = !밖.length;
+  $('outH').textContent = '⚠ 예정 아님 ' + 밖.length;
+  var 모르는 = 바코드모름(판);
+  $('outCard').innerHTML = 밖.map(function (o) {
+    var 글 = o.꼴 === '관' ? '바코드 ' + o.바코드 : o.p;
+    var 덧 = o.꼴 === '관' ? '예정 바코드 아님 · QR ' + o.raw : (o.how === '손' ? '손으로 친 번호' : '7월 라벨 ' + o.raw);
+    return '<div class="row"><span class="ic warn">⚠</span><div class="grow"><div class="p num">' + esc(글) + '</div><div class="d num">' +
+      esc(덧) + ' · ' + esc(o.at) + '</div></div><button type="button" class="x" data-out="' + esc(o.key) + '">빼기</button></div>';
+  }).join('') + (모르는.length && 밖.some(function (o) { return o.꼴 === '관'; }) ?
+    '<div class="out-hint">ℹ 바코드 모르는 예정 관(' + esc(모르는.slice(0, 3).join(', ')) + (모르는.length > 3 ? ' …' : '') +
+    ')일 수 있어요 — 라벨 번호를 보고 👁 로</div>' : '');
+  $('unkSec').hidden = !판.모름.length;
+  $('unkH').textContent = '기타 ' + 판.모름.length;
+  $('unkCard').innerHTML = 판.모름.map(function (u) {
+    return '<div class="row"><span class="ic unk">–</span><div class="grow"><div class="d num">' + esc(u.raw) + '</div></div><span class="meta">' + esc(u.at) + '</span></div>';
+  }).join('');
+}
+
+function 메인단추() {
+  var 글 = '📨 봇에 보내기';
+  if (텔레그램안) {
+    try { tg.MainButton.setParams({ text: 글, is_visible: true, is_active: true }); } catch (e) {}
+  } else {
+    $('fakeMain').hidden = !$('qr').hidden;                // QR 창이 열려 있으면 가림(실제도 창이 다 덮는다)
+    $('btnFakeMain').textContent = 글;
+  }
+}
+
+function 개발그리기() {
+  var 조각 = b64url짓기(JSON.stringify(판.계획));
+  var 보낼 = 보낼것(판, false, '시험id');
+  $('devBody').innerHTML =
+    '<p>단추 링크 #조각(이 예시 차) — ' + 조각.length + '자</p><pre>#c=' + esc(조각) + '</pre>' +
+    '<p>sendData(보내기만) — ' + 바이트(보낼) + ' / ' + 보낼한도 + '바이트</p><pre>' + esc(보낼) + '</pre>' +
+    '<p>폰 기록 ' + 기록.length + '건 · 받았다는 표시를 기다리는 보냄 ' + 보냄들.length + '</p>';
+}
+
+/* 찍기 — 텔레그램 QR 창(연달아) · 시험이면 흉내 창 */
+function 받은글(raw, 조용히) {
+  var 지금초 = Date.now() / 1000;
+  if (!조용히 && raw === 마지막.raw && 지금초 - 마지막.t < 같은글초) { 마지막.t = 지금초; return false; }   // 같은 QR 을 카메라가 계속 봄
+  마지막 = { raw: raw, t: 지금초 };
+  var r = 찍기셈(판, raw);
+  if (r.바뀜) 남기기({ t: 'qr', raw: raw });
+  var 닫기 = !!r.닫기;
+  알림(r.말, r.결과, r.덧);
+  if (r.결과 === '✓' && 셈(판).남음 === 0) { 닫기 = true; 알림(r.말 + ' — 다 확인했어요', '✓'); }
+  if (!조용히) 떨림(r.결과);
+  저장(); 그리기();
+  if (!텔레그램안) 흉내결과(r);
+  return 닫기;
+}
+
+function 찍기열기() {
+  if (시험 || 시안) { 흉내열기(); return; }
+  if (!판짓기('6.4')) { 알리기('QR 찍기는 텔레그램 새 판에서만 돼요 — 플레이 스토어에서 텔레그램을 업데이트해 주세요.'); return; }
+  if (['android', 'ios'].indexOf(tg.platform) < 0) { 알리기('QR 찍기는 폰 텔레그램에서만 돼요(지금: ' + tg.platform + ').'); return; }
+  try {
+    스캔중 = true;
+    tg.showScanQrPopup({ text: 팝업글 }, function (text) { return 받은글(String(text || ''), false) === true; });
+  } catch (e) { 스캔중 = false; 알리기('QR 창을 못 열었어요 — ' + e.message); }
+}
+
+/* 흉내 QR 창(텔레그램 밖) */
+function 가짜QR(canvas, 글) {
+  var g = canvas.getContext('2d'), N = 25, P = 2, h = 0;
+  for (var i = 0; i < 글.length; i++) h = (h * 31 + 글.charCodeAt(i)) >>> 0;
+  h = h || 1;
+  var 난 = function () { h ^= h << 13; h >>>= 0; h ^= h >> 17; h ^= h << 5; h >>>= 0; return h / 4294967296; };
+  g.fillStyle = '#fff'; g.fillRect(0, 0, N + 2 * P, N + 2 * P);
+  g.fillStyle = '#000';
+  var 찾기 = function (x, y) { for (var a = 0; a < 7; a++) for (var b = 0; b < 7; b++) {
+    var on = a === 0 || a === 6 || b === 0 || b === 6 || (a >= 2 && a <= 4 && b >= 2 && b <= 4); if (on) g.fillRect(P + x + a, P + y + b, 1, 1); } };
+  for (var y = 0; y < N; y++) for (var x = 0; x < N; x++) {
+    var 자리 = (x < 8 && y < 8) || (x >= N - 8 && y < 8) || (x < 8 && y >= N - 8);
+    if (자리) continue;
+    if (y === 6 || x === 6) { if ((x + y) % 2 === 0) g.fillRect(P + x, P + y, 1, 1); continue; }
+    if (난() < .47) g.fillRect(P + x, P + y, 1, 1);
+  }
+  찾기(0, 0); 찾기(N - 7, 0); 찾기(0, N - 7);
+}
+function 흉내라벨(raw) {
+  var x = 가르기(raw), pn = '';
+  if (x.꼴 === '관') { var e = 관찾기(판.계획, x); pn = e ? e.p : '26J' + x.바코드.slice(-4); }
+  else if (x.꼴 === '번호') pn = x.p;
+  $('qrPn').textContent = pn ? 'PIPE NO : ' + pn : (x.꼴 === '차' ? '상차요청서 ' + x.순번 + '-' + x.차4 : '(관 라벨 아님)');
+  가짜QR($('qrCanvas'), raw || 'x');
+}
+function 흉내열기() {
+  var head = $('head').getBoundingClientRect();
+  document.documentElement.style.setProperty('--qr-top', Math.max(0, Math.round(head.bottom + 6)) + 'px');
+  $('qr').hidden = false; 스캔중 = true; $('fakeMain').hidden = true;
+  $('qrSub').textContent = 팝업글;
+  $('qrTest').hidden = !시험;
+  $('qrFlash').hidden = true;
+  흉내라벨(예시QR[시험차례 % 예시QR.length]);
+  흉내안내();
+}
+function 흉내안내() {
+  $('qrMuted').textContent = '다음 예시: ' + 예시QR[시험차례 % 예시QR.length] + ' (' + (시험차례 % 예시QR.length + 1) + '/' + 예시QR.length + ') — 실제는 텔레그램 QR 창 · 결과는 떨림으로';
+}
+function 흉내닫기() { $('qr').hidden = true; 스캔중 = false; 그리기(); }
+function 흉내결과(r) {
+  if ($('qr').hidden) return;
+  var f = $('qrFlash');
+  f.hidden = false;
+  f.className = 'flash ' + ({ '✓': '', '⚠': 'warn', '딴차': 'warn', '기타': 'unk' }[r.결과] || 'info');
+  f.innerHTML = esc(r.말) + '<small>' + esc(r.덧 || (r.닫기 ? '창이 닫혀요 — 화면을 보세요' : '떨림 · 이어서 찍기')) + '</small>';
+  if (r.닫기 && 시험) setTimeout(흉내닫기, 900);
+}
+function 흉내다음(raw) {
+  if (raw == null) { raw = 예시QR[시험차례 % 예시QR.length]; 시험차례++; }
+  흉내라벨(raw);
+  받은글(raw, false);
+  흉내안내();
+}
+
+/* 보내기 — sendData(보내기만 / 보내고 검수 끝). 폰 기록은 봇이 받음으로 알려 올 때까지 둔다 */
+async function 보내기누름() {
+  var c = 셈(판);
+  var 머리 = '폰 기준 ✓ ' + (c.QR + c.손) + ' · 👁 ' + c.눈 + (c.봇 ? ' · 봇 ✓ ' + c.봇 : '') + ' · ⚠ ' + c.밖 + ' · 남음 ' + c.남음;
+  var 말 = 머리 + '\n\n📨 보내기만 — 봇 목록만 고치고 검수는 이어 가요(M3 와 같이 찍으면 이쪽)\n' +
+    '✅ 보내고 검수 끝 — 봇이 다 맞음 / 다름을 답해요' + (c.남음 ? '(남은 ' + c.남음 + '본은 빠짐 — 그 뒤 M3 로 찍은 것은 봇이 셈)' : '');
+  var 고름 = await 고르기('봇에 보내기', 말, [['send', '📨 보내기만'], ['end', '✅ 보내고 검수 끝']]);
+  if (고름 !== 'send' && 고름 !== 'end') return;
+  var 끝 = 고름 === 'end';
+  if (!끝 && !새것있나(판)) { 알리기('새로 찍은 것이 없어요 — 보낼 것이 없어요.'); return; }
+  var id = 새id();
+  var 글 = 보낼것(판, 끝, id);
+  if (바이트(글) > 보낼한도) 글 = 보낼것(판, 끝, id, true);
+  if (바이트(글) > 보낼한도) { 알리기('한 번에 보낼 양(4096바이트)을 넘었어요 — ⚠ 줄을 빼거나 봇에서 M3 로 나눠 주세요.'); return; }
+  보냄들.push({ id: id, 때: 지금(), n: 기록.length });
+  저장();
+  if (!텔레그램안) {
+    $('sheetP').textContent = 'sendData ' + 바이트(글) + ' / 4096바이트 — 실제는 여기서 앱이 닫히고 봇이 ' +
+      (끝 ? '다 맞음 / [✅ 적용] 으로' : '목록 메시지로') + ' 답해요. 폰 기록은 봇이 받았다고(링크의 받음) 알려 올 때까지 남아요.';
+    $('sheetPre').textContent = JSON.stringify(JSON.parse(글), null, 1);
+    $('sheetBg').hidden = false;
+    그리기();
+    return;
+  }
+  try {
+    if (판짓기('6.2')) tg.disableClosingConfirmation();
+    tg.sendData(글);                                       // 키보드 단추로 연 앱이면 여기서 닫힌다
+  } catch (e) {
+    보냄들 = 보냄들.filter(function (b) { return b.id !== id; }); 저장(); 그리기();
+    알리기('보내지 못했어요 — ' + e.message);
+    return;
+  }
+  setTimeout(function () {                                 // 4초 뒤에도 안 닫혔다 = 키보드 단추로 연 앱이 아님(소리 없이 안 감)
+    보냄들 = 보냄들.filter(function (b) { return b.id !== id; }); 저장(); 그리기();
+    알리기("봇에 안 갔어요 — 봇 대화 아래 '📷 검수 스캔 " + 판.계획.순번 + '-' + 판.계획.차4 + "' 단추로 다시 열어 주세요(찍은 것은 남아 있어요).");
+  }, 4000);
+}
+
+/* 시작 */
+function 시작() {
+  var 계획 = null, 오류 = '';
+  if (해시.c) { try { 계획 = 계획다듬기(JSON.parse(b64url풀기(해시.c))); } catch (e) { 오류 = e.message; } }
+  else if (!텔레그램안) 계획 = 계획다듬기(JSON.parse(JSON.stringify(예시계획)));
+  if (텔레그램안) {
+    try { tg.ready(); tg.expand(); } catch (e) {}
+    if (판짓기('7.7')) { try { tg.disableVerticalSwipes(); } catch (e) {} }
+    var 테마 = function () { document.documentElement.setAttribute('data-theme', tg.colorScheme === 'dark' ? 'dark' : 'light'); };
+    테마(); tg.onEvent('themeChanged', 테마);
+    if (판짓기('6.1')) { try { tg.setHeaderColor('bg_color'); tg.setBackgroundColor('secondary_bg_color'); } catch (e) {} }
+    try { tg.MainButton.onClick(보내기누름); } catch (e) {}
+    if (판짓기('7.7')) tg.onEvent('scanQrPopupClosed', function () { 스캔중 = false; 그리기(); });
+  }
+  if (!계획) {
+    $('noPlan').hidden = false;
+    $('noPlan').innerHTML = '🔍 차 정보가 없어요' + (오류 ? '(' + esc(오류) + ')' : '') +
+      "<br>봇 대화 아래 <b>'📷 검수 스캔 7-6610'</b> 단추로 열어 주세요.<br><small style=\"color:var(--hint)\">먼저 봇에 '검수 7-6610' — 그 차 단추가 생겨요</small>";
+    return;
+  }
+  $('main').hidden = false;
+  $('testStrip').hidden = !시험;
+  $('dev').hidden = !시험;
+  if (!시안) 묵은것치우기();
+  var 옛 = 시안 ? null : 옛기록(계획);
+  if (옛 && 계획.받음.length) {                                // 봇이 받았다고 알려 온 만큼은 먼저 던다(앞 검수 것이어도)
+    var 먼저 = 받은만큼(옛.기록, 옛.보냄, 계획.받음); 옛.기록 = 먼저.기록; 옛.보냄 = 먼저.보냄들; 받은때 = 먼저.받은때;
+  }
+  var 딴검수 = !!(옛 && 옛.sid && 계획.sid && 옛.sid !== 계획.sid);
+  if (딴검수 && !옛.기록.length) { 옛 = null; 딴검수 = false; }   // 앞 검수의 보낸 표시만 — 이 검수와 상관없음
+  if (딴검수) {
+    판 = 새판(계획); 기록 = []; 보냄들 = []; 묻는중 = true;
+    그리기();
+    var 보낸 = 옛.보냄.length ? 옛.보냄[옛.보냄.length - 1].때 : '';
+    묻기('앞 검수에서 찍은 ' + 옛.기록.length + '건이 폰에 남아 있어요' + (보낸 ? '(' + 보낸 + ' 에 보냄 — 봇이 받았는지 모름)' : '(안 보냄)') +
+      '.\n이 검수에 이어 쓸까요?').then(function (y) {
+      묻는중 = false;
+      if (y) { 기록 = 옛.기록.slice(); 판 = 다시돌리기(계획, 기록); 알림('앞 검수에서 찍은 것을 이어 써요 — ' + 판.사건.length + '건', '차'); }
+      저장(); 그리기();
+    });
+  } else {
+    if (옛) { 기록 = 옛.기록; 보냄들 = 옛.보냄; }
+    판 = 다시돌리기(계획, 기록);
+    if (판.사건.length) 알림('앞에 찍은 ' + 판.사건.length + '건을 이어서 보여 줘요', '차');
+    if (텔레그램안 && tg.initDataUnsafe && tg.initDataUnsafe.query_id)
+      알림("이렇게 열면 봇에 못 보내요 — 봇 대화 아래 '📷 검수 스캔' 단추로 여세요", '⚠');
+    그리기();
+    저장();
+  }
+  if (시안) 시안차림(시안);
+}
+
+/* 시안 그림용 — 텔레그램처럼 보이게(시험 띠 없음) */
+function 시안차림(무엇) {
+  if (무엇 === 'scan') {
+    ['*P2026093003031 1  3207.95904', '*P2026093003041 1  3208.11', '*P2026093003111 1  3206.88'].forEach(function (r) { 받은글(r, true); });
+    if (눈셈(판, '26J0308', true)) 남기기({ t: '눈', p: '26J0308' });
+    그리기();
+    흉내열기();
+    흉내라벨('*P2026093003061 1  3207.5');
+    받은글('*P2026093003061 1  3207.5', true);
+  }
+}
+
+$('btnScan').addEventListener('click', 찍기열기);
+$('btnEye').addEventListener('click', function () { 눈켬 = !눈켬; 그리기(); });
+$('btnFakeMain').addEventListener('click', 보내기누름);
+$('sent').addEventListener('click', function (ev) { if (ev.target.closest('[data-resend]')) 보내기누름(); });
+$('pickBtns').addEventListener('click', function (ev) {
+  var b = ev.target.closest('[data-pick]');
+  if (b && 고르기끝) 고르기끝(b.getAttribute('data-pick'));
+});
+$('planCard').addEventListener('click', function (ev) {
+  var row = ev.target.closest('[data-eye]');
+  if (row) {
+    var p = row.getAttribute('data-eye'), 켬 = !판.끝냄[p];
+    if (눈셈(판, p, 켬)) { 남기기({ t: 켬 ? '눈' : '눈취소', p: p }); 알림(켬 ? '✓ ' + p + ' (눈)' : p + ' 눈 확인 취소', 켬 ? '눈' : '차'); 떨림(켬 ? '✓' : '이미'); 저장(); 그리기(); }
+    return;
+  }
+  if (ev.target.id === 'typeBtn') {
+    var inp = $('typeIn'), r = 손셈(판, inp.value);
+    if (r.바뀜) 남기기({ t: '손', p: _s(inp.value).toUpperCase() });
+    알림(r.말, r.결과); 떨림(r.결과); 저장(); 그리기();
+  }
+});
+$('planCard').addEventListener('keydown', function (ev) { if (ev.target.id === 'typeIn' && ev.key === 'Enter') { ev.preventDefault(); $('typeBtn').click(); } });
+$('outCard').addEventListener('click', function (ev) {
+  var b = ev.target.closest('[data-out]');
+  if (!b) return;
+  var key = b.getAttribute('data-out');
+  if (빼기셈(판, key)) { 남기기({ t: '빼기', key: key }); 알림('뺐어요 — 봇에 안 가요(다시 찍으면 들어와요)', '차'); 저장(); 그리기(); }
+});
+$('qrClose').addEventListener('click', 흉내닫기);
+$('qrNext').addEventListener('click', function () { 흉내다음(null); });
+$('qrType').addEventListener('click', function () { var v = $('qrInput').value; if (_s(v)) { 흉내다음(v); $('qrInput').value = ''; } });
+$('sheetClose').addEventListener('click', function () { $('sheetBg').hidden = true; });
+$('btnTheme').addEventListener('click', function () {
+  var r = document.documentElement, now = r.getAttribute('data-theme');
+  var dark = now ? now === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+  r.setAttribute('data-theme', dark ? 'light' : 'dark');
+});
+$('btnReset').addEventListener('click', async function () {
+  if (!(await 묻기('찍은 것 · 보낸 표시를 모두 비울까요?'))) return;
+  기록 = []; 보냄들 = []; 받은때 = ''; 판 = 새판(판.계획); 막말 = null; 시험차례 = 0; 저장(); 그리기();
+});
+시작();
+</script>
+</body>
+</html>
