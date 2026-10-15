@@ -252,7 +252,7 @@
 
     <div class="actions">
       <button class="btn-scan" id="btnScan" type="button"><span>📷</span><span id="btnScanText">관 QR 찍기</span></button>
-      <div class="hint" id="scanHint">연달아 찍어요 · ✓ 면 떨림 한 번 · ⚠ 면 멈춰요</div>
+      <div class="hint" id="scanHint">연달아 찍어요 · ✓ 면 떨림 한 번 · ⚠ 예정 밖도 적고 계속</div>
       <button class="btn-eye" id="btnEye" type="button">👁 눈으로 확인</button>
     </div>
 
@@ -327,7 +327,7 @@ var 앱판 = 1;
 var 같은글초 = 2.5;
 var 보낼한도 = 4096;
 var 남길초 = 12 * 3600;
-var 팝업글 = '관 QR 을 차례로 비추세요 · ✓ 떨림 한 번 · ⚠ 면 멈춰요';   // showScanQrPopup text — 64자까지
+var 팝업글 = '관 QR 을 차례로 비추세요 · ✓ 떨림 한 번 · ⚠ 예정 밖도 적고 계속';   // showScanQrPopup text — 64자까지
 
 var 예시계획 = {
   순번: '7', 차4: '6610', 날: '', sid: 'test',
@@ -475,8 +475,11 @@ function 찍기셈(판, raw) {
   if (밖찾기(판, key)) return { 결과: '이미', 말: '· ' + (관 ? '바코드 ' + 보일 : 보일) + ' — 이미 찍음(예정 아님)', 닫기: false };
   판.밖.push({ key: key, raw: x.raw, 꼴: x.꼴, 바코드: 관 ? x.바코드 : '', p: 관 ? '' : x.p, how: 'QR', at: at, 뺌: false });
   판.순서.push({ raw: x.raw, key: key });
-  if (관) return { 결과: '⚠', 말: '⚠ 예정 바코드 아님 — ' + 보일 + ' (멈췄어요)', 덧: 바코드모름말(판), 닫기: true, 바뀜: true };
-  return { 결과: '⚠', 말: '⚠ ' + 보일 + ' 예정 아님 (멈췄어요)', 덧: '봇이 어디 것인지 가려요', 닫기: true, 바뀜: true };
+  // 예정 밖 관은 창을 닫지 않는다 — 지게차가 뒷차 관과 맞바꿔 실으면 이 차에 실린 것이 맞다(2026-10-15). 들어옴 후보로 적고
+  // 계속 찍는다(경고 떨림) · 어느 차 것인지(8번 차 몫 · 8번 계획)는 보낸 뒤 봇이 가리고 [적용] 이 맞바꿔 고친다. 다른 차 상차요청서 QR ·
+  // 관 라벨이 아닌 QR 은 그대로 멈춘다(차를 잘못 잡았거나 엉뚱한 것을 비춘 것)
+  if (관) return { 결과: '⚠', 말: '⚠ 예정 바코드 아님 — ' + 보일 + ' · 들어옴 후보로 적음', 덧: 바코드모름말(판), 닫기: false, 바뀜: true };
+  return { 결과: '⚠', 말: '⚠ ' + 보일 + ' 예정 아님 · 들어옴 후보로 적음', 덧: '봇이 어디 것인지 가려요', 닫기: false, 바뀜: true };
 }
 
 function 눈셈(판, p, 켬) {
