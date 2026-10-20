@@ -327,7 +327,7 @@ var 앱판 = 1;
 var 같은글초 = 2.5;
 var 보낼한도 = 4096;
 var 남길초 = 12 * 3600;
-var 팝업글 = '관 QR 을 차례로 비추세요 · ✓ 떨림 한 번 · ⚠ 예정 밖도 적고 계속';   // showScanQrPopup text — 64자까지
+var 팝업글 = '관 QR 을 차례로 비추세요 · ✓ 삐 한 번 · ⚠ 낮게 두 번(예정 밖도 적고 계속)';   // showScanQrPopup text — 64자까지
 
 var 예시계획 = {
   순번: '7', 차4: '6610', 날: '', sid: 'test',
@@ -376,9 +376,11 @@ function 새id() { return Date.now().toString(36).slice(-5) + Math.random().toSt
 function 계획다듬기(x) {
   if (!x || typeof x !== 'object') throw new Error('차 정보 꼴이 아님');
   var 예정 = (x.예정 || []).map(function (e) {
-    if (Array.isArray(e)) e = { p: e[0], b: e[1], 단: e[2] };
+    if (Array.isArray(e)) e = { p: e[0], b: e[1], 단: e[2], 옛: e[3] };
     var 단 = parseInt(e.단, 10);
-    return { p: _s(e.p).toUpperCase(), b: _s(e.b), 단: isNaN(단) ? null : 단 };
+    // 옛: 포장 전 라벨의 바코드들 — ERP 가 포장 단계에서 완제품 바코드로 새로 매긴다(2026-10-20)
+    return { p: _s(e.p).toUpperCase(), b: _s(e.b), 단: isNaN(단) ? null : 단,
+             옛: (Array.isArray(e.옛) ? e.옛 : []).map(_s).filter(Boolean) };
   }).filter(function (e) { return e.p; });
   var 순번 = _s(x.순번).toUpperCase(), 차4 = _s(x.차4);
   if (!순번 || !차4) throw new Error('순번 · 차4 없음');
@@ -417,6 +419,9 @@ function 관찾기(계획, x) {
   var 맞 = 계획.예정.filter(function (e) { return e.b && e.b === x.바코드; });
   if (맞.length === 1) return 맞[0];
   if (맞.length > 1) return null;
+  var 옛맞 = 계획.예정.filter(function (e) { return (e.옛 || []).indexOf(x.바코드) >= 0; });   // 포장 전 옛 라벨
+  if (옛맞.length === 1) { x.옛 = true; return 옛맞[0]; }
+  if (옛맞.length > 1) return null;
   var best = null, n = 0, 겹 = false;
   계획.예정.forEach(function (e) {
     if (!e.b || e.b.length > x.통.length || x.통.indexOf(e.b) !== 0 || !/^\d*$/.test(x.통.slice(e.b.length))) return;
@@ -469,7 +474,7 @@ function 찍기셈(판, raw) {
     if (앞) return { 결과: '이미', 말: '· ' + e.p + (앞.how === '봇' ? ' 봇에 이미 ✓' : ' 이미 찍음'), 닫기: false };
     판.끝냄[e.p] = { how: 'QR', at: at, raw: x.raw };
     판.순서.push({ raw: x.raw, key: key });
-    return { 결과: '✓', 말: '✓ ' + e.p, 닫기: false, 바뀜: true, p: e.p };
+    return { 결과: '✓', 말: '✓ ' + e.p + (x.옛 ? ' (옛 라벨 — 다시 인쇄)' : ''), 닫기: false, 바뀜: true, p: e.p };
   }
   var 관 = x.꼴 === '관';
   if (밖찾기(판, key)) return { 결과: '이미', 말: '· ' + (관 ? '바코드 ' + 보일 : 보일) + ' — 이미 찍음(예정 아님)', 닫기: false };
@@ -609,6 +614,39 @@ function 떨림(결과) {
     else if (결과 === '기타') tg.HapticFeedback.notificationOccurred('error');
     else if (결과 === '이미') tg.HapticFeedback.impactOccurred('light');
     else tg.HapticFeedback.selectionChanged();
+  } catch (e) {}
+}
+/* 소리 — QR 창이 화면을 다 덮어 글이 안 보이니 읽을 때마다 삐(2026-10-20). 소리 파일 없이 WebAudio 로 짓는다.
+   폰은 사람이 누른 뒤에만 소리를 낸다 — [📷 찍기] 를 누를 때 소리준비 로 깨워 둔다. 소리는 폰 미디어 음량 */
+var 소리판 = null;
+function 소리준비() {
+  try {
+    var A = window.AudioContext || window.webkitAudioContext;
+    if (!A) return;
+    if (!소리판) 소리판 = new A();
+    if (소리판.state === 'suspended') 소리판.resume();
+  } catch (e) { 소리판 = null; }
+}
+var 소리틀 = {                                   // [높이 Hz, 길이 초] 차례 — 사이 0.07초
+  '✓': [[1320, 0.14]], '⚠': [[440, 0.16], [440, 0.16]], '딴차': [[440, 0.16], [440, 0.16]],
+  '기타': [[262, 0.35]], '이미': [[880, 0.05]], '차': [[660, 0.1]]
+};
+function 삐(결과) {
+  var 틀 = 소리틀[결과];
+  if (!틀 || !소리판) return;
+  try {
+    var t = 소리판.currentTime + 0.01;
+    틀.forEach(function (x) {
+      var o = 소리판.createOscillator(), g = 소리판.createGain();
+      o.type = 'square'; o.frequency.value = x[0];
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.25, t + 0.01);
+      g.gain.setValueAtTime(0.25, t + x[1] - 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + x[1]);
+      o.connect(g); g.connect(소리판.destination);
+      o.start(t); o.stop(t + x[1] + 0.01);
+      t += x[1] + 0.07;
+    });
   } catch (e) {}
 }
 function 묻기(말) {
@@ -767,13 +805,14 @@ function 받은글(raw, 조용히) {
   var 닫기 = !!r.닫기;
   알림(r.말, r.결과, r.덧);
   if (r.결과 === '✓' && 셈(판).남음 === 0) { 닫기 = true; 알림(r.말 + ' — 다 확인했어요', '✓'); }
-  if (!조용히) 떨림(r.결과);
+  if (!조용히) { 떨림(r.결과); 삐(r.결과); }
   저장(); 그리기();
   if (!텔레그램안) 흉내결과(r);
   return 닫기;
 }
 
 function 찍기열기() {
+  소리준비();                                    // 누른 이 순간에 깨워야 QR 창이 열린 동안 삐가 난다
   if (시험 || 시안) { 흉내열기(); return; }
   if (!판짓기('6.4')) { 알리기('QR 찍기는 텔레그램 새 판에서만 돼요 — 플레이 스토어에서 텔레그램을 업데이트해 주세요.'); return; }
   if (['android', 'ios'].indexOf(tg.platform) < 0) { 알리기('QR 찍기는 폰 텔레그램에서만 돼요(지금: ' + tg.platform + ').'); return; }
