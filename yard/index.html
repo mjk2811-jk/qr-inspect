@@ -10,14 +10,16 @@
   · 단추 링크 #c=<base64url(UTF-8 JSON)> — #조각은 호스팅 서버로 가지 않는다.
       {v:1, d:날, t:때, r:[받은 id …], L:[[작지, 규격, 접두, '0805-0884,0890'] …], n:G1 본수, m:못 실은 본수}
       작지 · 규격 · 파이프 번호만 — 고객 · 도착지 · 무게는 넣지 않는다(봇 yard_tablet.조각)
-  · 야드를 고르고(＋ 야드) 쌓은 차례대로 번호를 누른다. 단은 기본 1단 — 고른 줄에 [1단][2단][3단] 을 누르면 그 단(번갈아 고르면
-    고른 대로). 줄을 눌러 다시 고르고 ✕ 로 뺀다. 찾기 칸에 뒤 번호 · 번호 전체(목록에 없는 옛 번호도 ＋ 넣기).
+  · 야드를 고르고(＋ 야드) 쌓은 차례대로 번호를 누른다. 단은 기본 1단(회색) — 고른 줄에 [1단][2단][3단] 을 누르면 그 단(파랑).
+    단이 1 · 2 · 1 처럼 한 번 되돌아오면(기본 1단 줄도 1 로 침 · 3단은 1 · 2 · 3 · 1) **자동 번갈아** — 다음 번호부터 단이 저절로(하늘색 '자동'), 다시 단을
+    누르면 자동을 끄고 그 뒤로는 1단(2026-11-17 — '1단 2단 반복하면 다음 번호부터 자동, 다시 단을 고르면 해제하고 1단으로만',
+    고름 '한 번 되돌아올 때'). 자동은 야드마다 따로. 줄을 눌러 다시 고르고 ✕ 로 뺀다. 찾기 칸에 뒤 번호 · 번호 전체(옛 번호도 ＋ 넣기).
   · 누를 때마다 태블릿(localStorage)에 저장 — 앱이 꺼져도 남는다. [📤 보내기] → sendData(JSON ≤ 4096바이트)
       {k:'야드', v:1, id, d, y:{'B06C': '26K 0805 0806.2;26J 0101', …}, n} — 접두 한 번 + 뒤 넷(단이 1 이 아니면 '.단'), 누른 차례.
     크면 야드마다 나눠 보낸다(이번에 못 보낸 야드는 남김). 보낸 야드는 봇이 받았다고(r) 알려 오면 지운다.
   · 저장소 web/yard/index.html — 검수 미니 앱과 같은 GitHub Pages 저장소의 yard/ 에 올린다(docs/설계_검수_미니앱_올리기.md 끝).
     봇 쪽은 yard_tablet.py(링크 · 받기) · 메인 📦 재고 › 📝 야드파일 만들기(yard_note_photo — 받은 목록을 사람이 보고 저장 · DB).
-  함수  셈: 해시읽기 · b64url풀기 · 범위풀기 · 번호꼴 · 보낼글 · 보낼묶음
+  함수  셈: 해시읽기 · b64url풀기 · 범위풀기 · 번호꼴 · 보낼글 · 보낼묶음 · 반복켜 · 자동켜찾기 · 다음단
         화면: 그리기 · 칩그리기 · 판그리기 · 야드그리기 · 차례그리기 · 누름 · 단고름 · 야드고르기열기 · 보내기 · 시작
 -->
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -76,12 +78,15 @@
   td { padding: 10px 10px; border-bottom: 1px solid var(--sep); font-size: 21px; }
   td.n { width: 44px; color: var(--hint); text-align: right; font-size: 15px; }
   td.p { font-weight: bold; letter-spacing: .5px; }
-  td.d { width: 84px; text-align: center; }
+  td.d { width: 116px; text-align: center; }
   td.x { width: 64px; text-align: center; color: #c0392b; font-size: 26px; cursor: pointer; }
   tr.cur td { background: var(--sel-bg); }
-  .dan { display: inline-block; min-width: 56px; padding: 5px 8px; border-radius: 14px; font-size: 16px; }
+  .dan { display: inline-block; min-width: 56px; padding: 5px 8px; border-radius: 14px; font-size: 16px; white-space: nowrap; }
   .dan.def { color: var(--hint); background: #f0f2f5; }
   .dan.set { color: #fff; background: var(--sel); font-weight: bold; }
+  .dan.auto { color: #0369a1; background: #e0f2fe; border: 1px solid #7dd3fc; font-weight: bold; }
+  .dan.auto small { font-size: 11px; font-weight: normal; }
+  .autoline { padding: 6px 10px; font-size: 15px; color: #0369a1; background: #e0f2fe; border-top: 1px solid #7dd3fc; }
   .tier { padding: 8px 10px; border-top: 1px solid var(--sep); display: flex; align-items: center; }
   .tier .k3 { flex: 1; font-size: 24px; padding: 18px 0; margin-left: 8px; }
   .foot { padding: 8px 10px 10px; display: flex; border-top: 1px solid var(--sep); }
@@ -129,6 +134,7 @@
     <div class="yards" id="yards"></div>
     <div class="stackhead"><span id="sh"></span><span class="grow"></span><span>단</span></div>
     <div class="stack" id="stackBox"><table id="stack"></table></div>
+    <div class="autoline" id="autoLine" hidden></div>
     <div class="tier">
       <span class="hint" id="tierfor"></span>
       <button class="k3" data-t="1">1단</button><button class="k3" data-t="2">2단</button><button class="k3" data-t="3">3단</button>
@@ -196,6 +202,28 @@ function 보낼글(줄들) {
   });
   return 조각.join(';');
 }
+/** 고른 단 한 줄기(시간 차례)가 '번갈아'인가 → 켜(단 수) | 0. 셋 넘게 · 켜 2 넘게 · 다음 = 앞 % 켜 + 1 · 한 번은 되돌아와야(1 · 2 · 1) */
+function 반복켜(단들) {
+  if (!단들 || 단들.length < 3) return 0;
+  var 켜 = Math.max.apply(null, 단들), 되돌 = false;
+  if (켜 < 2) return 0;
+  for (var i = 1; i < 단들.length; i++) {
+    if (단들[i] !== 단들[i - 1] % 켜 + 1) return 0;
+    if (단들[i] < 단들[i - 1]) 되돌 = true;
+  }
+  return 되돌 ? 켜 : 0;
+}
+/** 끝 줄이 '고름'일 때 — 끝에서부터 이어진 고름 · 기본(1단) 줄들 가운데 번갈아인 가장 긴 꼬리 → 켜 | 0.
+ *  기본 줄도 1단으로 친다 — [2단]만 누르고 1단 줄은 그냥 둬도(1 · 2 · 1 · 2) 된다. 자동 줄에서 멈춘다 */
+function 자동켜찾기(줄들) {
+  var 꼬리 = [];
+  if (!줄들.length || !줄들[줄들.length - 1].고름) return 0;
+  for (var i = 줄들.length - 1; i >= 0 && !줄들[i].자동; i--) 꼬리.unshift(줄들[i].고름 ? 줄들[i].단 : 1);
+  for (var s = 0; s + 3 <= 꼬리.length; s++) { var k = 반복켜(꼬리.slice(s)); if (k) return k; }
+  return 0;
+}
+/** 자동일 때 새 번호의 단 — 마지막 줄 단 % 켜 + 1(줄이 없으면 1) */
+function 다음단(줄들, 켜) { var x = 줄들[줄들.length - 1]; return x ? x.단 % 켜 + 1 : 1; }
 /** 보낼 묶음 — 한도 안에서 야드 차례대로(넘는 야드는 다음에). → {글, 야드들, n} */
 function 보낼묶음(야드들, id, 날) {
   var y = {}, 들 = [], n = 0, 글 = '';
@@ -217,7 +245,7 @@ var 텔레그램안 = !!(tg && tg.platform && tg.platform !== 'unknown');
 var 시험 = !텔레그램안;
 var 자료 = null;
 var 열쇠 = 'yard|v1';
-var 상태 = { 야드들: {}, 야드: '', 작지: '', 고른: -1, 보냄: {} };
+var 상태 = { 야드들: {}, 야드: '', 작지: '', 고른: -1, 보냄: {}, 자동: {} };   // 자동 = {야드: 켜}
 var 모든번호 = {};            // 번호 → 작지 줄
 var $ = function (id) { return document.getElementById(id); };
 
@@ -227,6 +255,7 @@ function 저장() {
 function 읽기() {
   try { var s = JSON.parse(localStorage.getItem(열쇠) || 'null'); if (s && s.야드들) 상태 = s; } catch (e) {}
   if (!상태.보냄) 상태.보냄 = {};
+  if (!상태.자동) 상태.자동 = {};
 }
 function 쓴곳() {
   var m = {};
@@ -315,7 +344,7 @@ function 차례그리기() {
     var tr = document.createElement('tr');
     if (i === 상태.고른) tr.className = 'cur';
     tr.innerHTML = '<td class="n">' + (i + 1) + '</td><td class="p">' + esc(x.p) + '</td><td class="d"><span class="dan ' +
-      (x.고름 ? 'set' : 'def') + '">' + x.단 + '단</span></td><td class="x">✕</td>';
+      (x.고름 ? 'set' : x.자동 ? 'auto' : 'def') + '">' + x.단 + '단' + (x.자동 ? ' <small>자동</small>' : '') + '</span></td><td class="x">✕</td>';
     tr.onclick = function (e) {
       if (e.target.className === 'x') { xs.splice(i, 1); 상태.고른 = Math.min(상태.고른, xs.length - 1); }
       else 상태.고른 = i;
@@ -323,7 +352,10 @@ function 차례그리기() {
     };
     t.appendChild(tr);
   });
-  var 고 = xs[상태.고른];
+  var 고 = xs[상태.고른], 켜 = 상태.자동[상태.야드];
+  $('autoLine').hidden = !켜;
+  if (켜) $('autoLine').textContent = '🔁 자동 번갈아(' + Array.apply(null, Array(켜)).map(function (_, i) { return i + 1; }).join(' · ') +
+    '단) — 다음 번호는 ' + 다음단(xs, 켜) + '단 · 단을 누르면 자동이 꺼져요';
   $('tierfor').textContent = 고 ? (상태.고른 + 1) + '번 ' + 고.p.slice(-4) : '고른 줄 없음';
   Array.prototype.forEach.call(document.querySelectorAll('.tier .k3'), function (b) {
     b.classList.toggle('on', !!고 && String(고.단) === b.getAttribute('data-t'));
@@ -344,16 +376,21 @@ function 누름(p) {
   if (!상태.야드) { 야드고르기열기(); return; }
   var 쓴 = 쓴곳();
   if (쓴[p]) { 알림(p + ' 는 이미 ' + 쓴[p] + ' 에 넣었어요'); return; }
-  var xs = 지금줄들();
-  xs.push({ p: p, 단: 1, 고름: false });
+  var xs = 지금줄들(), 켜 = 상태.자동[상태.야드];
+  xs.push(켜 ? { p: p, 단: 다음단(xs, 켜), 고름: false, 자동: true } : { p: p, 단: 1, 고름: false, 자동: false });
   상태.고른 = xs.length - 1;
   try { if (tg && tg.HapticFeedback) tg.HapticFeedback.selectionChanged(); } catch (e) {}
   저장(); 그리기();
 }
 function 단고름(t) {
-  var x = 지금줄들()[상태.고른];
+  var xs = 지금줄들(), x = xs[상태.고른];
   if (!x) return;
-  x.단 = t; x.고름 = true;
+  x.단 = t; x.고름 = true; x.자동 = false;
+  if (상태.자동[상태.야드]) delete 상태.자동[상태.야드];          // 자동 중에 다시 고르면 끔 — 그 뒤로는 1단
+  else if (상태.고른 === xs.length - 1) {                          // 끝 줄을 골랐고 고른 단이 한 번 되돌아왔으면 자동 켬
+    var 켜 = 자동켜찾기(xs);
+    if (켜) 상태.자동[상태.야드] = 켜;
+  }
   저장(); 그리기();
 }
 function 알림(글) { if (텔레그램안 && tg.showAlert) tg.showAlert(글); else alert(글); }
@@ -439,6 +476,12 @@ function 시작() {
     return;
   }
   if (시험) 열쇠 = 'yard|v1|시험';
+  if (시험 && 해시.shot === 'tier') {                                  // 시안 그림용 — 기본 · 고름 · 자동 · 끔
+    var 예 = [[1, 0, 0], [1, 0, 0], [1, 1, 0], [2, 1, 0], [1, 1, 0], [2, 0, 1], [1, 0, 1], [2, 0, 1], [2, 1, 0], [1, 0, 0]];
+    상태 = { 야드들: { 'B06C': 예.map(function (e, i) { return { p: '00X' + ('0' + (101 + i)).slice(-4), 단: e[0], 고름: !!e[1], 자동: !!e[2] }; }) },
+             야드: 'B06C', 작지: '', 고른: 9, 보냄: {}, 자동: {} };
+    try { localStorage.setItem(열쇠, JSON.stringify(상태)); } catch (e) {}
+  }
   자료.L.forEach(function (l) { l.번호들 = 범위풀기(l[3]).map(function (뒤) { return l[2] + 뒤; }); l.번호들.forEach(function (p) { 모든번호[p] = l; }); });
   읽기();
   var 지운 = 받은만큼();
@@ -449,7 +492,7 @@ function 시작() {
   if (노트.length) { $('note').hidden = false; $('note').textContent = 노트.join(' · '); }
   if (!상태.야드 && !Object.keys(상태.야드들).length) setTimeout(야드고르기열기, 0);
   Array.prototype.forEach.call(document.querySelectorAll('.tier .k3'), function (b) { b.onclick = function () { 단고름(parseInt(b.getAttribute('data-t'), 10)); }; });
-  $('undo').onclick = function () { var xs = 지금줄들(); xs.pop(); 상태.고른 = xs.length - 1; 저장(); 그리기(); };
+  $('undo').onclick = function () { var xs = 지금줄들(); xs.pop(); 상태.고른 = xs.length - 1; if (!xs.length) delete 상태.자동[상태.야드]; 저장(); 그리기(); };
   $('q').oninput = 판그리기;
   $('addTyped').onclick = function () { var p = 번호꼴($('q').value); if (p) { 누름(p); $('q').value = ''; 판그리기(); } };
   $('send').onclick = 보내기;
