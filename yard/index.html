@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>야드 등록</title>
+<!--
+  야드 등록 — 텔레그램 미니 앱 한 파일(서버 · 외부 자료 없음 — telegram-web-app.js 만, 텔레그램 밖이면 시험 모드)
+  · 봇이 관리자 자판의 web_app 단추 [📍 야드 등록] 으로 연다(sendData 는 이 단추로 연 앱에서만 된다).
+  · 단추 링크 #c=<base64url(UTF-8 JSON)> — #조각은 호스팅 서버로 가지 않는다.
+      {v:1, d:날, t:때, r:[받은 id …], L:[[작지, 규격, 접두, '0805-0884,0890'] …], n:G1 본수, m:못 실은 본수}
+      작지 · 규격 · 파이프 번호만 — 고객 · 도착지 · 무게는 넣지 않는다(봇 yard_tablet.조각)
+  · 야드를 고르고(＋ 야드) 쌓은 차례대로 번호를 누른다. 단은 기본 1단 — 고른 줄에 [1단][2단][3단] 을 누르면 그 단(번갈아 고르면
+    고른 대로). 줄을 눌러 다시 고르고 ✕ 로 뺀다. 찾기 칸에 뒤 번호 · 번호 전체(목록에 없는 옛 번호도 ＋ 넣기).
+  · 누를 때마다 태블릿(localStorage)에 저장 — 앱이 꺼져도 남는다. [📤 보내기] → sendData(JSON ≤ 4096바이트)
+      {k:'야드', v:1, id, d, y:{'B06C': '26K 0805 0806.2;26J 0101', …}, n} — 접두 한 번 + 뒤 넷(단이 1 이 아니면 '.단'), 누른 차례.
+    크면 야드마다 나눠 보낸다(이번에 못 보낸 야드는 남김). 보낸 야드는 봇이 받았다고(r) 알려 오면 지운다.
+  · 저장소 web/yard/index.html — 검수 미니 앱과 같은 GitHub Pages 저장소의 yard/ 에 올린다(docs/설계_검수_미니앱_올리기.md 끝).
+    봇 쪽은 yard_tablet.py(링크 · 받기) · 메인 📦 재고 › 📝 야드파일 만들기(yard_note_photo — 받은 목록을 사람이 보고 저장 · DB).
+  함수  셈: 해시읽기 · b64url풀기 · 범위풀기 · 번호꼴 · 보낼글 · 보낼묶음
+        화면: 그리기 · 칩그리기 · 판그리기 · 야드그리기 · 차례그리기 · 누름 · 단고름 · 야드고르기열기 · 보내기 · 시작
+-->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root {
+    --f-bg: #ffffff; --f-bg2: #eef1f5; --f-text: #15191e; --f-hint: #7b838e; --sep: rgba(20, 30, 45, .12);
+    --sel: #2c6bd4; --sel-bg: #e7effd; --used: #c9cfd7; --warn: #b45309; --warn-bg: #fff4dc; --ok: #1d9a52;
+  }
+  :root {
+    --bg: var(--tg-theme-secondary-bg-color, var(--f-bg2)); --card: var(--tg-theme-bg-color, var(--f-bg));
+    --text: var(--tg-theme-text-color, var(--f-text)); --hint: var(--tg-theme-hint-color, var(--f-hint));
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--bg); color: var(--text); font: 17px/1.3 "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+         display: flex; flex-direction: column; overflow: hidden; -webkit-user-select: none; user-select: none; }
+  .bar { display: flex; align-items: center; padding: 8px 12px; background: var(--card); border-bottom: 1px solid var(--sep); }
+  .bar > * + * { margin-left: 10px; }
+  .bar h1 { font-size: 21px; margin: 0; white-space: nowrap; }
+  .hint { color: var(--hint); font-size: 14px; }
+  .grow { flex: 1; }
+  .test { background: #efe9fb; color: #6b45c2; font-size: 13px; padding: 4px 8px; border-radius: 6px; }
+  .k3 { border: 1px solid #b9c2cd; border-bottom-width: 4px; border-radius: 10px; background: linear-gradient(#ffffff, #e9edf2);
+        color: #15191e; font: inherit; padding: 8px 12px; cursor: pointer; }
+  .k3:active { border-bottom-width: 1px; transform: translateY(3px); }
+  .k3.blue { background: linear-gradient(#4a9bf0, #2477d3); border-color: #1d5fa8; color: #fff; font-weight: bold; }
+  .k3.on { background: linear-gradient(#dbe8fb, #c3d7f6); border-color: #6d97d6; font-weight: bold; }
+  .k3:disabled { opacity: .45; }
+  .main { flex: 1; display: flex; min-height: 0; }
+  .left { flex: 62; display: flex; flex-direction: column; min-width: 0; min-height: 0; border-right: 1px solid var(--sep); }
+  .right { flex: 38; display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--card); }
+  .chips { display: flex; padding: 8px 10px; overflow-x: auto; background: var(--card); border-bottom: 1px solid var(--sep); }
+  .chips .k3 { white-space: nowrap; padding: 10px 14px; font-size: 16px; margin-right: 6px; flex: none; }
+  .chips small { color: var(--hint); font-weight: normal; }
+  .find { display: flex; align-items: center; padding: 6px 10px; }
+  .find > * + * { margin-left: 8px; }
+  .find input { font: inherit; font-size: 24px; width: 170px; padding: 8px 10px; border: 1px solid #b9c2cd; border-radius: 8px; }
+  .grid { flex: 1; overflow-y: auto; padding: 0 10px 14px; position: relative; }
+  .lot { margin: 14px 0 6px; font-size: 15px; color: var(--hint); }
+  .lot b { color: var(--text); }
+  .nums { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); grid-gap: 9px; }
+  .num { height: 82px; padding: 2px 0; text-align: center; position: relative; }
+  .num .p { display: block; font-size: 13px; color: var(--hint); padding-top: 4px; }
+  .num .t { display: block; font-size: 32px; font-weight: bold; letter-spacing: .5px; }
+  .num.used { background: #eef0f3; border-color: var(--used); color: #9aa3ad; }
+  .num.used .t { font-weight: normal; }
+  .num .badge { color: var(--sel); font-weight: bold; }
+  .empty { padding: 30px 10px; color: var(--hint); text-align: center; }
+  .yards { display: flex; flex-wrap: wrap; padding: 6px 10px 2px; border-bottom: 1px solid var(--sep); }
+  .yards .k3 { padding: 12px 16px; font-size: 18px; margin: 0 6px 6px 0; }
+  .yards .sent { color: var(--ok); font-size: 13px; }
+  .stackhead { padding: 6px 10px; font-size: 14px; color: var(--hint); display: flex; }
+  .stack { flex: 1; overflow-y: auto; position: relative; }
+  table { width: 100%; border-collapse: collapse; }
+  td { padding: 10px 10px; border-bottom: 1px solid var(--sep); font-size: 21px; }
+  td.n { width: 44px; color: var(--hint); text-align: right; font-size: 15px; }
+  td.p { font-weight: bold; letter-spacing: .5px; }
+  td.d { width: 84px; text-align: center; }
+  td.x { width: 64px; text-align: center; color: #c0392b; font-size: 26px; cursor: pointer; }
+  tr.cur td { background: var(--sel-bg); }
+  .dan { display: inline-block; min-width: 56px; padding: 5px 8px; border-radius: 14px; font-size: 16px; }
+  .dan.def { color: var(--hint); background: #f0f2f5; }
+  .dan.set { color: #fff; background: var(--sel); font-weight: bold; }
+  .tier { padding: 8px 10px; border-top: 1px solid var(--sep); display: flex; align-items: center; }
+  .tier .k3 { flex: 1; font-size: 24px; padding: 18px 0; margin-left: 8px; }
+  .foot { padding: 8px 10px 10px; display: flex; border-top: 1px solid var(--sep); }
+  .foot .k3 { padding: 18px 16px; font-size: 18px; }
+  .foot .send { flex: 1; font-size: 21px; margin-left: 8px; }
+  .note { margin: 0 10px 8px; padding: 8px 10px; border-radius: 8px; background: var(--warn-bg); color: var(--warn); font-size: 14px; }
+  .sheet-bg { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 60; background: rgba(0, 0, 0, .45);
+              display: flex; align-items: center; justify-content: center; }
+  .sheet { background: var(--card); border-radius: 14px; padding: 14px; width: 92%; max-width: 760px; max-height: 92%; overflow-y: auto; }
+  .sheet h2 { margin: 0 0 10px; font-size: 20px; }
+  .rowbtns { display: flex; flex-wrap: wrap; margin-bottom: 8px; }
+  .rowbtns .k3 { min-width: 64px; padding: 14px 10px; font-size: 20px; margin: 0 6px 6px 0; }
+  .ygrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); grid-gap: 6px; margin: 6px 0 10px; }
+  .ygrid .k3 { padding: 14px 0; font-size: 20px; }
+  .sheet .btns { display: flex; justify-content: flex-end; margin-top: 8px; }
+  .sheet .btns .k3 { padding: 14px 20px; font-size: 18px; margin-left: 8px; }
+  @media (orientation: portrait) {
+    #info { display: none; }                         /* 세로는 위 띠가 좁다 — 기본 1단은 차례 칸의 회색 '1단'으로 보인다 */
+    .main { flex-direction: column; }
+    .left { flex: 58; border-right: 0; border-bottom: 2px solid var(--sep); }
+    .right { flex: 42; }
+  }
+</style>
+</head>
+<body>
+<div class="bar">
+  <h1>📍 야드 등록</h1>
+  <span class="test" id="testStrip" hidden>🧪 시험 모드(텔레그램 밖) — 보내기는 화면에만</span>
+  <span class="hint" id="saved"></span>
+  <span class="grow"></span>
+  <span class="hint" id="info"></span>
+</div>
+<div class="main" id="main">
+  <div class="left">
+    <div class="chips" id="chips"></div>
+    <div class="find">
+      <span class="hint">찾기</span><input id="q" inputmode="text" autocomplete="off" placeholder="뒤 번호">
+      <button class="k3" id="addTyped" hidden></button>
+      <span class="grow"></span><span class="hint" id="cnt"></span>
+    </div>
+    <div class="note" id="note" hidden></div>
+    <div class="grid" id="grid"></div>
+  </div>
+  <div class="right">
+    <div class="yards" id="yards"></div>
+    <div class="stackhead"><span id="sh"></span><span class="grow"></span><span>단</span></div>
+    <div class="stack" id="stackBox"><table id="stack"></table></div>
+    <div class="tier">
+      <span class="hint" id="tierfor"></span>
+      <button class="k3" data-t="1">1단</button><button class="k3" data-t="2">2단</button><button class="k3" data-t="3">3단</button>
+    </div>
+    <div class="foot">
+      <button class="k3" id="undo">↩ 마지막 빼기</button>
+      <button class="k3 blue send" id="send">📤 보내기</button>
+    </div>
+  </div>
+</div>
+<div class="sheet-bg" id="sheetBg" hidden><div class="sheet" id="sheet"></div></div>
+<script>
+'use strict';
+/* ── 셈 ─────────────────────────────────────────────────────────────── */
+var 예시자료 = { v: 1, d: '시험', t: '시험', r: [], n: 46, m: 12, L: [
+  ['RB00X003', '000 X 00 X 12M', '00X', '0101-0130'],
+  ['RB00X002', '000 X 00 X 6M', '00X', '0201-0210,0215-0220'],
+  ['PB00W001', '000 X 00 X 12M', 'P00W', '0001-0004']] };
+var 보낼한도 = 4096;
+
+function 해시읽기() {
+  var h = '';
+  try { h = String(location.hash || ''); } catch (e) { h = ''; }
+  h = h.replace(/^#/, '');
+  var out = {};
+  h.split(/[&?]/).forEach(function (kv) {
+    var i = kv.indexOf('=');
+    if (i > 0) { var k = kv.slice(0, i); if (!(k in out)) out[k] = kv.slice(i + 1); }
+  });
+  return out;
+}
+function b64url풀기(s) {
+  s = String(s || '').replace(/-/g, '+').replace(/_/g, '/');
+  while (s.length % 4) s += '=';
+  var bin = atob(s), bytes = new Uint8Array(bin.length);
+  for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder('utf-8').decode(bytes);
+}
+function 바이트(글) { return new TextEncoder().encode(글).length; }
+function _s(v) { return v == null ? '' : String(v).trim(); }
+function 지금() { var d = new Date(); return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
+function esc(s) { return _s(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+/** '0805-0807,0890' → ['0805','0806','0807','0890'] */
+function 범위풀기(글) {
+  var out = [];
+  _s(글).split(',').forEach(function (조) {
+    if (!조) return;
+    var ab = 조.split('-'), a = parseInt(ab[0], 10), b = ab.length > 1 ? parseInt(ab[1], 10) : a;
+    for (var n = a; n <= b && out.length < 20000; n++) out.push(('000' + n).slice(-4));
+  });
+  return out;
+}
+/** 사람이 친 번호 전체 → '26K0805' | '' — 26K-805 · 26k0805 · P26G-32 */
+function 번호꼴(글) {
+  var t = _s(글).toUpperCase().replace(/\s+/g, '');
+  var m = /^([A-Z]*\d{2}[A-Z])[-_]?(\d{1,4})$/.exec(t);
+  return m ? m[1] + ('000' + m[2]).slice(-4) : '';
+}
+/** 한 야드 → '26K 0805 0806.2;26J 0101' — 누른 차례, 접두가 바뀌면 ';' */
+function 보낼글(줄들) {
+  var 조각 = [], 앞 = '';
+  줄들.forEach(function (x) {
+    var 접 = x.p.slice(0, -4), 뒤 = x.p.slice(-4) + (x.단 && x.단 !== 1 ? '.' + x.단 : '');
+    if (접 !== 앞) { 조각.push(접 + ' ' + 뒤); 앞 = 접; } else 조각[조각.length - 1] += ' ' + 뒤;
+  });
+  return 조각.join(';');
+}
+/** 보낼 묶음 — 한도 안에서 야드 차례대로(넘는 야드는 다음에). → {글, 야드들, n} */
+function 보낼묶음(야드들, id, 날) {
+  var y = {}, 들 = [], n = 0, 글 = '';
+  Object.keys(야드들).forEach(function (야) {
+    var xs = 야드들[야];
+    if (!xs.length) return;
+    y[야] = 보낼글(xs);
+    var 시험글 = JSON.stringify({ k: '야드', v: 1, id: id, d: 날, y: y, n: n + xs.length });
+    if (바이트(시험글) > 보낼한도) { delete y[야]; return; }
+    들.push(야); n += xs.length; 글 = 시험글;
+  });
+  return { 글: 글, 야드들: 들, n: n };
+}
+
+/* ── 화면 ─────────────────────────────────────────────────────────────── */
+var tg = (window.Telegram && window.Telegram.WebApp) || null;
+var 해시 = 해시읽기();
+var 텔레그램안 = !!(tg && tg.platform && tg.platform !== 'unknown');
+var 시험 = !텔레그램안;
+var 자료 = null;
+var 열쇠 = 'yard|v1';
+var 상태 = { 야드들: {}, 야드: '', 작지: '', 고른: -1, 보냄: {} };
+var 모든번호 = {};            // 번호 → 작지 줄
+var $ = function (id) { return document.getElementById(id); };
+
+function 저장() {
+  try { localStorage.setItem(열쇠, JSON.stringify(상태)); $('saved').textContent = '💾 태블릿에 저장 ' + 지금(); } catch (e) {}
+}
+function 읽기() {
+  try { var s = JSON.parse(localStorage.getItem(열쇠) || 'null'); if (s && s.야드들) 상태 = s; } catch (e) {}
+  if (!상태.보냄) 상태.보냄 = {};
+}
+function 쓴곳() {
+  var m = {};
+  Object.keys(상태.야드들).forEach(function (y) { 상태.야드들[y].forEach(function (x, i) { m[x.p] = y + '·' + (i + 1); }); });
+  return m;
+}
+function 지금줄들() { return 상태.야드들[상태.야드] || []; }
+
+function 그리기() { 칩그리기(); 판그리기(); 야드그리기(); 차례그리기(); }
+
+function 칩그리기() {
+  var 쓴 = 쓴곳(), 칩 = $('chips');
+  칩.innerHTML = '';
+  function 하나(글, 값) {
+    var b = document.createElement('button');
+    b.className = 'k3' + (상태.작지 === 값 ? ' on' : '');
+    b.innerHTML = 글;
+    b.onclick = function () { 상태.작지 = 값; 저장(); 그리기(); $('grid').scrollTop = 0; };
+    칩.appendChild(b);
+  }
+  하나('G1 전부 <small>' + 자료.n + '</small>', '');
+  자료.L.forEach(function (l) {
+    var 번호들 = l.번호들, 남 = 번호들.filter(function (p) { return !쓴[p]; }).length;
+    하나(esc(l[0]) + ' <small>' + esc(l[1]) + ' · ' + 남 + '/' + 번호들.length + '</small>', l[0] + '|' + l[2]);
+  });
+}
+function 판그리기() {
+  var 쓴 = 쓴곳(), q = _s($('q').value).toUpperCase(), g = $('grid'), 수 = 0;
+  g.innerHTML = '';
+  자료.L.forEach(function (l) {
+    if (상태.작지 && 상태.작지 !== l[0] + '|' + l[2]) return;
+    var 번호들 = l.번호들.filter(function (p) { return !q || p.slice(-4).indexOf(q) >= 0 || p.indexOf(q.replace('-', '')) >= 0; });
+    if (!번호들.length) return;
+    var h = document.createElement('div');
+    h.className = 'lot';
+    h.innerHTML = '<b>' + esc(l[0]) + '</b> · ' + esc(l[1]) + ' · ' + l.번호들.length + '본 (남은 ' +
+      l.번호들.filter(function (p) { return !쓴[p]; }).length + ')';
+    g.appendChild(h);
+    var box = document.createElement('div');
+    box.className = 'nums';
+    g.appendChild(box);
+    번호들.forEach(function (p) {
+      수++;
+      var b = document.createElement('button');
+      b.className = 'k3 num' + (쓴[p] ? ' used' : '');
+      b.innerHTML = (쓴[p] ? '<span class="p badge">' + esc(쓴[p]) + '</span>' : '<span class="p">' + esc(p.slice(0, -4)) + '</span>') +
+        '<span class="t">' + p.slice(-4).replace(/^0/, '') + '</span>';
+      b.onclick = function () { 누름(p); };
+      box.appendChild(b);
+    });
+  });
+  if (!수) { var e = document.createElement('div'); e.className = 'empty'; e.textContent = q ? "'" + q + "' 에 맞는 G1 번호가 없어요" : '보일 번호가 없어요'; g.appendChild(e); }
+  $('cnt').textContent = '보이는 번호 ' + 수;
+  var 친 = 번호꼴(q);
+  $('addTyped').hidden = !(친 && !모든번호[친] && !쓴[친]);
+  $('addTyped').textContent = '＋ ' + 친 + ' 넣기';
+}
+function 야드그리기() {
+  var ys = $('yards');
+  ys.innerHTML = '';
+  Object.keys(상태.야드들).forEach(function (y) {
+    var b = document.createElement('button');
+    b.className = 'k3' + (y === 상태.야드 ? ' on' : '');
+    b.innerHTML = esc(y) + '  ' + 상태.야드들[y].length + (보낸야드(y) ? ' <span class="sent">📤 보냄</span>' : '');
+    b.onclick = function () {
+      if (y === 상태.야드 && !상태.야드들[y].length) { delete 상태.야드들[y]; 상태.야드 = Object.keys(상태.야드들)[0] || ''; }
+      else { 상태.야드 = y; 상태.고른 = 상태.야드들[y].length - 1; }
+      저장(); 그리기();
+    };
+    ys.appendChild(b);
+  });
+  var 더 = document.createElement('button');
+  더.className = 'k3';
+  더.textContent = '＋ 야드';
+  더.onclick = 야드고르기열기;
+  ys.appendChild(더);
+}
+function 보낸야드(y) {
+  return Object.keys(상태.보냄).some(function (id) { return (상태.보냄[id].야드들 || []).indexOf(y) >= 0; });
+}
+function 차례그리기() {
+  var xs = 지금줄들(), t = $('stack');
+  $('sh').textContent = 상태.야드 ? 상태.야드 + ' 쌓은 차례 — ' + xs.length + '본' : '먼저 ＋ 야드 로 야드를 고르세요';
+  t.innerHTML = '';
+  xs.forEach(function (x, i) {
+    var tr = document.createElement('tr');
+    if (i === 상태.고른) tr.className = 'cur';
+    tr.innerHTML = '<td class="n">' + (i + 1) + '</td><td class="p">' + esc(x.p) + '</td><td class="d"><span class="dan ' +
+      (x.고름 ? 'set' : 'def') + '">' + x.단 + '단</span></td><td class="x">✕</td>';
+    tr.onclick = function (e) {
+      if (e.target.className === 'x') { xs.splice(i, 1); 상태.고른 = Math.min(상태.고른, xs.length - 1); }
+      else 상태.고른 = i;
+      저장(); 그리기();
+    };
+    t.appendChild(tr);
+  });
+  var 고 = xs[상태.고른];
+  $('tierfor').textContent = 고 ? (상태.고른 + 1) + '번 ' + 고.p.slice(-4) : '고른 줄 없음';
+  Array.prototype.forEach.call(document.querySelectorAll('.tier .k3'), function (b) {
+    b.classList.toggle('on', !!고 && String(고.단) === b.getAttribute('data-t'));
+    b.disabled = !고;
+  });
+  var 모두 = 0, 곳 = 0;
+  Object.keys(상태.야드들).forEach(function (y) { if (상태.야드들[y].length) { 모두 += 상태.야드들[y].length; 곳++; } });
+  $('send').textContent = '📤 보내기 — ' + 곳 + '곳 ' + 모두 + '본';
+  $('send').disabled = !모두;
+  $('undo').disabled = !xs.length;
+  var cur = t.querySelector('tr.cur'), 판 = $('stackBox');           // 목록 칸 안에서만 굴린다
+  if (cur) {
+    if (cur.offsetTop < 판.scrollTop) 판.scrollTop = cur.offsetTop;
+    else if (cur.offsetTop + cur.offsetHeight > 판.scrollTop + 판.clientHeight) 판.scrollTop = cur.offsetTop + cur.offsetHeight - 판.clientHeight;
+  }
+}
+function 누름(p) {
+  if (!상태.야드) { 야드고르기열기(); return; }
+  var 쓴 = 쓴곳();
+  if (쓴[p]) { 알림(p + ' 는 이미 ' + 쓴[p] + ' 에 넣었어요'); return; }
+  var xs = 지금줄들();
+  xs.push({ p: p, 단: 1, 고름: false });
+  상태.고른 = xs.length - 1;
+  try { if (tg && tg.HapticFeedback) tg.HapticFeedback.selectionChanged(); } catch (e) {}
+  저장(); 그리기();
+}
+function 단고름(t) {
+  var x = 지금줄들()[상태.고른];
+  if (!x) return;
+  x.단 = t; x.고름 = true;
+  저장(); 그리기();
+}
+function 알림(글) { if (텔레그램안 && tg.showAlert) tg.showAlert(글); else alert(글); }
+
+/* 야드 고르기 — 줄 글자 · 번호 · (B 줄은 쪽 A/C) · 직접 */
+function 야드고르기열기() {
+  var 줄 = 'B', 쪽 = 'C';
+  function 그림() {
+    var h = '<h2>야드 고르기</h2><div class="rowbtns">';
+    'ABCDEFZ'.split('').forEach(function (c) { h += '<button class="k3' + (c === 줄 ? ' on' : '') + '" data-line="' + c + '">' + c + '</button>'; });
+    h += '</div>';
+    if (줄 === 'B') {
+      h += '<div class="rowbtns">';
+      [['A', 'A 쪽'], ['C', 'C 쪽'], ['', '쪽 없음']].forEach(function (s) {
+        h += '<button class="k3' + (s[0] === 쪽 ? ' on' : '') + '" data-side="' + s[0] + '">' + s[1] + '</button>';
+      });
+      h += '</div>';
+    }
+    h += '<div class="ygrid">';
+    for (var n = 1; n <= 25; n++) {
+      var 이름 = 줄 + ('0' + n).slice(-2) + (줄 === 'B' ? 쪽 : '');
+      h += '<button class="k3" data-yard="' + 이름 + '">' + 이름 + '</button>';
+    }
+    h += '</div><div class="find"><span class="hint">직접</span><input id="yardTyped" placeholder="예: 2-A01" autocomplete="off">' +
+      '<button class="k3" id="yardTypedOk">넣기</button></div><div class="btns"><button class="k3" id="sheetX">닫기</button></div>';
+    $('sheet').innerHTML = h;
+    Array.prototype.forEach.call($('sheet').querySelectorAll('[data-line]'), function (b) { b.onclick = function () { 줄 = b.getAttribute('data-line'); 그림(); }; });
+    Array.prototype.forEach.call($('sheet').querySelectorAll('[data-side]'), function (b) { b.onclick = function () { 쪽 = b.getAttribute('data-side'); 그림(); }; });
+    Array.prototype.forEach.call($('sheet').querySelectorAll('[data-yard]'), function (b) { b.onclick = function () { 야드정함(b.getAttribute('data-yard')); }; });
+    $('yardTypedOk').onclick = function () { var v = _s($('yardTyped').value).toUpperCase(); if (v) 야드정함(v); };
+    $('sheetX').onclick = 닫기;
+  }
+  그림();
+  $('sheetBg').hidden = false;
+}
+function 야드정함(y) {
+  if (!상태.야드들[y]) 상태.야드들[y] = [];
+  상태.야드 = y; 상태.고른 = 상태.야드들[y].length - 1;
+  닫기(); 저장(); 그리기();
+}
+function 닫기() { $('sheetBg').hidden = true; $('sheet').innerHTML = ''; }
+
+/* 보내기 — sendData 는 앱을 닫는다. 보낸 야드는 봇이 받았다고(r) 알려 오면 지운다 */
+function 보내기() {
+  var id = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  var 묶 = 보낼묶음(상태.야드들, id, 자료.d);
+  if (!묶.n) { 알림('보낼 번호가 없어요'); return; }
+  var 남은 = Object.keys(상태.야드들).filter(function (y) { return 상태.야드들[y].length && 묶.야드들.indexOf(y) < 0; });
+  var 묻 = 묶.야드들.join(' · ') + ' — ' + 묶.n + '본을 보낼까요?' +
+    (남은.length ? '\n(목록이 커서 ' + 남은.join(' · ') + ' 는 다음에 보내요)' : '') + '\n메인에서 한 번 보고 DB 에 넣어요.';
+  var 가 = function (ok) {
+    if (!ok) return;
+    상태.보냄[id] = { 때: Date.now(), 야드들: 묶.야드들 };
+    저장();
+    if (텔레그램안) { tg.sendData(묶.글); return; }          // 키보드 단추로 연 앱이면 여기서 닫힌다
+    alert('🧪 시험 — 실제로는 텔레그램으로 보냅니다(' + 바이트(묶.글) + ' / ' + 보낼한도 + '바이트)\n\n' + 묶.글.slice(0, 800));
+    그리기();
+  };
+  if (텔레그램안 && tg.showConfirm) tg.showConfirm(묻, 가); else 가(confirm(묻));
+}
+/** 링크 r(봇이 받은 id) — 그 보냄의 야드들을 지운다. 사흘 지난 보냄 기록은 그냥 지운다(야드 목록은 남김) */
+function 받은만큼() {
+  var 받음 = 자료.r || [], 지운 = [];
+  Object.keys(상태.보냄).forEach(function (id) {
+    if (받음.indexOf(id) >= 0) {
+      (상태.보냄[id].야드들 || []).forEach(function (y) { if (상태.야드들[y]) { delete 상태.야드들[y]; 지운.push(y); } });
+      delete 상태.보냄[id];
+    } else if (Date.now() - (상태.보냄[id].때 || 0) > 3 * 86400 * 1000) delete 상태.보냄[id];
+  });
+  if (상태.야드 && !상태.야드들[상태.야드]) { 상태.야드 = Object.keys(상태.야드들)[0] || ''; 상태.고른 = -1; }
+  return 지운;
+}
+
+function 시작() {
+  var 오류 = '';
+  if (해시.c) { try { 자료 = JSON.parse(b64url풀기(해시.c)); } catch (e) { 오류 = e.message; } }
+  if (!자료 && 시험) 자료 = JSON.parse(JSON.stringify(예시자료));
+  if (텔레그램안) { try { tg.ready(); tg.expand(); } catch (e) {} }
+  $('testStrip').hidden = !시험;
+  if (!자료 || !자료.L) {
+    $('main').innerHTML = '<div class="empty">📍 G1 목록이 없어요' + (오류 ? '(' + esc(오류) + ')' : '') +
+      "<br>봇 대화 아래 <b>[📍 야드 등록]</b> 단추로 열어 주세요 — 먼저 봇에 '야드'</div>";
+    return;
+  }
+  if (시험) 열쇠 = 'yard|v1|시험';
+  자료.L.forEach(function (l) { l.번호들 = 범위풀기(l[3]).map(function (뒤) { return l[2] + 뒤; }); l.번호들.forEach(function (p) { 모든번호[p] = l; }); });
+  읽기();
+  var 지운 = 받은만큼();
+  $('info').textContent = (자료.t ? 자료.t + ' 기준 · ' : '') + '쌓은 차례대로 누르세요 · 단을 안 고르면 1단';
+  var 노트 = [];
+  if (지운.length) 노트.push('📥 봇이 받았어요 — ' + 지운.join(' · ') + ' 목록을 비웠어요');
+  if (자료.m) 노트.push('옛 작지 ' + 자료.m + '본은 목록에 없어요 — 찾기 칸에 번호 전체(예: 26G-145)를 치고 ＋ 넣기');
+  if (노트.length) { $('note').hidden = false; $('note').textContent = 노트.join(' · '); }
+  if (!상태.야드 && !Object.keys(상태.야드들).length) setTimeout(야드고르기열기, 0);
+  Array.prototype.forEach.call(document.querySelectorAll('.tier .k3'), function (b) { b.onclick = function () { 단고름(parseInt(b.getAttribute('data-t'), 10)); }; });
+  $('undo').onclick = function () { var xs = 지금줄들(); xs.pop(); 상태.고른 = xs.length - 1; 저장(); 그리기(); };
+  $('q').oninput = 판그리기;
+  $('addTyped').onclick = function () { var p = 번호꼴($('q').value); if (p) { 누름(p); $('q').value = ''; 판그리기(); } };
+  $('send').onclick = 보내기;
+  $('sheetBg').onclick = function (e) { if (e.target === $('sheetBg')) 닫기(); };
+  저장();
+  그리기();
+}
+시작();
+</script>
+</body>
+</html>
