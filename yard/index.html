@@ -8,7 +8,10 @@
   야드 등록 — 텔레그램 미니 앱 한 파일(서버 · 외부 자료 없음 — telegram-web-app.js 만, 텔레그램 밖이면 시험 모드)
   · 봇이 관리자 자판의 web_app 단추 [📍 야드 등록] 으로 연다(sendData 는 이 단추로 연 앱에서만 된다).
   · 단추 링크 #c=<base64url(UTF-8 JSON)> — #조각은 호스팅 서버로 가지 않는다.
-      {v:1, d:날, t:때, r:[받은 id …], L:[[작지, 규격, 접두, '0805-0884,0890'] …], n:G1 본수, m:못 실은 본수}
+      {v:1, d:날, t:때, r:[받은 id …], L:[[작지, 규격, 접두, '0805-0884,0890'] …], n:G1 본수, m:못 실은 본수,
+       Y:{'B06C': '26K 0617 0576 0608.2'}(봇에 '야드 B06C' — 그 야드의 지금 DB 더미, 회색 동그라미), Yx:[너무 커 뺀 야드]}
+    1-1 이 맨 앞(그림 왼쪽)이라 새로 누른 것이 앞(왼쪽)부터, 회색 DB 더미는 그 뒤로 밀려 그린다. 앞에 추가로 쌓았으면 그 야드 전체를
+    다시 조사해 순번을 다시 매겨야 해서(2026-11-17) 번호판 맨 위에 그 야드 DB 번호를 단추로 — 앞에서부터 모두 누르면 목록이 그 야드 전부.
       작지 · 규격 · 파이프 번호만 — 고객 · 도착지 · 무게는 넣지 않는다(봇 yard_tablet.조각)
   · 야드를 고르고(＋ 야드) 쌓은 차례대로 번호를 누른다. 단은 기본 1단(회색) — 고른 줄에 [1단][2단][3단] 을 누르면 그 단(파랑).
     단이 1 · 2 · 1 처럼 한 번 되돌아오면(기본 1단 줄도 1 로 침 · 3단은 1 · 2 · 3 · 1) **자동 번갈아** — 다음 번호부터 단이 저절로(하늘색 '자동'), 다시 단을
@@ -19,7 +22,9 @@
     크면 야드마다 나눠 보낸다(이번에 못 보낸 야드는 남김). 보낸 야드는 봇이 받았다고(r) 알려 오면 지운다.
   · 저장소 web/yard/index.html — 검수 미니 앱과 같은 GitHub Pages 저장소의 yard/ 에 올린다(docs/설계_검수_미니앱_올리기.md 끝).
     봇 쪽은 yard_tablet.py(링크 · 받기) · 메인 📦 재고 › 📝 야드파일 만들기(yard_note_photo — 받은 목록을 사람이 보고 저장 · DB).
-  함수  셈: 해시읽기 · b64url풀기 · 범위풀기 · 번호꼴 · 보낼글 · 보낼묶음 · 반복켜 · 자동켜찾기 · 다음단
+  · 쌓은 모양 그림(2026-11-17 시안 D) — 차례 목록 위에 파이프 단면: 1단은 바닥 줄(누른 차례), 2단은 1단 둘 사이 홈, 3단은 2단 사이 홈.
+    파랑 1단 · 노랑 2단 · 초록 3단 · 빨강 테 = 마지막 · 점선 = 다음 자리(자동이면 그 단). 동그라미를 누르면 그 줄을 고른다.
+  함수  셈: 해시읽기 · b64url풀기 · 범위풀기 · 번호꼴 · 보낼글 · 더미풀기 · 보낼묶음 · 반복켜 · 자동켜찾기 · 다음단 · 쌓은자리
         화면: 그리기 · 칩그리기 · 판그리기 · 야드그리기 · 차례그리기 · 누름 · 단고름 · 야드고르기열기 · 보내기 · 시작
 -->
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -73,6 +78,10 @@
   .yards .k3 { padding: 12px 16px; font-size: 18px; margin: 0 6px 6px 0; }
   .yards .sent { color: var(--ok); font-size: 13px; }
   .stackhead { padding: 6px 10px; font-size: 14px; color: var(--hint); display: flex; }
+  .pic { background: #f8fafc; border-bottom: 1px solid var(--sep); }
+  .pic .t { padding: 4px 10px 0; font-size: 13px; color: var(--hint); }
+  .picbox { overflow-x: auto; overflow-y: hidden; padding: 0 6px; }
+  .picbox svg { display: block; }
   .stack { flex: 1; overflow-y: auto; position: relative; }
   table { width: 100%; border-collapse: collapse; }
   td { padding: 10px 10px; border-bottom: 1px solid var(--sep); font-size: 21px; }
@@ -106,8 +115,8 @@
   @media (orientation: portrait) {
     #info { display: none; }                         /* 세로는 위 띠가 좁다 — 기본 1단은 차례 칸의 회색 '1단'으로 보인다 */
     .main { flex-direction: column; }
-    .left { flex: 58; border-right: 0; border-bottom: 2px solid var(--sep); }
-    .right { flex: 42; }
+    .left { flex: 50; border-right: 0; border-bottom: 2px solid var(--sep); }
+    .right { flex: 50; }
   }
 </style>
 </head>
@@ -132,6 +141,7 @@
   </div>
   <div class="right">
     <div class="yards" id="yards"></div>
+    <div class="pic" id="pic" hidden><div class="t" id="picT"></div><div class="picbox" id="picBox"></div></div>
     <div class="stackhead"><span id="sh"></span><span class="grow"></span><span>단</span></div>
     <div class="stack" id="stackBox"><table id="stack"></table></div>
     <div class="autoline" id="autoLine" hidden></div>
@@ -224,6 +234,28 @@ function 자동켜찾기(줄들) {
 }
 /** 자동일 때 새 번호의 단 — 마지막 줄 단 % 켜 + 1(줄이 없으면 1) */
 function 다음단(줄들, 켜) { var x = 줄들[줄들.length - 1]; return x ? x.단 % 켜 + 1 : 1; }
+/** 쌓은 모양 자리 — 줄들(누른 차례)을 단마다 왼쪽부터: 1단 k 번째는 x = k, 2단 k 번째는 1단 k · k+1 사이(x = k + .5),
+ *  3단 k 번째는 2단 k · k+1 사이(x = k + 1). → [{i(줄 자리), 단, x, 줄수}] (x 는 동그라미 지름 단위) */
+function 쌓은자리(줄들, 앞수) {
+  var 수 = {}, out = [];
+  Object.keys(앞수 || {}).forEach(function (k) { 수[k] = 앞수[k]; });     // DB 더미 뒤로 이어 쌓기(단마다 몇 본 있었나)
+  줄들.forEach(function (r, i) {
+    var 단 = Math.max(1, Math.min(3, r.단 || 1)), k = 수[단] || 0;
+    수[단] = k + 1;
+    out.push({ i: i, 단: 단, x: k + (단 - 1) * 0.5 });
+  });
+  return out;
+}
+/** '26K 0617 0576.2;26J 0101' → [{p, 단}] — 보낼글 의 거꾸로(봇의 DB 더미 Y) */
+function 더미풀기(글) {
+  var out = [];
+  _s(글).split(';').forEach(function (조) {
+    var 낱 = 조.trim().split(/\s+/), 접 = 낱.shift();
+    if (!접) return;
+    낱.forEach(function (x) { var ab = x.split('.'); if (/^\d{4}$/.test(ab[0])) out.push({ p: 접 + ab[0], 단: ab[1] ? parseInt(ab[1], 10) : 1 }); });
+  });
+  return out;
+}
 /** 보낼 묶음 — 한도 안에서 야드 차례대로(넘는 야드는 다음에). → {글, 야드들, n} */
 function 보낼묶음(야드들, id, 날) {
   var y = {}, 들 = [], n = 0, 글 = '';
@@ -247,6 +279,7 @@ var 자료 = null;
 var 열쇠 = 'yard|v1';
 var 상태 = { 야드들: {}, 야드: '', 작지: '', 고른: -1, 보냄: {}, 자동: {} };   // 자동 = {야드: 켜}
 var 모든번호 = {};            // 번호 → 작지 줄
+var 더미 = {};                // 야드 → [{p, 단}] — 봇이 실어 준 지금 DB 더미(태블릿에 저장 안 함 — 늘 링크의 것)
 var $ = function (id) { return document.getElementById(id); };
 
 function 저장() {
@@ -264,7 +297,54 @@ function 쓴곳() {
 }
 function 지금줄들() { return 상태.야드들[상태.야드] || []; }
 
-function 그리기() { 칩그리기(); 판그리기(); 야드그리기(); 차례그리기(); }
+function 그리기() { 칩그리기(); 판그리기(); 야드그리기(); 그림그리기(); 차례그리기(); }   // 그림 먼저 — 목록 굴림이 자리를 맞게 잼
+
+/** 쌓은 모양 — 파이프 단면 동그라미(가로로 넘치면 판 안에서 굴려 마지막이 보이게) */
+function 그림그리기() {
+  var xs = 지금줄들(), 켜 = 상태.자동[상태.야드], 쓴 = 쓴곳();
+  var 옛 = (더미[상태.야드] || []).filter(function (r) { return !쓴[r.p]; });   // 다시 눌러 목록에 넣은 DB 번호는 회색에서 빠짐
+  $('pic').hidden = !xs.length && !옛.length;
+  if (!xs.length && !옛.length) return;
+  var R = 27, 높 = R * 1.72, 자리들 = 쌓은자리(xs), 색 = { 1: ['#dbeafe', '#2c6bd4'], 2: ['#fde68a', '#b45309'], 3: ['#dcfce7', '#16a34a'] };
+  var 다음 = 켜 ? 다음단(xs, 켜) : 1, 수 = {};
+  자리들.forEach(function (a) { 수[a.단] = (수[a.단] || 0) + 1; });
+  var 다음x = (수[다음] || 0) + (다음 - 1) * 0.5;
+  var 앞수 = {};                                                      // 회색은 새 것 뒤로 — 다음 자리 단은 한 칸 더 비움
+  Object.keys(수).forEach(function (k) { 앞수[k] = 수[k]; });
+  앞수[다음] = (앞수[다음] || 0) + 1;
+  var 옛자리 = 쌓은자리(옛, 앞수), 옛수 = {};
+  옛자리.forEach(function (a) { 옛수[a.단] = (옛수[a.단] || 0) + 1; });
+  var 끝x = 다음x;
+  자리들.concat(옛자리).forEach(function (a) { if (a.x > 끝x) 끝x = a.x; });
+  var 위단 = 다음;
+  자리들.concat(옛자리).forEach(function (a) { if (a.단 > 위단) 위단 = a.단; });           // 있는 단(과 다음 자리)만큼만 높이
+  var W = Math.max(300, Math.round((끝x + 1) * 2 * R + 16)), H = Math.round(2 * R + (위단 - 1) * 높 + 12), 바닥 = H - 6;
+  var cx = function (x) { return 8 + R + x * 2 * R; }, cy = function (단) { return 바닥 - R - (단 - 1) * 높; };
+  var h = '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '"><line x1="0" y1="' + 바닥 + '" x2="' + W + '" y2="' + 바닥 +
+    '" stroke="#94a3b8" stroke-width="3"/>';
+  옛자리.forEach(function (a) {                                        // DB 더미 — 회색
+    h += '<circle cx="' + cx(a.x) + '" cy="' + cy(a.단) + '" r="' + (R - 2) + '" fill="#e5e7eb" stroke="#9ca3af" stroke-width="2"/>' +
+      '<text x="' + cx(a.x) + '" y="' + (cy(a.단) + 6) + '" font-size="16" text-anchor="middle" fill="#4b5563">' + esc(옛[a.i].p.slice(-3)) + '</text>';
+  });
+  자리들.forEach(function (a) {
+    var r = xs[a.i], 끝 = a.i === xs.length - 1, 고 = a.i === 상태.고른;
+    h += '<g data-i="' + a.i + '" style="cursor:pointer"><circle cx="' + cx(a.x) + '" cy="' + cy(a.단) + '" r="' + (R - 2) + '" fill="' + 색[a.단][0] +
+      '" stroke="' + (끝 ? '#dc2626' : 색[a.단][1]) + '" stroke-width="' + (끝 || 고 ? 4 : 2.5) + '"' + (r.자동 ? ' stroke-dasharray="7 3"' : '') + '/>' +
+      '<text x="' + cx(a.x) + '" y="' + (cy(a.단) + 6) + '" font-size="17" font-weight="bold" text-anchor="middle" fill="#15191e">' +
+      esc(r.p.slice(-3)) + '</text></g>';
+  });
+  h += '<circle cx="' + cx(다음x) + '" cy="' + cy(다음) + '" r="' + (R - 2) + '" fill="none" stroke="#94a3b8" stroke-width="2" stroke-dasharray="6 5"/>' +
+    '<text x="' + cx(다음x) + '" y="' + (cy(다음) + 5) + '" font-size="12" fill="#64748b" text-anchor="middle">다음</text></svg>';
+  $('picBox').innerHTML = h;
+  var 옛단 = Object.keys(옛수).sort().map(function (k) { return k + '단 ' + 옛수[k]; }).join(' · ');
+  $('picT').textContent = 상태.야드 + ' 쌓은 모양(왼쪽 = 앞 · 1-1) — ' + (옛.length ? '회색 = 목록에 없는 DB ' + 옛.length + '본(' + 옛단 + ') · ' : '') +
+    '파랑 1단 · 노랑 2단 · 초록 3단 · 점선 테 = 자동 · 점선 동그라미 = 다음 자리(' + 다음 + '단)';
+  Array.prototype.forEach.call($('picBox').querySelectorAll('g[data-i]'), function (g) {
+    g.onclick = function () { 상태.고른 = parseInt(g.getAttribute('data-i'), 10); 저장(); 그리기(); };
+  });
+  var 판 = $('picBox');
+  판.scrollLeft = Math.max(0, cx(다음x) + R * 3 - 판.clientWidth);   // 다음 자리(와 그 뒤 회색 조금)가 보이게
+}
 
 function 칩그리기() {
   var 쓴 = 쓴곳(), 칩 = $('chips');
@@ -285,6 +365,25 @@ function 칩그리기() {
 function 판그리기() {
   var 쓴 = 쓴곳(), q = _s($('q').value).toUpperCase(), g = $('grid'), 수 = 0;
   g.innerHTML = '';
+  var 옛 = (더미[상태.야드] || []).filter(function (r) { return !q || r.p.slice(-4).indexOf(q) >= 0; });
+  if (옛.length) {                                                     // 지금 야드의 DB 번호 — 야드 전체를 다시 조사할 때 앞에서부터 눌러 넣기
+    var oh = document.createElement('div');
+    oh.className = 'lot';
+    oh.innerHTML = '<b>🗂 ' + esc(상태.야드) + ' 지금 DB ' + (더미[상태.야드] || []).length + '본</b> · 앞에 추가했으면 야드 전체를 다시 — 앞에서부터 새 것 · 이 번호까지 모두 누르기';
+    g.appendChild(oh);
+    var obox = document.createElement('div');
+    obox.className = 'nums';
+    g.appendChild(obox);
+    옛.forEach(function (r) {
+      수++;
+      var b = document.createElement('button');
+      b.className = 'k3 num' + (쓴[r.p] ? ' used' : '');
+      b.innerHTML = (쓴[r.p] ? '<span class="p badge">' + esc(쓴[r.p]) + '</span>' : '<span class="p">DB ' + r.단 + '단</span>') +
+        '<span class="t">' + r.p.slice(-4).replace(/^0/, '') + '</span>';
+      b.onclick = function () { 누름(r.p); };
+      obox.appendChild(b);
+    });
+  }
   자료.L.forEach(function (l) {
     if (상태.작지 && 상태.작지 !== l[0] + '|' + l[2]) return;
     var 번호들 = l.번호들.filter(function (p) { return !q || p.slice(-4).indexOf(q) >= 0 || p.indexOf(q.replace('-', '')) >= 0; });
@@ -319,7 +418,8 @@ function 야드그리기() {
   Object.keys(상태.야드들).forEach(function (y) {
     var b = document.createElement('button');
     b.className = 'k3' + (y === 상태.야드 ? ' on' : '');
-    b.innerHTML = esc(y) + '  ' + 상태.야드들[y].length + (보낸야드(y) ? ' <span class="sent">📤 보냄</span>' : '');
+    b.innerHTML = esc(y) + '  ' + 상태.야드들[y].length + (더미[y] ? ' <span class="hint">· DB ' + 더미[y].length + '</span>' : '') +
+      (보낸야드(y) ? ' <span class="sent">📤 보냄</span>' : '');
     b.onclick = function () {
       if (y === 상태.야드 && !상태.야드들[y].length) { delete 상태.야드들[y]; 상태.야드 = Object.keys(상태.야드들)[0] || ''; }
       else { 상태.야드 = y; 상태.고른 = 상태.야드들[y].length - 1; }
@@ -485,10 +585,18 @@ function 시작() {
   자료.L.forEach(function (l) { l.번호들 = 범위풀기(l[3]).map(function (뒤) { return l[2] + 뒤; }); l.번호들.forEach(function (p) { 모든번호[p] = l; }); });
   읽기();
   var 지운 = 받은만큼();
+  Object.keys(자료.Y || {}).forEach(function (y) {                      // 봇이 실어 준 DB 더미 — 그 야드 탭을 만들어 둔다
+    더미[y] = 더미풀기(자료.Y[y]);
+    if (!상태.야드들[y]) 상태.야드들[y] = [];
+    if (!상태.야드) { 상태.야드 = y; 상태.고른 = -1; }
+  });
   $('info').textContent = (자료.t ? 자료.t + ' 기준 · ' : '') + '쌓은 차례대로 누르세요 · 단을 안 고르면 1단';
   var 노트 = [];
   if (지운.length) 노트.push('📥 봇이 받았어요 — ' + 지운.join(' · ') + ' 목록을 비웠어요');
   if (자료.m) 노트.push('옛 작지 ' + 자료.m + '본은 목록에 없어요 — 찾기 칸에 번호 전체(예: 26G-145)를 치고 ＋ 넣기');
+  if (자료.Y) 노트.push('🗂 DB 더미 ' + Object.keys(자료.Y).map(function (y) { return y + ' ' + 더미[y].length + '본'; }).join(' · ') +
+    ' — 회색 · 1-1 이 맨 앞(왼쪽)이라 앞에 추가했으면 그 야드 전체를 다시 조사(번호판 맨 위 DB 번호까지 앞에서부터 누르기)');
+  if (자료.Yx && 자료.Yx.length) 노트.push(자료.Yx.join(' · ') + ' 더미는 너무 커서 못 실었어요');
   if (노트.length) { $('note').hidden = false; $('note').textContent = 노트.join(' · '); }
   if (!상태.야드 && !Object.keys(상태.야드들).length) setTimeout(야드고르기열기, 0);
   Array.prototype.forEach.call(document.querySelectorAll('.tier .k3'), function (b) { b.onclick = function () { 단고름(parseInt(b.getAttribute('data-t'), 10)); }; });
