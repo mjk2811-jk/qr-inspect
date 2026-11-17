@@ -16,11 +16,14 @@
       {k:'검수', v, id, 검수:'7-6610', 날, sid, 끝, qr:[QR 글 그대로 · 찍은 차례], 눈:[번호], 손:[번호], 기타:[글], n, 때}
   · QR 글 가르기(위에서부터): '*P…' 관 · 'N-차4' · 'N_차4_…' 상차요청서(차 확인만, 안 보냄) · 첫 낱말이 번호 꼴 → 번호 · 그 밖 기타
   · 찍은 차례는 폰(localStorage)에 차마다 — 보낸 뒤에도 봇이 받았다고(받음) 알려 올 때까지, 길어야 12시간.
+  · 🚛 실은 모양(2026-11-17) — 링크 자리 {W, H, P:[[x, y, 지름, 본수]…]}(봇이 상차 그림 셈으로 — cm · 싣는 차례, 숫자만)로 뒤에서 본
+    단면을 그리고, 확인한 차례(봇 ✓ → 찍고 · 눈 · 손 · ⚠ 예정 아님)대로 자리를 채운다(6M 은 한 자리 앞 · 뒤 두 본). 어느 번호가
+    어느 자리인지는 모른다 — 동그라미를 누르면 '다음 자리'로 정해 다음 확인이 거기 들어간다(폰에만 남음). 봇에는 안 보낸다.
   · 텔레그램 밖에서 열면 시험 모드(예시 차 · 🧪 가짜 QR 창). #shot=open|scan 은 시안 그림용.
   · 저장소 web/inspect/index.html — 올리는 법 docs/설계_검수_미니앱_올리기.md(GitHub Pages). 봇 쪽은 inspect_miniapp.py(바닥) · telegram_inspect.미니앱받기.
   함수  셈: 해시읽기 · b64url풀기 · b64url짓기 · 계획다듬기 · 번호꼴 · 가르기 · 관찾기 · 새판 · 찍기셈 · 눈셈 · 손셈 · 빼기셈 ·
-            다시돌리기 · 셈 · 보낼것 · 받은만큼
-        화면: 그리기 · 목록그리기 · 받은글 · 찍기열기 · 고르기 · 보내기누름 · 시작
+            다시돌리기 · 셈 · 보낼것 · 받은만큼 · 채움차례 · 자리채우기
+        화면: 그리기 · 목록그리기 · 트럭그리기 · 받은글 · 찍기열기 · 고르기 · 보내기누름 · 시작
 -->
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
@@ -128,6 +131,10 @@
     font-weight: 700; text-transform: none; }
   .sec-h .r { margin-left: auto; color: var(--hint); font-weight: 500; font-size: 12px; }
   .card { background: var(--card); border-radius: 14px; overflow: hidden; }
+  .truck { padding: 8px 10px 10px; }
+  .truck svg { display: block; width: 100%; max-width: 560px; height: auto; margin: 0 auto; }
+  .truck .leg { font-size: 12px; color: var(--hint); margin-top: 4px; line-height: 1.6; }
+  .truck .leg i { display: inline-block; width: 10px; height: 10px; border-radius: 5px; margin: 0 3px 0 8px; vertical-align: -1px; }
   .eye-guide { padding: 10px 12px; background: var(--eye-bg); color: var(--eye); font-size: 13px; line-height: 1.45; }
   .out-hint { padding: 8px 12px; border-top: 1px solid var(--sep); background: var(--eye-bg); color: var(--eye); font-size: 12.5px; }
   .tier { padding: 6px 12px 4px; font-size: 12px; font-weight: 700; color: var(--hint); background: var(--bg);
@@ -256,6 +263,10 @@
       <button class="btn-eye" id="btnEye" type="button">👁 눈으로 확인</button>
     </div>
 
+    <div class="sec" id="truckSec" hidden>
+      <div class="sec-h"><span>🚛 실은 모양</span><span class="r" id="truckR"></span></div>
+      <div class="card truck" id="truckCard"></div>
+    </div>
     <div class="sec">
       <div class="sec-h"><span id="planH">예정</span><span class="r" id="planR"></span></div>
       <div class="card" id="planCard"></div>
@@ -336,7 +347,8 @@ var 예시계획 = {
     { p: '26J0305', b: '202609300305', 단: 1 }, { p: '26J0306', b: '202609300306', 단: 2 },
     { p: '26J0307', b: '202609300307', 단: 2 }, { p: '26J0308', b: '', 단: 3 }
   ],
-  이미: [], 받음: []
+  이미: [], 받음: [],
+  자리: { W: 245, H: 90, P: [[38, 38, 76, 1], [114, 38, 76, 1], [191, 38, 76, 1], [55, 113, 76, 1], [131, 113, 76, 1], [207, 113, 76, 1]] }
 };
 var 예시QR = [
   '*P2026093003031 1  3207.95904', '*P2026093003041 1  3208.11', '*P2026093003111 1  3206.88',
@@ -384,9 +396,15 @@ function 계획다듬기(x) {
   }).filter(function (e) { return e.p; });
   var 순번 = _s(x.순번).toUpperCase(), 차4 = _s(x.차4);
   if (!순번 || !차4) throw new Error('순번 · 차4 없음');
+  var 자리 = null;                                       // 🚛 실은 모양 — 숫자만 [[x, y, 지름, 본수]…](cm)
+  if (x.자리 && Array.isArray(x.자리.P)) {
+    var P = x.자리.P.filter(function (a) { return Array.isArray(a) && a.length >= 3 && a.slice(0, 3).every(function (v) { return isFinite(v); }); })
+      .map(function (a) { return [+a[0], +a[1], +a[2], Math.max(1, Math.min(2, parseInt(a[3], 10) || 1))]; });
+    if (P.length) 자리 = { W: +x.자리.W || 245, H: +x.자리.H || 0, P: P };
+  }
   return { 순번: 순번, 차4: 차4, 날: _s(x.날), sid: _s(x.sid),      // 차 머리는 '7번 6610' 만(차번호 · 도착지는 안 받는다)
            예정: 예정, 이미: (x.이미 || []).map(function (p) { return _s(p).toUpperCase(); }).filter(Boolean),
-           받음: (x.받음 || []).map(_s).filter(Boolean) };
+           받음: (x.받음 || []).map(_s).filter(Boolean), 자리: 자리 };
 }
 
 var 파이프꼴 = /^[0-9A-Za-z]{6,9}(?:-\d{1,2})?$/;
@@ -525,6 +543,51 @@ function 다시돌리기(계획, 사건들) {
     if (바뀜) 판.사건.push(ev);
   });
   return 판;
+}
+
+/** 확인한 차례 — 봇 ✓(이미)를 먼저, 그다음 사건 차례(QR ✓ · 눈 · 손 · ⚠ 예정 아님). 눈 취소 · 빼기는 빠지고, 눈 → QR 은 그 자리 그대로.
+ *  → [{key, p, how: 봇 | QR | 눈 | 손 | 밖}] */
+function 채움차례(계획, 사건들) {
+  var 판2 = 새판(계획), out = [];
+  계획.예정.forEach(function (e) { if (판2.끝냄[e.p]) out.push({ key: 'b:' + e.p, p: e.p, how: '봇' }); });
+  function 밖끝(n) { if (판2.밖.length > n) { var o = 판2.밖[판2.밖.length - 1]; out.push({ key: o.key, p: o.p || o.바코드, how: '밖' }); } }
+  (사건들 || []).forEach(function (ev) {
+    var n = 판2.밖.length, r;
+    if (ev.t === 'qr') {
+      r = 찍기셈(판2, ev.raw);
+      if (!r.바뀜) return;
+      if (r.결과 === '✓') {
+        var 있 = out.filter(function (x) { return x.p === r.p; })[0];
+        if (있) 있.how = 'QR'; else out.push({ key: 'b:' + r.p, p: r.p, how: 'QR' });
+      } else if (r.결과 === '⚠') 밖끝(n);
+    } else if (ev.t === '눈') {
+      if (눈셈(판2, ev.p, true)) out.push({ key: 'b:' + ev.p, p: ev.p, how: '눈' });
+    } else if (ev.t === '눈취소') {
+      if (눈셈(판2, ev.p, false)) out = out.filter(function (x) { return x.p !== ev.p; });
+    } else if (ev.t === '손') {
+      r = 손셈(판2, ev.p);
+      if (!r.바뀜) return;
+      if (r.결과 === '✓') out.push({ key: 'b:' + _s(ev.p).toUpperCase(), p: _s(ev.p).toUpperCase(), how: '손' }); else 밖끝(n);
+    } else if (ev.t === '빼기') {
+      if (빼기셈(판2, ev.key)) out = out.filter(function (x) { return x.key !== ev.key; });
+    }
+  });
+  return out;
+}
+/** 자리 채우기 — P(싣는 차례 자리 · 본수) · 차례(채움차례) · 핀({key: 자리 번호}) → {칸: [{a, 들: [차례 한 줄]}], 넘: 못 넣은 수, 다음: 빈 첫 자리 | -1} */
+function 자리채우기(P, 차례, 핀) {
+  var 칸 = P.map(function (a) { return { a: a, 들: [] }; }), 남 = [], 넘 = 0;
+  차례.forEach(function (x) {
+    var k = 핀 ? 핀[x.key] : null;
+    if (k != null && 칸[k] && 칸[k].들.length < 칸[k].a[3]) 칸[k].들.push(x); else 남.push(x);
+  });
+  남.forEach(function (x) {
+    var 빈 = 칸.filter(function (c) { return c.들.length < c.a[3]; })[0];
+    if (빈) 빈.들.push(x); else 넘++;
+  });
+  var 다음 = -1;
+  for (var i = 0; i < 칸.length; i++) if (칸[i].들.length < 칸[i].a[3]) { 다음 = i; break; }
+  return { 칸: 칸, 넘: 넘, 다음: 다음 };
 }
 
 function 셈(판) {
@@ -710,9 +773,88 @@ function 그리기() {
   $('btnScanText').textContent = 시험 ? '시험 스캔(가짜 QR 창)' : (판.사건.length ? '관 QR 이어 찍기' : '관 QR 찍기');
   $('btnEye').classList.toggle('on', 눈켬);
   $('btnEye').textContent = 눈켬 ? '👁 눈으로 확인 중 — 다 됐으면 누르기' : '👁 눈으로 확인';
+  트럭그리기();
   목록그리기(c);
   메인단추();
   if (시험) 개발그리기();
+}
+
+/* 🚛 실은 모양 — 자리 상태(핀 · 본 · 다음)는 폰에만(차마다) */
+function 자리열쇠() { return 'isp-seat|' + 열쇠(판.계획); }
+function 자리상태() {
+  try { var s = JSON.parse(localStorage.getItem(자리열쇠()) || 'null'); if (s && s.핀) return s; } catch (e) {}
+  return { 핀: {}, 본: [], 다음: null };
+}
+function 자리저장(st) { try { localStorage.setItem(자리열쇠(), JSON.stringify(st)); } catch (e) {} }
+function 트럭그리기() {
+  var 자리 = 판.계획.자리;
+  $('truckSec').hidden = !자리;
+  if (!자리) return;
+  var 차례 = 채움차례(판.계획, 판.사건), st = 자리상태(), 바뀜 = false;
+  차례.forEach(function (x) {                                   // 새로 확인된 것 — '다음 자리'를 골라 뒀으면 거기에 핀
+    if (st.본.indexOf(x.key) >= 0) return;
+    st.본.push(x.key);
+    if (st.다음 != null) { st.핀[x.key] = st.다음; st.다음 = null; }
+    바뀜 = true;
+  });
+  if (바뀜) 자리저장(st);
+  var r = 자리채우기(자리.P, 차례, st.핀), 다음 = st.다음 != null ? st.다음 : r.다음;
+  var 바닥 = 0, 마진 = 14;
+  자리.P.forEach(function (a) { 바닥 = Math.max(바닥, a[1] + a[2] / 2); });
+  var W = 자리.W + 2 * 마진, H = Math.round(바닥 + 26), y0 = H - 12;
+  var 색 = { 'QR': ['#e6f6ec', '#1d9a52', '✓'], '손': ['#e6f6ec', '#1d9a52', '✋'], '눈': ['#e7effd', '#2c6bd4', '👁'],
+            '봇': ['#e0f3f3', '#0d8487', '✓'], '밖': ['#fff2dc', '#c26f00', '⚠'] };
+  var h = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="실은 모양">' +
+    '<rect x="' + (마진 - 4) + '" y="' + y0 + '" width="' + (자리.W + 8) + '" height="8" rx="2" fill="#475569"/>';
+  if (자리.H) [마진 - 4, 마진 + 자리.W].forEach(function (x) {
+    h += '<rect x="' + x + '" y="' + (y0 - Math.min(자리.H, 바닥)) + '" width="4" height="' + Math.min(자리.H, 바닥) + '" fill="#94a3b8"/>';
+  });
+  r.칸.forEach(function (c, i) {
+    var a = c.a, cx = 마진 + a[0], cy = y0 - a[1], rr = a[2] / 2 - 1, fs = Math.max(9, a[2] * 0.2);
+    var 다음칸 = i === 다음;
+    if (a[3] === 1) {
+      var x = c.들[0];
+      if (x) {
+        var k = 색[x.how] || 색.QR;
+        h += '<g data-seat="' + i + '"><circle cx="' + cx + '" cy="' + cy + '" r="' + rr + '" fill="' + k[0] + '" stroke="' + k[1] + '" stroke-width="3"/>' +
+          '<text x="' + cx + '" y="' + (cy - rr * 0.25) + '" font-size="' + fs + '" text-anchor="middle" fill="' + k[1] + '">' + k[2] + '</text>' +
+          '<text x="' + cx + '" y="' + (cy + rr * 0.42) + '" font-size="' + (fs * 1.05) + '" font-weight="700" text-anchor="middle" fill="currentColor">' +
+          esc(String(x.p).slice(-4)) + '</text></g>';
+      } else {
+        h += '<g data-seat="' + i + '"><circle cx="' + cx + '" cy="' + cy + '" r="' + rr + '" fill="' + (다음칸 ? '#e7effd' : 'none') + '" stroke="' +
+          (다음칸 ? '#2c6bd4' : '#94a3b8') + '" stroke-width="' + (다음칸 ? 3.5 : 2) + '" stroke-dasharray="7 5"/>' +
+          '<text x="' + cx + '" y="' + (cy + fs * 0.35) + '" font-size="' + fs + '" text-anchor="middle" fill="' + (다음칸 ? '#2c6bd4' : '#94a3b8') + '">' +
+          (다음칸 ? '다음' : (i + 1)) + '</text></g>';
+      }
+    } else {                                                   // 6M — 한 자리 앞 · 뒤 두 본(반원 둘)
+      h += '<g data-seat="' + i + '">';
+      [0, 1].forEach(function (j) {
+        var x = c.들[j], k = x ? (색[x.how] || 색.QR) : null;
+        h += '<path d="M ' + cx + ' ' + (cy - rr) + ' A ' + rr + ' ' + rr + ' 0 0 ' + (j ? 1 : 0) + ' ' + cx + ' ' + (cy + rr) + ' Z" fill="' +
+          (k ? k[0] : (다음칸 && c.들.length === j ? '#e7effd' : '#ffffff')) + '" stroke="' + (k ? k[1] : (다음칸 ? '#2c6bd4' : '#94a3b8')) +
+          '" stroke-width="2"' + (k ? '' : ' stroke-dasharray="5 4"') + '/>' +
+          '<text x="' + (cx + (j ? 1 : -1) * rr * 0.45) + '" y="' + (cy + fs * 0.3) + '" font-size="' + (fs * 0.8) + '" text-anchor="middle" fill="' +
+          (k ? 'currentColor' : '#94a3b8') + '">' + (x ? esc(String(x.p).slice(-3)) : (j ? '뒤' : '앞')) + '</text>';
+      });
+      h += '</g>';
+    }
+  });
+  h += '</svg>';
+  var 채움 = r.칸.reduce(function (n, c) { return n + c.들.length; }, 0), 자리수 = r.칸.reduce(function (n, c) { return n + c.a[3]; }, 0);
+  $('truckR').textContent = '채움 ' + 채움 + ' / ' + 자리수 + (r.넘 ? ' · 넘침 ' + r.넘 : '');
+  $('truckCard').innerHTML = h + '<div class="leg"><i style="background:#1d9a52"></i>✓ 찍음 · 손<i style="background:#2c6bd4"></i>👁 눈' +
+    '<i style="background:#0d8487"></i>봇 ✓<i style="background:#c26f00"></i>⚠ 예정 아님 · 파란 점선 = 다음 자리</div>' +
+    '<div class="leg">자리는 확인한 차례로 채워요 — 아래 왼쪽부터 확인하면 실제와 맞아요. 동그라미를 누르면 다음 확인이 그 자리로.</div>';
+  Array.prototype.forEach.call($('truckCard').querySelectorAll('[data-seat]'), function (g) {
+    g.style.cursor = 'pointer';
+    g.onclick = function () {
+      var i = parseInt(g.getAttribute('data-seat'), 10), st2 = 자리상태(), c = r.칸[i];
+      if (c.들.length >= c.a[3]) { 알리기('그 자리는 찼어요 — 빈 자리를 누르세요'); return; }
+      st2.다음 = st2.다음 === i ? null : i;
+      자리저장(st2);
+      그리기();
+    };
+  });
 }
 
 function 보냄그리기() {
