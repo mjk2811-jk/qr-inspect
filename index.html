@@ -8,7 +8,9 @@
   검수 스캔 — 텔레그램 미니 앱 한 파일(서버 · 외부 자료 없음 — telegram-web-app.js 만, 없으면 시험 모드)
   · 봇이 답장 자판의 web_app 단추로 연다(sendData 는 이 단추로 연 앱에서만 된다).
   · 단추 링크 #c=<base64url(UTF-8 JSON)> 에 차 예정 — #조각은 호스팅 서버로 가지 않는다.
-      {순번, 차4, 날, sid, 예정:[[번호, 바코드|'', 단?] …], 이미:[번호 …], 받음:[보낸 id …]}
+      {순번, 차4, 날, sid, 예정:[[번호, 바코드|'', 단?] …], 이미:[번호 …], 받음:[보낸 id …], 자리?, 더?}
+      더(2026-11-18) = 👁 눈 모드에 더 보일 번호 {이웃:[[◀|▶, 순번, [번호…]]…], 칸:[칸…], 야드:[[표, [번호…]]…]} — 누르면
+      ⚠ 예정 아님(눈)으로 적어 눈:[번호] 로 보낸다(봇이 '9번 차 몫' · '재고' 로 가려 들어옴 후보). 실은 모양에는 주황 자리
       순번-차4 · 예정 바코드 · 파이프 번호(· 단)만 — 도착지 · 차량번호 전체 · 무게 · 고객은 넣지 않는다(봇 inspect_miniapp.조각)
       이미 = 봇이 이 검수에서 벌써 ✓ 로 아는 번호(M3 · 앞서 보낸 것) · 받음 = 봇이 받은 sendData 의 id
   · 관 QR 을 showScanQrPopup 로 연달아 읽고 예정 바코드 · 번호와 견줘 화면에만 ✓ · ⚠ · 기타 · 이미 를 보인다(판정 · 기록은 봇).
@@ -21,9 +23,9 @@
     어느 자리인지는 모른다 — 동그라미를 누르면 '다음 자리'로 정해 다음 확인이 거기 들어간다(폰에만 남음). 봇에는 안 보낸다.
   · 텔레그램 밖에서 열면 시험 모드(예시 차 · 🧪 가짜 QR 창). #shot=open|scan 은 시안 그림용.
   · 저장소 web/inspect/index.html — 올리는 법 docs/설계_검수_미니앱_올리기.md(GitHub Pages). 봇 쪽은 inspect_miniapp.py(바닥) · telegram_inspect.미니앱받기.
-  함수  셈: 해시읽기 · b64url풀기 · b64url짓기 · 계획다듬기 · 번호꼴 · 가르기 · 관찾기 · 새판 · 찍기셈 · 눈셈 · 손셈 · 빼기셈 ·
+  함수  셈: 해시읽기 · b64url풀기 · b64url짓기 · 계획다듬기 · 번호꼴 · 가르기 · 관찾기 · 새판 · 찍기셈 · 눈셈 · 눈밖셈 · 손셈 · 빼기셈 ·
             다시돌리기 · 셈 · 보낼것 · 받은만큼 · 채움차례 · 자리채우기
-        화면: 그리기 · 목록그리기 · 트럭그리기 · 받은글 · 찍기열기 · 고르기 · 보내기누름 · 시작
+        화면: 그리기 · 목록그리기 · 더그리기 · 트럭그리기 · 받은글 · 찍기열기 · 고르기 · 보내기누름 · 시작
 -->
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
@@ -160,6 +162,8 @@
   .row.tap:active { background: var(--eye-bg); }
   .eye-mode .row.todo-row .ic.todo { border-color: var(--eye); border-style: dashed; }
   .eye-mode .row.todo-row .meta::after { content: "눌러서 ✓(눈)"; display: block; color: var(--eye); font-weight: 600; }
+  .eye-mode .row.todo-out .meta::after { content: "실렸으면 눌러서 ⚠"; display: block; color: var(--warn); font-weight: 600; }
+  .row .p.outd { color: var(--warn); }
   .row .grow { min-width: 0; flex: 1; }
   .row .grow .p, .row .grow .d { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .row .d { color: var(--hint); font-size: 12px; }
@@ -348,7 +352,8 @@ var 예시계획 = {
     { p: '26J0307', b: '202609300307', 단: 2 }, { p: '26J0308', b: '', 단: 3 }
   ],
   이미: [], 받음: [],
-  자리: { W: 245, H: 90, P: [[38, 38, 76, 1], [114, 38, 76, 1], [191, 38, 76, 1], [55, 113, 76, 1], [131, 113, 76, 1], [207, 113, 76, 1]] }
+  자리: { W: 245, H: 90, P: [[38, 38, 76, 1], [114, 38, 76, 1], [191, 38, 76, 1], [55, 113, 76, 1], [131, 113, 76, 1], [207, 113, 76, 1]] },
+  더: { 이웃: [['▶', '8', ['26J0311', '26J0312']]], 칸: ['C04'], 야드: [['재고', ['26J0320', '26J0321']], ['9번', ['26J0330']]] }
 };
 var 예시QR = [
   '*P2026093003031 1  3207.95904', '*P2026093003041 1  3208.11', '*P2026093003111 1  3206.88',
@@ -402,9 +407,27 @@ function 계획다듬기(x) {
       .map(function (a) { return [+a[0], +a[1], +a[2], Math.max(1, Math.min(2, parseInt(a[3], 10) || 1))]; });
     if (P.length) 자리 = { W: +x.자리.W || 245, H: +x.자리.H || 0, P: P };
   }
+  // 👁 눈 모드에 더 보일 번호(2026-11-18) — ◀ ▶ 앞뒤 차 · 📍 야드 칸(예정 아님). 번호 · 순번 · 칸 · 표만
+  var 더 = { 이웃: [], 칸: [], 야드: [] }, 예정표 = {};
+  예정.forEach(function (e) { 예정표[e.p] = 1; });
+  function 더번호들(a) {
+    return (Array.isArray(a) ? a : []).map(function (p) { return _s(p).toUpperCase(); })
+      .filter(function (p) { return 번호꼴(p) && !예정표[p]; });
+  }
+  if (x.더 && typeof x.더 === 'object') {
+    (Array.isArray(x.더.이웃) ? x.더.이웃 : []).forEach(function (g) {
+      var ps = Array.isArray(g) ? 더번호들(g[2]) : [];
+      if (ps.length) 더.이웃.push({ 표: g[0] === '◀' ? '◀' : '▶', 순번: _s(g[1]).toUpperCase().slice(0, 6), ps: ps });
+    });
+    더.칸 = (Array.isArray(x.더.칸) ? x.더.칸 : []).map(_s).filter(Boolean).slice(0, 10);
+    (Array.isArray(x.더.야드) ? x.더.야드 : []).forEach(function (g) {
+      var ps = Array.isArray(g) ? 더번호들(g[1]) : [];
+      if (ps.length) 더.야드.push({ 표: _s(g[0]).slice(0, 10), ps: ps });
+    });
+  }
   return { 순번: 순번, 차4: 차4, 날: _s(x.날), sid: _s(x.sid),      // 차 머리는 '7번 6610' 만(차번호 · 도착지는 안 받는다)
            예정: 예정, 이미: (x.이미 || []).map(function (p) { return _s(p).toUpperCase(); }).filter(Boolean),
-           받음: (x.받음 || []).map(_s).filter(Boolean), 자리: 자리 };
+           받음: (x.받음 || []).map(_s).filter(Boolean), 자리: 자리, 더: 더 };
 }
 
 var 파이프꼴 = /^[0-9A-Za-z]{6,9}(?:-\d{1,2})?$/;
@@ -512,6 +535,20 @@ function 눈셈(판, p, 켬) {
   if (!앞 || 앞.how !== '눈') return false;
   delete 판.끝냄[p]; return true;
 }
+/** 👁 눈 모드의 ◀ ▶ 앞뒤 차 · 📍 야드 번호(계획.더 — 예정 아님, 2026-11-18). 켜면 ⚠ 예정 아님(how 눈 · 표)으로 적어 봇에 눈:[번호] 로
+ *  보내고(봇이 '9번 차 몫' · '재고' 로 가려 들어옴 후보로), 끄면 뺀다. 예정 번호 · 이미 적힌 번호(QR · 손)는 false */
+function 눈밖셈(판, p, 켬, 표) {
+  p = _s(p).toUpperCase();
+  if (!번호꼴(p) || 예정에(판, p)) return false;
+  var o = 밖찾기(판, 'p:' + p);
+  if (켬) {
+    if (o) return false;
+    판.밖.push({ key: 'p:' + p, raw: '', 꼴: '번호', 바코드: '', p: p, how: '눈', 표: _s(표), at: 지금(), 뺌: false });
+    return true;
+  }
+  if (!o || o.how !== '눈') return false;
+  o.뺌 = true; return true;
+}
 function 손셈(판, p) {
   p = _s(p).toUpperCase();
   if (!번호꼴(p)) return { 결과: '기타', 말: '번호 꼴이 아니에요 — 예 26J0311' };
@@ -540,6 +577,8 @@ function 다시돌리기(계획, 사건들) {
     else if (ev.t === '눈취소') 바뀜 = 눈셈(판, ev.p, false);
     else if (ev.t === '손') 바뀜 = !!손셈(판, ev.p).바뀜;
     else if (ev.t === '빼기') 바뀜 = 빼기셈(판, ev.key);
+    else if (ev.t === '눈밖') 바뀜 = 눈밖셈(판, ev.p, true, ev.표);
+    else if (ev.t === '눈밖취소') 바뀜 = 눈밖셈(판, ev.p, false);
     if (바뀜) 판.사건.push(ev);
   });
   return 판;
@@ -570,6 +609,10 @@ function 채움차례(계획, 사건들) {
       if (r.결과 === '✓') out.push({ key: 'b:' + _s(ev.p).toUpperCase(), p: _s(ev.p).toUpperCase(), how: '손' }); else 밖끝(n);
     } else if (ev.t === '빼기') {
       if (빼기셈(판2, ev.key)) out = out.filter(function (x) { return x.key !== ev.key; });
+    } else if (ev.t === '눈밖') {                       // 👁 앞뒤 차 · 야드 번호 — ⚠ 예정 아님 자리(2026-11-18)
+      if (눈밖셈(판2, ev.p, true, ev.표)) 밖끝(n);
+    } else if (ev.t === '눈밖취소') {
+      if (눈밖셈(판2, ev.p, false)) out = out.filter(function (x) { return x.key !== 'p:' + _s(ev.p).toUpperCase(); });
     }
   });
   return out;
@@ -609,7 +652,10 @@ function 보낼것(판, 끝, id, 기타빼기) {
   판.순서.forEach(function (s) { if (!뺀[s.key] && !본[s.raw]) { 본[s.raw] = 1; qr.push(s.raw); } });
   var 눈 = [], 손 = [];
   계획.예정.forEach(function (e) { var d = 판.끝냄[e.p]; if (d && d.how === '눈') 눈.push(e.p); if (d && d.how === '손') 손.push(e.p); });
-  판.밖.forEach(function (o) { if (!o.뺌 && o.how === '손') 손.push(o.p); });
+  판.밖.forEach(function (o) {
+    if (!o.뺌 && o.how === '손') 손.push(o.p);
+    if (!o.뺌 && o.how === '눈') 눈.push(o.p);          // 👁 앞뒤 차 · 야드 번호 — 봇이 견주기로 '그 차 몫' · '재고' 를 가린다
+  });
   var o = { k: '검수', v: 앱판, id: id || '', 검수: 계획.순번 + '-' + 계획.차4, 날: 계획.날 || 오늘(), sid: 계획.sid, 끝: !!끝,
             qr: qr, 눈: 눈, 손: 손,
             기타: 기타빼기 ? [] : 판.모름.slice(0, 10).map(function (u) { return u.raw.slice(0, 80); }), n: qr.length, 때: 지금() };
@@ -870,6 +916,30 @@ function 보냄그리기() {
   } else el.hidden = true;
 }
 
+/** 👁 눈 모드 아래 — ◀ ▶ 앞뒤 차 · 📍 야드 칸의 검수 안 된 번호(계획.더, 2026-11-18). 이 차에 실린 것을 보면 누른다 → ⚠ 예정 아님
+ *  (그 차 몫 · 재고 — 봇이 가림) · 들어옴 후보, 다시 누르면 취소. QR · 손으로 이미 넣은 번호는 누를 수 없이 ⚠ 만 */
+function 더그리기() {
+  var 더 = 판.계획.더, h = '';
+  if (!더 || (!더.이웃.length && !더.야드.length)) return '';
+  function 줄(p, 글) {
+    var o = 밖찾기(판, 'p:' + p), 내것 = !o || o.how === '눈';
+    return '<div class="row more' + (내것 ? ' tap' : '') + (o ? '' : ' todo-out') + '"' +
+      (내것 ? ' data-eyeout="' + esc(p) + '" data-pyo="' + esc(글) + '"' : '') + '>' +
+      (o ? '<span class="ic warn">⚠</span>' : '<span class="ic todo"></span>') +
+      '<span class="p num' + (o ? ' outd' : '') + '">' + esc(p) + '</span><span class="meta"><span class="tag">' + esc(글) + '</span>' +
+      (o ? ' ' + esc(o.at) : '') + '</span></div>';
+  }
+  if (더.이웃.length) {
+    h += '<div class="tier">◀ ▶ 앞뒤 차의 검수 안 된 번호 — 이 차에 실려 있으면 누르세요</div>';
+    더.이웃.forEach(function (g) { g.ps.forEach(function (p) { h += 줄(p, g.표 + ' ' + g.순번 + '번'); }); });
+  }
+  if (더.야드.length) {
+    h += '<div class="tier">📍 야드 ' + esc(더.칸.join(' · ')) + ' 의 검수 안 된 번호 — 이 차에 실려 있으면 누르세요</div>';
+    더.야드.forEach(function (g) { g.ps.forEach(function (p) { h += 줄(p, '📍 ' + g.표); }); });
+  }
+  return h;
+}
+
 function 목록그리기(c) {
   var 계획 = 판.계획, html = '';
   $('planH').textContent = '예정 ' + c.예정 + '본';
@@ -897,6 +967,7 @@ function 목록그리기(c) {
     });
   });
   if (눈켬) html += '<div class="type"><input id="typeIn" placeholder="예정에 없는 번호 치기 — 26J0311" autocomplete="off" inputmode="text"><button type="button" id="typeBtn">넣기</button></div>';
+  if (눈켬) html += 더그리기();
   $('planCard').innerHTML = html;
 
   var 밖 = 판.밖.filter(function (o) { return !o.뺌; });
@@ -905,7 +976,8 @@ function 목록그리기(c) {
   var 모르는 = 바코드모름(판);
   $('outCard').innerHTML = 밖.map(function (o) {
     var 글 = o.꼴 === '관' ? '바코드 ' + o.바코드 : o.p;
-    var 덧 = o.꼴 === '관' ? '예정 바코드 아님 · QR ' + o.raw : (o.how === '손' ? '손으로 친 번호' : '7월 라벨 ' + o.raw);
+    var 덧 = o.꼴 === '관' ? '예정 바코드 아님 · QR ' + o.raw : (o.how === '손' ? '손으로 친 번호' :
+             (o.how === '눈' ? '👁 눈 · ' + (o.표 || '앞뒤 차 · 야드') : '7월 라벨 ' + o.raw));
     return '<div class="row"><span class="ic warn">⚠</span><div class="grow"><div class="p num">' + esc(글) + '</div><div class="d num">' +
       esc(덧) + ' · ' + esc(o.at) + '</div></div><button type="button" class="x" data-out="' + esc(o.key) + '">빼기</button></div>';
   }).join('') + (모르는.length && 밖.some(function (o) { return o.꼴 === '관'; }) ?
@@ -1129,6 +1201,16 @@ $('pickBtns').addEventListener('click', function (ev) {
   if (b && 고르기끝) 고르기끝(b.getAttribute('data-pick'));
 });
 $('planCard').addEventListener('click', function (ev) {
+  var orow = ev.target.closest('[data-eyeout]');          // 👁 앞뒤 차 · 야드 번호(2026-11-18)
+  if (orow) {
+    var p2 = orow.getAttribute('data-eyeout'), 표2 = orow.getAttribute('data-pyo') || '', 켬2 = !밖찾기(판, 'p:' + p2);
+    if (눈밖셈(판, p2, 켬2, 표2)) {
+      남기기(켬2 ? { t: '눈밖', p: p2, 표: 표2 } : { t: '눈밖취소', p: p2 });
+      알림(켬2 ? '⚠ ' + p2 + ' (눈) 예정 아님 — ' + 표2 + ' · 들어옴 후보로 적음' : p2 + ' 눈 확인 취소', 켬2 ? '⚠' : '차');
+      떨림(켬2 ? '⚠' : '이미'); 저장(); 그리기();
+    }
+    return;
+  }
   var row = ev.target.closest('[data-eye]');
   if (row) {
     var p = row.getAttribute('data-eye'), 켬 = !판.끝냄[p];
