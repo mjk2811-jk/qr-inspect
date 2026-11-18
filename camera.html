@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>카메라</title>
+<!--
+  📷 카메라 — 텔레그램 관리자 자판 [📷 카메라](web_app 단추 — telegram_camera.py)가 여는 쪽(jk님 2026-11-18 '텔레그램 검수 버튼처럼
+  카메라 실행 버튼 · 그냥 카메라 실행해서 사진만 찍을 수 있게, 저장은 폰에').
+  · 열리면 바로 폰 카메라 앱을 띄운다(안드로이드 STILL_IMAGE_CAMERA) — 사진은 카메라 앱이 폰 갤러리에 저장한다. 봇으로는 아무것도
+    안 보낸다. 카메라 앱이 뜨면(이 쪽이 가려지면) 이 쪽은 스스로 닫힌다 — 돌아오면 대화.
+  · 저절로 안 뜨면 [📷 카메라 켜기] 를 누른다(누름이 있어야 여는 폰이 있다).
+  · 카메라 앱을 못 띄우는 폰(아이폰 · 막힌 폰)은 [여기서 찍기] — 찍은 사진이 아래에 보이면 길게 눌러 저장.
+  · index.html(검수 스캔)과 같은 GitHub 저장소 · 같은 폴더에 올린다(주소 = 검수 미니 앱 주소 옆 camera.html).
+-->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin: 0; background: #111418; color: #F2F4F7; font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif; }
+  main { min-height: 100vh; box-sizing: border-box; padding: 24px 16px; display: flex; flex-direction: column; align-items: center;
+         justify-content: center; gap: 14px; }
+  h1 { font-size: 24px; margin: 0 0 6px; }
+  button { width: 100%; max-width: 380px; border: 0; border-radius: 16px; font-size: 22px; font-weight: 700; padding: 20px 16px;
+           background: #2a78d6; color: #fff; }
+  button.작은 { font-size: 16px; font-weight: 600; padding: 14px 16px; background: #2B313A; color: #D0D5DD; }
+  p { margin: 0; color: #98A2B3; font-size: 14px; text-align: center; line-height: 1.5; }
+  img { max-width: 100%; max-height: 60vh; border-radius: 10px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>📷 카메라</h1>
+  <button id="켜기">📷 카메라 켜기</button>
+  <button id="여기" class="작은">카메라가 안 열리면 — 여기서 찍기</button>
+  <input id="찍기" type="file" accept="image/*" capture="environment" hidden>
+  <p id="글">사진은 폰 갤러리에 저장됩니다.</p>
+  <img id="본" alt="" hidden>
+</main>
+<script>
+(function () {
+  "use strict";
+  var tg = window.Telegram && window.Telegram.WebApp;
+  if (tg) { try { tg.ready(); tg.expand(); } catch (e) {} }
+  var 카메라앱 = "intent:#Intent;action=android.media.action.STILL_IMAGE_CAMERA;end";
+  var 안드로이드 = /android/i.test(navigator.userAgent || "");
+  var 켰다 = false;
+  var $ = function (id) { return document.getElementById(id); };
+
+  function 닫기() { if (tg) { try { tg.close(); } catch (e) {} } }
+
+  function 여기서() { $("찍기").click(); }
+
+  function 켜기() {
+    if (!안드로이드) { 여기서(); return; }
+    켰다 = true;
+    try { window.location.href = 카메라앱; } catch (e) { 여기서(); }
+    setTimeout(function () {                       // 카메라 앱이 떴으면 이 쪽은 가려져 있다 — 닫는다
+      if (document.hidden) { 닫기(); }
+      else { $("글").textContent = "카메라가 안 열렸으면 [여기서 찍기] 를 누르세요."; }
+    }, 1500);
+  }
+
+  document.addEventListener("visibilitychange", function () {
+    if (켰다 && document.hidden) { setTimeout(닫기, 300); }
+  });
+  $("켜기").addEventListener("click", 켜기);
+  $("여기").addEventListener("click", 여기서);
+  $("찍기").addEventListener("change", function (ev) {
+    var f = ev.target.files && ev.target.files[0];
+    if (!f) { return; }
+    var 본 = $("본");
+    본.src = URL.createObjectURL(f);
+    본.hidden = false;
+    $("글").textContent = "사진을 길게 눌러 저장하세요(폰 카메라 앱으로 찍으면 저절로 저장됩니다).";
+  });
+  window.addEventListener("load", function () { setTimeout(켜기, 200); });   // 열리면 바로 — 막히면 단추로
+})();
+</script>
+</body>
+</html>
