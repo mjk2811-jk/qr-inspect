@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>야드 지도</title>
+<!--
+  야드 지도 — 텔레그램 미니 앱 한 파일(서버 · 외부 자료 없음 — telegram-web-app.js 만, 없으면 시험 모드). 보기만 한다(봇에 보내는 것 없음).
+  · 봇이 인라인 web_app 단추 [🗺 지도 열기] 로 연다. 단추 링크 #c=<base64url(zlib(JSON))> 에 그때의 야드 칸 · 재고 — #조각은 호스팅 서버로
+    가지 않는다. 이 파일(공개)에는 칸 자리도 재고도 없다 — 링크에서만 받는다.
+      {v:1, t:'YYYY-MM-DD HH:MM', W:[폭, 높이], K:[[야드, x, y, w, h]…], L:[[작지, 규격]…], Y:{야드:[[작지 i(-1 = 그 밖 작지), 본수, 번호글]…]},
+       N:{전체, 칸, 밖}, 열:'B07C'?}
+      번호글 = '26K:0600-0612,0618|26J:0101|:ABC1,XYZ'(앞머리:뒤 넷 범위 · 앞머리 없으면 번호 그대로) · '' = 번호 못 실음(본수만)
+  · 칸을 누르면 아래에 그 야드 재고(작지 · 규격 · 본수 · 관 번호). 칸 밖 야드(G1 · 빈칸 …)는 지도 아래 단추. B 칸은 위 반 …A · 아래 반 …C,
+    'B03' 처럼 반쪽 글자 없는 재고는 그 칸 전체(두 반쪽)에 센다. 관 번호 찾기 — 뒤 4자리 · 번호 전체.
+  · 지도는 폰에서 옆으로 밀어 보고 [− +] 로 크기. 압축 풀기는 DecompressionStream('deflate')(웹뷰 80+).
+  · 가로 넓은 화면(폭 1000px 이상 — 태블릿 가로)은 왼쪽 지도 · 오른쪽 재고 목록 나란히, 지도는 화면 높이에 맞춰 한눈에(2026-11-19).
+  · 텔레그램 밖에서 열면 시험 모드(예시 칸 · 가짜 작지).
+-->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root { --bg:#F1F5F9; --card:#FFFFFF; --text:#0F172A; --sub:#64748B; --line:#CBD5E1; --empty:#F8FAFC; --sel:#F97316;
+          --c1:#DBEAFE; --c2:#93C5FD; --c3:#3B82F6; --c4:#1D4ED8; --chip:#EEF2FF; --chiptext:#1E3A8A; --hit:#FDE68A; }
+  [data-theme="dark"] { --bg:#0F172A; --card:#1E293B; --text:#E2E8F0; --sub:#94A3B8; --line:#475569; --empty:#1E293B;
+          --c1:#1E3A8A; --c2:#1D4ED8; --c3:#3B82F6; --c4:#93C5FD; --chip:#1E293B; --chiptext:#BFDBFE; --hit:#92400E; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font-family: "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+               -webkit-tap-highlight-color: transparent; }
+  main { padding: 10px 10px 28px; max-width: 1100px; margin: 0 auto; }
+  .card { background: var(--card); border-radius: 14px; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08); margin-bottom: 10px; }
+  .test { background: #F3E8FF; color: #6B21A8; border-radius: 10px; padding: 8px 10px; font-size: 13px; margin-bottom: 10px; }
+  h1 { font-size: 19px; margin: 0; display: flex; align-items: baseline; gap: 8px; }
+  h1 small { font-size: 13px; color: var(--sub); font-weight: 600; }
+  .tot { font-size: 14px; margin-top: 6px; }
+  .tot b { font-size: 18px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .chip { border: 0; border-radius: 999px; padding: 6px 10px; background: var(--chip); color: var(--chiptext); font-size: 13px; font-weight: 700; }
+  .chip.on { outline: 2px solid var(--sel); }
+  .find { display: flex; gap: 6px; }
+  .find input { flex: 1; font-size: 16px; padding: 9px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--text); }
+  .hits { margin-top: 6px; font-size: 14px; }
+  .hrow { padding: 7px 4px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; gap: 8px; }
+  .hrow:last-child { border-bottom: 0; }
+  .maphead { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .maphead span { font-size: 13px; color: var(--sub); }
+  .zoom button { width: 38px; height: 34px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--text); font-size: 18px; }
+  #wrap { overflow: auto; -webkit-overflow-scrolling: touch; border-radius: 10px; border: 1px solid var(--line); background: var(--empty); }
+  svg { display: block; }
+  .cell rect { stroke: var(--line); stroke-width: 1; }
+  .cell text { pointer-events: none; font-family: inherit; }
+  .cell .nm { fill: var(--sub); font-size: 9px; }
+  .cell .n { font-size: 15px; font-weight: 800; }
+  .cell.sel rect { stroke: var(--sel); stroke-width: 3; }
+  .cell.hitc rect { stroke: #F59E0B; stroke-width: 3; stroke-dasharray: 4 2; }
+  .legend { display: flex; gap: 10px; flex-wrap: wrap; font-size: 12px; color: var(--sub); margin-top: 8px; align-items: center; }
+  .legend i { display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: -2px; margin-right: 4px; border: 1px solid var(--line); }
+  #detail h2 { font-size: 18px; margin: 0 0 4px; }
+  #detail .sub { font-size: 13px; color: var(--sub); margin-bottom: 8px; }
+  .lot { border-top: 1px solid var(--line); padding: 9px 0; }
+  .lot:first-of-type { border-top: 0; }
+  .lothead { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+  .lothead b { font-size: 16px; }
+  .lothead .sz { font-size: 13px; color: var(--sub); flex: 1; }
+  .lothead .cnt { font-size: 16px; font-weight: 800; color: var(--c4); white-space: nowrap; }
+  [data-theme="dark"] .lothead .cnt { color: #93C5FD; }
+  .nums { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+  .num { font-size: 13px; font-variant-numeric: tabular-nums; padding: 3px 7px; border-radius: 7px; background: var(--empty); border: 1px solid var(--line); }
+  .num.hit { background: var(--hit); border-color: #F59E0B; }
+  .none { font-size: 13px; color: var(--sub); margin-top: 4px; }
+  .foot { font-size: 12px; color: var(--sub); text-align: center; margin-top: 4px; }
+  .err { padding: 30px 14px; text-align: center; color: var(--sub); }
+  .wait { color: var(--sub); font-size: 14px; padding: 18px 4px; text-align: center; }
+  @media (min-width: 1000px) {                       /* 태블릿 가로 — 왼쪽 지도 · 오른쪽 재고 */
+    main { max-width: none; display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 10px; align-items: start; }
+    #side { position: sticky; top: 10px; max-height: calc(100vh - 20px); overflow: auto; }
+    #side .card { margin-bottom: 0; }
+    .foot { grid-column: 1 / -1; }
+  }
+</style>
+</head>
+<body>
+<main id="main" hidden>
+  <div id="left">
+  <div class="test" id="testStrip" hidden>🧪 시험 모드 — 예시 칸 · 가짜 작지로 돌아요</div>
+  <div class="card">
+    <h1>🗺 야드 지도 <small id="when"></small></h1>
+    <div class="tot" id="tot"></div>
+    <div class="chips" id="outChips"></div>
+  </div>
+  <div class="card">
+    <div class="find"><input id="findIn" placeholder="관 번호 찾기 — 0618 · 26K0618" inputmode="text" autocomplete="off" autocapitalize="characters"></div>
+    <div class="hits" id="hits"></div>
+  </div>
+  <div class="card">
+    <div class="maphead"><span>칸을 누르면 그 야드 재고</span>
+      <span class="zoom"><button type="button" id="zoomOut">−</button> <button type="button" id="zoomIn">＋</button></span></div>
+    <div id="wrap"><svg id="map"></svg></div>
+    <div class="legend" id="legend"></div>
+  </div>
+  </div>
+  <div id="side"><div class="card" id="detail" hidden></div></div>
+  <div class="foot" id="foot"></div>
+</main>
+<div class="err" id="err" hidden></div>
+<script>
+'use strict';
+var tg = window.Telegram && window.Telegram.WebApp;
+var 텔레그램안 = !!(tg && tg.platform && tg.platform !== 'unknown');
+var $ = function (id) { return document.getElementById(id); };
+
+/* ── 셈 ─────────────────────────────────────────────────────────── */
+function _s(v) { return v == null ? '' : String(v).trim(); }
+function esc(t) { return _s(t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function 해시읽기(h) {
+  var out = {};
+  _s(h).replace(/^#/, '').split('&').forEach(function (kv) { var i = kv.indexOf('='); if (i > 0) out[kv.slice(0, i)] = decodeURIComponent(kv.slice(i + 1)); });
+  return out;
+}
+function b64바이트(t) {
+  t = _s(t).replace(/-/g, '+').replace(/_/g, '/');
+  while (t.length % 4) t += '=';
+  var s = atob(t), b = new Uint8Array(s.length);
+  for (var i = 0; i < s.length; i++) b[i] = s.charCodeAt(i);
+  return b;
+}
+function 풀기(조) {                                   // base64url(zlib(JSON)) → Promise<자료>
+  var 흐름 = new Blob([b64바이트(조)]).stream().pipeThrough(new DecompressionStream('deflate'));
+  return new Response(흐름).text().then(function (t) { return JSON.parse(t); });
+}
+function 번호풀기(글) {                              // '26K:0600-0602,0618|:ABC' → ['26K0600', '26K0601', '26K0602', '26K0618', 'ABC']
+  var out = [];
+  _s(글).split('|').forEach(function (조) {
+    if (!조) return;
+    var i = 조.indexOf(':'), 앞 = i >= 0 ? 조.slice(0, i) : '', 몸 = i >= 0 ? 조.slice(i + 1) : 조;
+    몸.split(',').forEach(function (r) {
+      if (!r) return;
+      if (!앞) { out.push(r); return; }
+      var ab = r.split('-'), a = parseInt(ab[0], 10), b = ab.length > 1 ? parseInt(ab[1], 10) : a;
+      for (var n = a; n <= b && n - a < 5000; n++) out.push(앞 + ('0000' + n).slice(-4));
+    });
+  });
+  return out;
+}
+function 칸이름들(자료) { var s = {}; (자료.K || []).forEach(function (k) { s[k[0]] = 1; }); return s; }
+function 칸야드(야드, 이름들) {                       // 재고 야드 → 그릴 칸 이름들('B03' = B03A · B03C)
+  if (이름들[야드]) return [야드];
+  if (/^B\d{2}$/.test(야드) && 이름들[야드 + 'A']) return [야드 + 'A', 야드 + 'C'];
+  return [];
+}
+function 칸본수(자료) {                                // {칸 이름: 본수}(B03 같은 것은 두 반쪽에 다) · 칸 밖 야드 목록
+  var 이름들 = 칸이름들(자료), 칸 = {}, 밖 = [];
+  Object.keys(자료.Y || {}).forEach(function (y) {
+    var n = (자료.Y[y] || []).reduce(function (a, m) { return a + m[1]; }, 0), 곳 = 칸야드(y, 이름들);
+    if (곳.length) 곳.forEach(function (c) { 칸[c] = (칸[c] || 0) + n; }); else 밖.push([y, n]);
+  });
+  밖.sort(function (a, b) { return (a[0] === 'G1' ? 0 : a[0] === '' ? 1 : 2) - (b[0] === 'G1' ? 0 : b[0] === '' ? 1 : 2) || b[1] - a[1]; });
+  return { 칸: 칸, 밖: 밖 };
+}
+function 색(n) { return !n ? 'var(--empty)' : n < 10 ? 'var(--c1)' : n < 30 ? 'var(--c2)' : n < 60 ? 'var(--c3)' : 'var(--c4)'; }
+function 글색(n) { return n >= 30 ? '#FFFFFF' : 'var(--text)'; }
+function 찾기(자료, q) {                              // 뒤 4자리 · 번호 전체 → [[번호, 야드, 작지]] (20개까지)
+  q = _s(q).toUpperCase().replace(/\s+/g, '');
+  if (q.length < 3) return [];
+  var out = [];
+  Object.keys(자료.Y || {}).forEach(function (y) {
+    (자료.Y[y] || []).forEach(function (m) {
+      번호풀기(m[2]).forEach(function (p) {
+        if (out.length < 20 && (p === q || p.slice(-q.length) === q)) out.push([p, y, m[0] >= 0 ? 자료.L[m[0]][0] : '']);
+      });
+    });
+  });
+  return out;
+}
+function 야드이름(y) { return y === '' ? '빈칸(야드 없음)' : y; }
+
+/* ── 화면 ───────────────────────────────────────────────────────── */
+var 자료 = null, 고른 = null, 배율 = 1, 찾은칸 = {}, 찾은번호 = {};
+
+function 지도그리기() {
+  var W = 자료.W[0], H = 자료.W[1], svg = $('map'), 본 = 칸본수(자료).칸, html = '';
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+  svg.setAttribute('width', Math.round(W * 배율));
+  svg.setAttribute('height', Math.round(H * 배율));
+  자료.K.forEach(function (k) {
+    var y = k[0], x = k[1], t = k[2], w = k[3], h = k[4], n = 본[y] || 0, 반 = /^B\d{2}[AC]$/.test(y);
+    var 고름 = 고른 && (고른 === y || (/^B\d{2}$/.test(고른) && y.slice(0, 3) === 고른));
+    html += '<g class="cell' + (고름 ? ' sel' : '') + (찾은칸[y] ? ' hitc' : '') + '" data-y="' + esc(y) + '">' +
+      '<rect x="' + x + '" y="' + t + '" width="' + w + '" height="' + h + '" fill="' + 색(n) + '"/>' +
+      '<text class="nm" x="' + (x + 3) + '" y="' + (t + 10) + '"' + (n >= 30 ? ' style="fill:#E0E7FF"' : '') + '>' + esc(반 ? y.slice(1) : y) + '</text>' +
+      (n ? '<text class="n" x="' + (x + w / 2) + '" y="' + (t + h / 2 + (반 ? 7 : 6)) + '" text-anchor="middle" fill="' + 글색(n) + '">' + n + '</text>' : '') +
+      '</g>';
+  });
+  svg.innerHTML = html;
+}
+function 밖그리기() {
+  var 밖 = 칸본수(자료).밖;
+  $('outChips').innerHTML = 밖.map(function (o) {
+    return '<button type="button" class="chip' + (고른 === o[0] ? ' on' : '') + '" data-y="' + esc(o[0]) + '">' +
+      (o[0] === 'G1' ? '📦 ' : '') + esc(야드이름(o[0])) + ' ' + o[1].toLocaleString() + '본</button>';
+  }).join('');
+}
+function 머리그리기() {
+  var n = 자료.N || {};
+  $('when').textContent = _s(자료.t).slice(11) + ' 기준';
+  $('tot').innerHTML = '재고 <b>' + (n.전체 || 0).toLocaleString() + '</b>본 · 야드 칸 ' + (n.칸 || 0).toLocaleString() + ' · 칸 밖 ' + (n.밖 || 0).toLocaleString();
+  $('legend').innerHTML = [['1–9', 'var(--c1)'], ['10–29', 'var(--c2)'], ['30–59', 'var(--c3)'], ['60+', 'var(--c4)']]
+    .map(function (x) { return '<span><i style="background:' + x[1] + '"></i>' + x[0] + '본</span>'; }).join('');
+  $('foot').textContent = _s(자료.t) + ' 기준 — 새로 보려면 봇에 [🗺 야드 지도]';
+}
+function 자세히(y) {
+  고른 = y;
+  var 이름들 = 칸이름들(자료), 몫들 = [];
+  if (자료.Y[y]) 몫들 = 자료.Y[y];
+  else if (/^B\d{2}[AC]$/.test(y) && 자료.Y[y.slice(0, 3)]) 몫들 = [];
+  var 함께 = [];                                       // 반쪽 칸(B03A)을 눌렀는데 반쪽 글자 없는 재고(B03)가 있으면 같이
+  if (/^B\d{2}[AC]$/.test(y) && 자료.Y[y.slice(0, 3)]) 함께 = 자료.Y[y.slice(0, 3)];
+  var 합 = 몫들.concat(함께), n = 합.reduce(function (a, m) { return a + m[1]; }, 0);
+  var html = '<h2>' + esc(야드이름(y)) + ' · ' + n.toLocaleString() + '본</h2><div class="sub">' +
+    (합.length ? '작지 ' + 합.filter(function (m) { return m[0] >= 0; }).length + ' · ' : '') + _s(자료.t).slice(11) + ' 기준' +
+    (함께.length ? ' · ' + esc(y.slice(0, 3)) + '(반쪽 안 적힘) 포함' : '') + '</div>';
+  if (!합.length) html += '<div class="none">재고 없음</div>';
+  합.forEach(function (m) {
+    var 작 = m[0] >= 0 ? 자료.L[m[0]] : null, 번호 = 번호풀기(m[2]);
+    html += '<div class="lot"><div class="lothead"><b>' + (작 ? esc(작[0]) : '그 밖 작지') + '</b><span class="sz">' + (작 ? esc(작[1]) : '') +
+      '</span><span class="cnt">' + m[1].toLocaleString() + '본</span></div>';
+    if (번호.length) html += '<div class="nums">' + 번호.map(function (p) { return '<span class="num' + (찾은번호[p] ? ' hit' : '') + '">' + esc(p) + '</span>'; }).join('') + '</div>';
+    else html += '<div class="none">' + (m[0] >= 0 ? '번호는 링크에 다 못 실었어요 — 본수만' : '작은 작지들을 묶었어요') + '</div>';
+    html += '</div>';
+  });
+  $('detail').innerHTML = html;
+  $('detail').hidden = false;
+  지도그리기(); 밖그리기();
+  try { if (tg && tg.HapticFeedback) tg.HapticFeedback.selectionChanged(); } catch (e) {}
+}
+function 칸으로(y) {                                  // 그 칸이 보이게 지도를 민다
+  var k = (자료.K || []).filter(function (c) { return c[0] === y || c[0] === y + 'A'; })[0];
+  if (!k) return;
+  var wrap = $('wrap');
+  wrap.scrollLeft = Math.max(0, k[1] * 배율 - wrap.clientWidth / 2 + k[3] * 배율 / 2);
+}
+function 찾기그리기() {
+  var r = 찾기(자료, $('findIn').value);
+  찾은칸 = {}; 찾은번호 = {};
+  var 이름들 = 칸이름들(자료);
+  r.forEach(function (x) { 찾은번호[x[0]] = 1; 칸야드(x[1], 이름들).forEach(function (c) { 찾은칸[c] = 1; }); });
+  $('hits').innerHTML = _s($('findIn').value).length < 3 ? '' : (r.length ? r.map(function (x) {
+    return '<div class="hrow" data-y="' + esc(x[1]) + '"><b>' + esc(x[0]) + '</b><span>' + esc(야드이름(x[1])) + ' · ' + esc(x[2] || '그 밖') + '</span></div>';
+  }).join('') : '<div class="none">못 찾았어요(번호를 못 실은 G1 몫일 수 있어요)</div>');
+  지도그리기();
+  if (고른) 자세히(고른);
+}
+function 크기(d) {
+  var 폭 = $('wrap').clientWidth || 360, 맞춤 = 폭 / 자료.W[0];
+  if (넓은가()) {                                       // 태블릿 가로 — 화면 높이에도 맞춰 지도 전체가 한눈에
+    var 남은높이 = window.innerHeight - $('wrap').getBoundingClientRect().top - 48;
+    if (남은높이 > 150) 맞춤 = Math.min(맞춤, 남은높이 / 자료.W[1]);
+  }
+  배율 = Math.max(맞춤, Math.min(3, d == null ? (맞춤 >= 0.9 || 넓은가() ? 맞춤 : 1.15) : 배율 * d));   // 태블릿은 맞춤 · 폰은 밀어 보기
+  지도그리기();
+  if (고른) 칸으로(고른);
+}
+
+function 시작(d) {
+  자료 = d;
+  $('main').hidden = false;
+  머리그리기(); 밖그리기();
+  크기(null);
+  if (자료.열) { 자세히(자료.열); 칸으로(자료.열); }
+  else if (넓은가()) { $('detail').innerHTML = '<div class="wait">칸을 누르면 여기에 그 야드 재고<br>(작지 · 규격 · 본수 · 관 번호)</div>'; $('detail').hidden = false; }
+}
+function 오류(말) { $('err').hidden = false; $('err').textContent = 말; }
+
+function 넓은가() { return !!(window.matchMedia && window.matchMedia('(min-width: 1000px)').matches); }
+function 보이기() { if (!넓은가()) $('detail').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+$('map').addEventListener('click', function (ev) {
+  var g = ev.target.closest && ev.target.closest('[data-y]');
+  if (g) { 자세히(g.getAttribute('data-y')); 보이기(); }
+});
+$('outChips').addEventListener('click', function (ev) {
+  var b = ev.target.closest('[data-y]');
+  if (b) { 자세히(b.getAttribute('data-y')); 보이기(); }
+});
+$('hits').addEventListener('click', function (ev) {
+  var h = ev.target.closest('[data-y]');
+  if (h) { var y = h.getAttribute('data-y'); 자세히(y); 칸으로(y); 보이기(); }
+});
+$('findIn').addEventListener('input', 찾기그리기);
+$('zoomIn').addEventListener('click', function () { 크기(1.25); });
+$('zoomOut').addEventListener('click', function () { 크기(0.8); });
+window.addEventListener('resize', function () { if (자료) 크기(1); });
+
+(function () {
+  if (텔레그램안) {
+    try { tg.ready(); tg.expand(); } catch (e) {}
+    var 테마 = function () { document.documentElement.setAttribute('data-theme', tg.colorScheme === 'dark' ? 'dark' : 'light'); };
+    테마(); try { tg.onEvent('themeChanged', 테마); } catch (e) {}
+  }
+  var h = 해시읽기(location.hash);
+  if (h.c) {
+    if (typeof DecompressionStream === 'undefined') { 오류('이 폰의 텔레그램(웹뷰)이 오래돼 지도를 못 풀어요 — 텔레그램 · Android System WebView 를 업데이트해 주세요.'); return; }
+    풀기(h.c).then(function (d) { if (h.열) d.열 = h.열; 시작(d); })
+      .catch(function (e) { 오류('지도 자료를 못 읽었어요 — 봇에 [🗺 야드 지도] 를 다시 눌러 주세요. (' + e.message + ')'); });
+    return;
+  }
+  if (텔레그램안) { 오류('지도 자료가 없어요 — 봇 대화에서 [🗺 야드 지도] 를 눌러 열어 주세요.'); return; }
+  $('testStrip').hidden = false;                        // 시험 모드 — 예시 칸 · 가짜 작지(회사 자료 없음)
+  var K = [], Y = {};
+  ['A', 'C'].forEach(function (줄, r) { for (var i = 1; i <= 8; i++) K.push([줄 + ('0' + i).slice(-2), (8 - i) * 60, r * 160, 60, 100]); });
+  for (var j = 1; j <= 8; j++) { K.push(['B0' + j + 'A', (8 - j) * 60, 110, 60, 22]); K.push(['B0' + j + 'C', (8 - j) * 60, 132, 60, 22]); }
+  Y.A01 = [[0, 6, 'X1A:0001-0006']]; Y.A03 = [[1, 24, 'X2B:0100-0123']]; Y.C05 = [[0, 40, 'X1A:0010-0049'], [1, 3, 'X2B:0200-0202']];
+  Y.B02A = [[1, 2, 'X2B:0300,0302']]; Y.G1 = [[0, 120, ''], [-1, 37, '']];
+  시작({ v: 1, t: '2026-01-01 09:00', W: [480, 260], K: K, L: [['XX00A001', '100X5X6M'], ['XX00B002', '200X8X12M']], Y: Y,
+        N: { 전체: 232, 칸: 75, 밖: 157 }, 열: 'C05' });
+})();
+</script>
+</body>
+</html>
