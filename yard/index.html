@@ -24,8 +24,19 @@
     봇 쪽은 yard_tablet.py(링크 · 받기) · 메인 📦 재고 › 📝 야드파일 만들기(yard_note_photo — 받은 목록을 사람이 보고 저장 · DB).
   · 쌓은 모양 그림(2026-11-17 시안 D) — 차례 목록 위에 파이프 단면: 1단은 바닥 줄(누른 차례), 2단은 1단 둘 사이 홈, 3단은 2단 사이 홈.
     파랑 1단 · 노랑 2단 · 초록 3단 · 빨강 테 = 마지막 · 점선 = 다음 자리(자동이면 그 단). 동그라미를 누르면 그 줄을 고른다.
+  · 📱 폰 · 중간 고치기(2026-11-19 — 폰으로 야드 조사해 보고 '번호 단추를 조금 줄이고 · 단추 사이가 붙어 굴리다 눌림 ·
+    중간에 잘못 넣은 번호를 빼거나 고치기'): 폰(폭 600 아래)은 번호 단추를 작게(한 줄 4개 · 사이 띄움) · 차례 목록을 늘 보이게
+    ([📋 차례] / [🔵 모양] 바꿔 보기 — 예전엔 폰에서 목록 칸이 0 이 되어 안 보였다). 태블릿은 크기 그대로.
+    굴리다 눌림 막기(누름인가 — 번호판 · 목록 · 그림 · 작지): 구르던 판을 멈추려 댄 손 · 누르는 동안 판이 구름 · 손가락이 밀림은 안 친다.
+    번호판 오른쪽 굴림 막대(같은 날 '번호를 왼쪽으로 몰고 우측에 스크롤바나 단추') — [▲] · 끄는 손잡이(막대를 누르면 그 자리로) ·
+    [▼](한 쪽씩). 번호는 왼쪽에서 누르기만, 굴리기는 오른쪽에서(번호 위를 밀어 굴리는 것도 그대로 됨 — 굴림 막기가 지킴).
+    줄(또는 동그라미)을 눌러 고르고 [✕ 빼기](5초 [되살리기]) · [✏ 바꾸기](다음에 누른 번호로 — 자리 · 단 그대로) ·
+    [⤴ 끼우기](그 줄 앞에 — 여러 개면 누른 차례로). 줄 끝 ✕ 는 없앰(목록을 굴리다 지워짐). [↩ 마지막 빼기] 는 [✕ 빼기] 로
+    (번호를 누를 때마다 끝 줄이 골라지므로 같은 일 — 단추에 'n번 빼기' 로 어느 줄인지 보인다).
   함수  셈: 해시읽기 · b64url풀기 · 범위풀기 · 번호꼴 · 보낼글 · 더미풀기 · 보낼묶음 · 반복켜 · 자동켜찾기 · 다음단 · 쌓은자리
+            · 바꾼줄 · 끼운줄 · 뺀줄 · 누름인가 · 레일자리 · 손굴림
         화면: 그리기 · 칩그리기 · 판그리기 · 야드그리기 · 차례그리기 · 누름 · 단고름 · 야드고르기열기 · 보내기 · 시작
+            · 지킴 · 눌러도 · 지금고침 · 고침켜기 · 빼기 · 모드그리기 · 토스트 · 보기바꿈 · 레일그리기 · 레일굴림 · 레일잇기
 -->
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
@@ -66,7 +77,18 @@
   .grid { flex: 1; overflow-y: auto; padding: 0 10px 14px; position: relative; }
   .lot { margin: 14px 0 6px; font-size: 15px; color: var(--hint); }
   .lot b { color: var(--text); }
-  .nums { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); grid-gap: 9px; }
+  .nums { display: grid; grid-template-columns: repeat(auto-fill, minmax(108px, 1fr)); grid-gap: 9px; }
+  .gridrow { flex: 1; display: flex; min-height: 0; }
+  .gridrow .grid { flex: 1; min-width: 0; }
+  .rail { flex: none; width: 68px; display: flex; flex-direction: column; padding: 4px 8px 8px 2px; }
+  .rail .rb { flex: none; height: 62px; padding: 0; font-size: 22px; }
+  .track { flex: 1; position: relative; margin: 6px 0; border-radius: 10px; background: #e2e7ee; touch-action: none; cursor: pointer; }
+  .track::before { content: ''; position: absolute; left: 50%; top: 8px; bottom: 8px; width: 2px; margin-left: -1px; background: #c3cbd6; }
+  .thumb { position: absolute; left: 3px; right: 3px; top: 0; height: 40px; border-radius: 9px;
+           background: linear-gradient(#5b9ff0, #2c6bd4); box-shadow: 0 1px 3px rgba(0, 0, 0, .3); }
+  .thumb::after { content: '≡'; position: absolute; left: 0; right: 0; top: 50%; margin-top: -11px; line-height: 22px;
+                  text-align: center; color: #fff; font-size: 18px; }
+  .rail.still .thumb { opacity: .25; }
   .num { height: 82px; padding: 2px 0; text-align: center; position: relative; }
   .num .p { display: block; font-size: 13px; color: var(--hint); padding-top: 4px; }
   .num .t { display: block; font-size: 32px; font-weight: bold; letter-spacing: .5px; }
@@ -100,7 +122,27 @@
   .tier .k3 { flex: 1; font-size: 24px; padding: 18px 0; margin-left: 8px; }
   .foot { padding: 8px 10px 10px; display: flex; border-top: 1px solid var(--sep); }
   .foot .k3 { padding: 18px 16px; font-size: 18px; }
-  .foot .send { flex: 1; font-size: 21px; margin-left: 8px; }
+  .foot .ed { padding: 18px 6px; font-size: 15px; margin-right: 5px; white-space: nowrap; }
+  .foot .send { flex: 1; font-size: 20px; margin-left: 2px; white-space: nowrap; }
+  .mode { display: flex; align-items: center; margin: 0 10px 6px; padding: 8px 10px; border-radius: 8px; font-size: 16px; font-weight: bold; }
+  .mode span { flex: 1; }
+  .mode.m-fix { background: #ffedd5; color: #9a3412; border: 2px solid #fb923c; }
+  .mode.m-ins { background: #dcfce7; color: #166534; border: 2px solid #4ade80; }
+  .mode .k3 { margin-left: 8px; padding: 6px 14px; font-size: 15px; flex: none; }
+  tr.tgt-fix td { background: #ffedd5; }
+  tr.tgt-fix td.n { color: #c2410c; font-weight: bold; }
+  tr.tgt-ins td { border-top: 3px solid #22c55e; }
+  .toast { position: fixed; left: 0; right: 0; bottom: 150px; margin: 0 auto; width: 92%; max-width: 560px; z-index: 70;
+           display: flex; align-items: center; padding: 10px 12px; border-radius: 10px; background: #1f2937; color: #fff;
+           font-size: 16px; box-shadow: 0 4px 14px rgba(0, 0, 0, .3); }
+  .toast span { flex: 1; }
+  .toast button { margin-left: 10px; padding: 6px 12px; border: 1px solid #93c5fd; border-radius: 8px; background: none;
+                  color: #93c5fd; font: inherit; font-weight: bold; }
+  .viewtog { display: none; }
+  .viewtog button { font: inherit; font-size: 13px; padding: 3px 9px; margin-left: 4px; border: 1px solid #b9c2cd; border-radius: 12px;
+                    background: #fff; color: #15191e; }
+  .viewtog button.on { background: var(--sel-bg); border-color: var(--sel); color: var(--sel); font-weight: bold; }
+  .num, .stack tr, .chips .k3, .foot .k3 { touch-action: manipulation; }
   .note { margin: 0 10px 8px; padding: 8px 10px; border-radius: 8px; background: var(--warn-bg); color: var(--warn); font-size: 14px; }
   .sheet-bg { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 60; background: rgba(0, 0, 0, .45);
               display: flex; align-items: center; justify-content: center; }
@@ -117,6 +159,53 @@
     .main { flex-direction: column; }
     .left { flex: 50; border-right: 0; border-bottom: 2px solid var(--sep); }
     .right { flex: 50; }
+  }
+  /* 📱 폰(폭 600 아래 — 11-19 '번호 단추를 조금 줄이고 · 사이를 띄워 굴리다 눌림 없게 · 차례 목록이 보이게'). 태블릿은 위 그대로 */
+  @media (max-width: 600px) {
+    .bar { padding: 6px 10px; }
+    .bar h1 { font-size: 18px; }
+    .chips { padding: 6px 8px; }
+    .chips .k3 { padding: 7px 10px; font-size: 14px; }
+    .find { padding: 4px 10px; }
+    .find input { font-size: 18px; width: 120px; padding: 5px 8px; }
+    .note { font-size: 12px; padding: 5px 8px; margin: 0 10px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .note.open { white-space: normal; }
+    .grid { padding: 0 6px 14px 10px; }
+    .rail { width: 50px; padding: 2px 6px 6px 0; }
+    .rail .rb { height: 46px; font-size: 18px; }
+    .lot { margin: 12px 0 6px; font-size: 13px; }
+    .nums { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); grid-gap: 14px 10px; }
+    .num { height: 50px; border-bottom-width: 3px; }
+    .num .p { font-size: 10px; padding-top: 2px; }
+    .num .t { font-size: 22px; letter-spacing: 0; }
+    .mode { font-size: 14px; padding: 6px 8px; margin: 0 10px 4px; }
+    .main .left { flex: 1; }
+    .main .right { flex: none; }
+    .yards { padding: 4px 8px 0; }
+    .yards .k3 { padding: 7px 12px; font-size: 16px; margin: 0 6px 4px 0; }
+    .stackhead { padding: 4px 10px; font-size: 13px; align-items: center; }
+    .stackhead .danh { display: none; }
+    .yards { order: 1; } .stackhead { order: 2; } .pic { order: 3; } .stack { order: 4; }     /* 차례 / 모양 머리는 늘 위 */
+    .autoline { order: 5; } .tier { order: 6; } .foot { order: 7; }
+    .viewtog { display: inline-block; }
+    .stack { flex: none; height: 150px; }
+    body.v-list #pic { display: none !important; }
+    body.v-pic #stackBox { display: none; }
+    body.v-pic .pic { height: 150px; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; }
+    .pic .t { display: none; }
+    td { padding: 7px 8px; font-size: 18px; }
+    td.n { width: 34px; font-size: 13px; }
+    td.d { width: 84px; }
+    .dan { min-width: 44px; padding: 3px 6px; font-size: 14px; }
+    .tier { padding: 5px 8px; }
+    .tier .k3 { font-size: 18px; padding: 7px 0; margin-left: 6px; }
+    #tierfor { width: 62px; font-size: 13px; }
+    .foot { padding: 5px 8px 8px; }
+    .foot .k3 { padding: 11px 6px; font-size: 15px; }
+    .foot .ed { padding: 11px 7px; font-size: 15px; margin-right: 5px; }
+    .foot .send { font-size: 16px; }
+    .foot .wide { display: none; }
+    .toast { bottom: 120px; font-size: 15px; }
   }
 </style>
 </head>
@@ -137,12 +226,17 @@
       <span class="grow"></span><span class="hint" id="cnt"></span>
     </div>
     <div class="note" id="note" hidden></div>
-    <div class="grid" id="grid"></div>
+    <div class="mode" id="mode" hidden><span id="modeT"></span><button class="k3" id="modeX">그만</button></div>
+    <div class="gridrow">
+      <div class="grid" id="grid"></div>
+      <div class="rail" id="rail"><button class="k3 rb" id="railUp">▲</button><div class="track" id="track"><div class="thumb" id="thumb"></div></div><button class="k3 rb" id="railDn">▼</button></div>
+    </div>
   </div>
   <div class="right">
     <div class="yards" id="yards"></div>
     <div class="pic" id="pic" hidden><div class="t" id="picT"></div><div class="picbox" id="picBox"></div></div>
-    <div class="stackhead"><span id="sh"></span><span class="grow"></span><span>단</span></div>
+    <div class="stackhead"><span id="sh"></span><span class="grow"></span><span class="danh">단</span>
+      <span class="viewtog"><button data-v="list">📋 차례</button><button data-v="pic">🔵 모양</button></span></div>
     <div class="stack" id="stackBox"><table id="stack"></table></div>
     <div class="autoline" id="autoLine" hidden></div>
     <div class="tier">
@@ -150,11 +244,14 @@
       <button class="k3" data-t="1">1단</button><button class="k3" data-t="2">2단</button><button class="k3" data-t="3">3단</button>
     </div>
     <div class="foot">
-      <button class="k3" id="undo">↩ 마지막 빼기</button>
+      <button class="k3 ed" id="del">✕ 빼기</button>
+      <button class="k3 ed" id="fix">✏ 바꾸기</button>
+      <button class="k3 ed" id="ins">⤴ 끼우기</button>
       <button class="k3 blue send" id="send">📤 보내기</button>
     </div>
   </div>
 </div>
+<div class="toast" id="toast" hidden><span id="toastT"></span><button id="toastB" hidden></button></div>
 <div class="sheet-bg" id="sheetBg" hidden><div class="sheet" id="sheet"></div></div>
 <script>
 'use strict';
@@ -269,6 +366,45 @@ function 보낼묶음(야드들, id, 날) {
   });
   return { 글: 글, 야드들: 들, n: n };
 }
+/** 중간 고치기(11-19) — 새 줄들을 돌려준다(본 줄들은 그대로). 바꾼줄: i 번째 번호만 p 로(단 · 고름 · 자동 그대로) ·
+ *  끼운줄: i 번째 앞에 p(기본 1단 — 자동 번갈아는 끝에 더할 때만) · 뺀줄: i 번째를 뺌 */
+function 바꾼줄(줄들, i, p) {
+  return 줄들.map(function (x, j) {
+    if (j !== i) return x;
+    var y = {};
+    Object.keys(x).forEach(function (k) { y[k] = x[k]; });
+    y.p = p;
+    return y;
+  });
+}
+function 끼운줄(줄들, i, p) {
+  var out = 줄들.slice();
+  out.splice(Math.max(0, Math.min(i, out.length)), 0, { p: p, 단: 1, 고름: false, 자동: false });
+  return out;
+}
+function 뺀줄(줄들, i) { var out = 줄들.slice(); if (i >= 0 && i < out.length) out.splice(i, 1); return out; }
+/** 굴리다 눌림 막기 — 손 {t: 손 댄 때, 굴림: 그 전에 판이 마지막으로 구른 때, x, y, top, left(판 자리)} · 뗌 {x, y, top, left}
+ *  → 누름으로 칠까. 구르던 판을 멈추려 댄 손(0.35초 안) · 누르는 동안 판이 구름 · 손가락이 8px 넘게 밀림은 아니다 */
+function 누름인가(손, 뗌) {
+  if (!손) return true;
+  if (손.t - 손.굴림 < 350) return false;
+  if (Math.abs(뗌.top - 손.top) > 2 || Math.abs(뗌.left - 손.left) > 2) return false;
+  if (Math.abs(뗌.x - 손.x) > 8 || Math.abs(뗌.y - 손.y) > 8) return false;
+  return true;
+}
+/** 오른쪽 굴림 막대(11-19) — 트랙 높이 · 판 전체 높이 · 보이는 높이 · 굴린 자리 → {키(손잡이), 위, 넘침} */
+function 레일자리(트랙, 전체, 보임, 굴림) {
+  if (전체 <= 보임 + 2 || 트랙 <= 0) return { 키: Math.max(0, 트랙), 위: 0, 넘침: false };
+  var 키 = Math.min(트랙, Math.max(40, Math.round(트랙 * 보임 / 전체)));
+  var 비 = Math.max(0, Math.min(1, 굴림 / (전체 - 보임)));
+  return { 키: 키, 위: Math.round((트랙 - 키) * 비), 넘침: true };
+}
+/** 막대 위 손 자리 y(트랙 안) → 판 scrollTop — 손잡이 가운데가 손 밑에 */
+function 손굴림(트랙, 키, 전체, 보임, y) {
+  if (전체 <= 보임 || 트랙 <= 키) return 0;
+  var 비 = Math.max(0, Math.min(1, (y - 키 / 2) / (트랙 - 키)));
+  return Math.round(비 * (전체 - 보임));
+}
 
 /* ── 화면 ─────────────────────────────────────────────────────────────── */
 var tg = (window.Telegram && window.Telegram.WebApp) || null;
@@ -280,7 +416,32 @@ var 열쇠 = 'yard|v1';
 var 상태 = { 야드들: {}, 야드: '', 작지: '', 고른: -1, 보냄: {}, 자동: {} };   // 자동 = {야드: 켜}
 var 모든번호 = {};            // 번호 → 작지 줄
 var 더미 = {};                // 야드 → [{p, 단}] — 봇이 실어 준 지금 DB 더미(태블릿에 저장 안 함 — 늘 링크의 것)
+var 고침 = null;              // {k: '바꿈' | '끼움', 야드, i(대상 줄), p(대상 번호), n(끼운 수)} — 저장 안 함(앱을 닫으면 그만)
+var 보기 = 'list';            // 폰 아래 칸 — 'list'(📋 차례) | 'pic'(🔵 모양)
+var 토스트때 = 0;
 var $ = function (id) { return document.getElementById(id); };
+function 뒤(p) { return _s(p).slice(-4); }
+
+/** 굴리는 판(번호판 · 목록 · 그림 · 작지)에 손 댄 때 · 구른 때를 적어 둔다 — 눌러도(판, e) 가 본다 */
+function 지킴(판) {
+  if (!판 || 판._지킴) return;
+  판._지킴 = true; 판._굴림 = 0; 판._손 = null;
+  판.addEventListener('scroll', function () { if (Date.now() - (판._조용 || 0) > 150) 판._굴림 = Date.now(); }, { passive: true });
+  판.addEventListener('pointerdown', function (e) {
+    판._손 = { t: Date.now(), 굴림: 판._굴림, x: e.clientX, y: e.clientY, top: 판.scrollTop, left: 판.scrollLeft };
+  }, true);
+}
+function 눌러도(판, e) { return 누름인가(판 && 판._손, { x: e.clientX, y: e.clientY, top: 판.scrollTop, left: 판.scrollLeft }); }
+function 떨림() { try { if (tg && tg.HapticFeedback) tg.HapticFeedback.selectionChanged(); } catch (e) {} }
+function 토스트(글, 단추, 할일) {
+  $('toastT').textContent = 글;
+  $('toastB').hidden = !단추;
+  $('toastB').textContent = 단추 || '';
+  $('toastB').onclick = function () { $('toast').hidden = true; if (할일) 할일(); };
+  $('toast').hidden = false;
+  clearTimeout(토스트때);
+  토스트때 = setTimeout(function () { $('toast').hidden = true; }, 할일 ? 5000 : 2500);
+}
 
 function 저장() {
   try { localStorage.setItem(열쇠, JSON.stringify(상태)); $('saved').textContent = '💾 태블릿에 저장 ' + 지금(); } catch (e) {}
@@ -297,7 +458,7 @@ function 쓴곳() {
 }
 function 지금줄들() { return 상태.야드들[상태.야드] || []; }
 
-function 그리기() { 칩그리기(); 판그리기(); 야드그리기(); 그림그리기(); 차례그리기(); }   // 그림 먼저 — 목록 굴림이 자리를 맞게 잼
+function 그리기() { 칩그리기(); 모드그리기(); 판그리기(); 야드그리기(); 그림그리기(); 차례그리기(); }   // 그림 먼저 — 목록 굴림이 자리를 맞게 잼
 
 /** 쌓은 모양 — 파이프 단면 동그라미(가로로 넘치면 판 안에서 굴려 마지막이 보이게) */
 function 그림그리기() {
@@ -339,10 +500,10 @@ function 그림그리기() {
   var 옛단 = Object.keys(옛수).sort().map(function (k) { return k + '단 ' + 옛수[k]; }).join(' · ');
   $('picT').textContent = 상태.야드 + ' 쌓은 모양(왼쪽 = 앞 · 1-1) — ' + (옛.length ? '회색 = 목록에 없는 DB ' + 옛.length + '본(' + 옛단 + ') · ' : '') +
     '파랑 1단 · 노랑 2단 · 초록 3단 · 점선 테 = 자동 · 점선 동그라미 = 다음 자리(' + 다음 + '단)';
-  Array.prototype.forEach.call($('picBox').querySelectorAll('g[data-i]'), function (g) {
-    g.onclick = function () { 상태.고른 = parseInt(g.getAttribute('data-i'), 10); 저장(); 그리기(); };
-  });
   var 판 = $('picBox');
+  Array.prototype.forEach.call(판.querySelectorAll('g[data-i]'), function (g) {
+    g.onclick = function (e) { if (!눌러도(판, e)) return; 고침 = null; 상태.고른 = parseInt(g.getAttribute('data-i'), 10); 저장(); 그리기(); };
+  });
   판.scrollLeft = Math.max(0, cx(다음x) + R * 3 - 판.clientWidth);   // 다음 자리(와 그 뒤 회색 조금)가 보이게
 }
 
@@ -353,7 +514,7 @@ function 칩그리기() {
     var b = document.createElement('button');
     b.className = 'k3' + (상태.작지 === 값 ? ' on' : '');
     b.innerHTML = 글;
-    b.onclick = function () { 상태.작지 = 값; 저장(); 그리기(); $('grid').scrollTop = 0; };
+    b.onclick = function (e) { if (!눌러도(칩, e)) return; 상태.작지 = 값; 저장(); 그리기(); $('grid').scrollTop = 0; };
     칩.appendChild(b);
   }
   하나('G1 전부 <small>' + 자료.n + '</small>', '');
@@ -380,7 +541,7 @@ function 판그리기() {
       b.className = 'k3 num' + (쓴[r.p] ? ' used' : '');
       b.innerHTML = (쓴[r.p] ? '<span class="p badge">' + esc(쓴[r.p]) + '</span>' : '<span class="p">DB ' + r.단 + '단</span>') +
         '<span class="t">' + r.p.slice(-4).replace(/^0/, '') + '</span>';
-      b.onclick = function () { 누름(r.p); };
+      b.onclick = function (e) { if (눌러도(g, e)) 누름(r.p); };
       obox.appendChild(b);
     });
   }
@@ -402,12 +563,13 @@ function 판그리기() {
       b.className = 'k3 num' + (쓴[p] ? ' used' : '');
       b.innerHTML = (쓴[p] ? '<span class="p badge">' + esc(쓴[p]) + '</span>' : '<span class="p">' + esc(p.slice(0, -4)) + '</span>') +
         '<span class="t">' + p.slice(-4).replace(/^0/, '') + '</span>';
-      b.onclick = function () { 누름(p); };
+      b.onclick = function (e) { if (눌러도(g, e)) 누름(p); };
       box.appendChild(b);
     });
   });
   if (!수) { var e = document.createElement('div'); e.className = 'empty'; e.textContent = q ? "'" + q + "' 에 맞는 G1 번호가 없어요" : '보일 번호가 없어요'; g.appendChild(e); }
   $('cnt').textContent = '보이는 번호 ' + 수;
+  레일그리기();
   var 친 = 번호꼴(q);
   $('addTyped').hidden = !(친 && !모든번호[친] && !쓴[친]);
   $('addTyped').textContent = '＋ ' + 친 + ' 넣기';
@@ -421,6 +583,7 @@ function 야드그리기() {
     b.innerHTML = esc(y) + '  ' + 상태.야드들[y].length + (더미[y] ? ' <span class="hint">· DB ' + 더미[y].length + '</span>' : '') +
       (보낸야드(y) ? ' <span class="sent">📤 보냄</span>' : '');
     b.onclick = function () {
+      고침 = null;
       if (y === 상태.야드 && !상태.야드들[y].length) { delete 상태.야드들[y]; 상태.야드 = Object.keys(상태.야드들)[0] || ''; }
       else { 상태.야드 = y; 상태.고른 = 상태.야드들[y].length - 1; }
       저장(); 그리기();
@@ -440,14 +603,15 @@ function 차례그리기() {
   var xs = 지금줄들(), t = $('stack');
   $('sh').textContent = 상태.야드 ? 상태.야드 + ' 쌓은 차례 — ' + xs.length + '본' : '먼저 ＋ 야드 로 야드를 고르세요';
   t.innerHTML = '';
+  var 지 = 지금고침(), 판 = $('stackBox');
   xs.forEach(function (x, i) {
     var tr = document.createElement('tr');
-    if (i === 상태.고른) tr.className = 'cur';
+    tr.className = (i === 상태.고른 ? 'cur' : '') + (지 && i === 지.i ? (지.k === '바꿈' ? ' tgt-fix' : ' tgt-ins') : '');
     tr.innerHTML = '<td class="n">' + (i + 1) + '</td><td class="p">' + esc(x.p) + '</td><td class="d"><span class="dan ' +
-      (x.고름 ? 'set' : x.자동 ? 'auto' : 'def') + '">' + x.단 + '단' + (x.자동 ? ' <small>자동</small>' : '') + '</span></td><td class="x">✕</td>';
-    tr.onclick = function (e) {
-      if (e.target.className === 'x') { xs.splice(i, 1); 상태.고른 = Math.min(상태.고른, xs.length - 1); }
-      else 상태.고른 = i;
+      (x.고름 ? 'set' : x.자동 ? 'auto' : 'def') + '">' + x.단 + '단' + (x.자동 ? ' <small>자동</small>' : '') + '</span></td>';
+    tr.onclick = function (e) {                                       // 고르기만 — 빼기 · 바꾸기 · 끼우기는 아래 단추(굴리다 지워지지 않게)
+      if (!눌러도(판, e)) return;
+      고침 = null; 상태.고른 = i;
       저장(); 그리기();
     };
     t.appendChild(tr);
@@ -463,10 +627,14 @@ function 차례그리기() {
   });
   var 모두 = 0, 곳 = 0;
   Object.keys(상태.야드들).forEach(function (y) { if (상태.야드들[y].length) { 모두 += 상태.야드들[y].length; 곳++; } });
-  $('send').textContent = '📤 보내기 — ' + 곳 + '곳 ' + 모두 + '본';
+  $('send').innerHTML = '📤 보내기 ' + (곳 > 1 ? '<span class="wide">' + 곳 + '곳 </span>' : '') + 모두 + '본';
   $('send').disabled = !모두;
-  $('undo').disabled = !xs.length;
-  var cur = t.querySelector('tr.cur'), 판 = $('stackBox');           // 목록 칸 안에서만 굴린다
+  $('del').innerHTML = '✕ ' + (고 ? '<span class="wide">' + (상태.고른 + 1) + '번 </span>' : '') + '빼기';   // 폰은 '✕ 빼기'(고른 줄은 목록 · 단 옆에)
+  ['del', 'fix', 'ins'].forEach(function (id) { $(id).disabled = !고; });
+  $('fix').classList.toggle('on', !!지 && 지.k === '바꿈');
+  $('ins').classList.toggle('on', !!지 && 지.k === '끼움');
+  Array.prototype.forEach.call(document.querySelectorAll('.viewtog button'), function (b) { b.classList.toggle('on', b.getAttribute('data-v') === 보기); });
+  var cur = t.querySelector('tr.cur');                                // 목록 칸 안에서만 굴린다
   if (cur) {
     if (cur.offsetTop < 판.scrollTop) 판.scrollTop = cur.offsetTop;
     else if (cur.offsetTop + cur.offsetHeight > 판.scrollTop + 판.clientHeight) 판.scrollTop = cur.offsetTop + cur.offsetHeight - 판.clientHeight;
@@ -474,13 +642,97 @@ function 차례그리기() {
 }
 function 누름(p) {
   if (!상태.야드) { 야드고르기열기(); return; }
-  var 쓴 = 쓴곳();
+  var 쓴 = 쓴곳(), xs = 지금줄들(), 지 = 지금고침();
+  if (지 && 지.k === '바꿈') {                                      // ✏ 바꾸기 — 그 줄 번호만(자리 · 단 그대로)
+    if (p === 지.p) { 고침 = null; 그리기(); return; }
+    if (쓴[p]) { 알림(p + ' 는 이미 ' + 쓴[p] + ' 에 넣었어요 — 그 줄을 먼저 빼거나 바꾸세요'); return; }
+    상태.야드들[상태.야드] = 바꾼줄(xs, 지.i, p);
+    상태.고른 = 지.i; 고침 = null;
+    떨림(); 저장(); 그리기();
+    토스트('✏ ' + (지.i + 1) + '번 ' + 뒤(지.p) + ' → ' + 뒤(p) + ' 로 바꿨어요');
+    return;
+  }
   if (쓴[p]) { 알림(p + ' 는 이미 ' + 쓴[p] + ' 에 넣었어요'); return; }
-  var xs = 지금줄들(), 켜 = 상태.자동[상태.야드];
+  if (지 && 지.k === '끼움') {                                      // ⤴ 끼우기 — 대상 줄 앞에, 누른 차례로
+    상태.야드들[상태.야드] = 끼운줄(xs, 지.i, p);
+    상태.고른 = 지.i; 지.i += 1; 지.n += 1;
+    떨림(); 저장(); 그리기();
+    return;
+  }
+  var 켜 = 상태.자동[상태.야드];
   xs.push(켜 ? { p: p, 단: 다음단(xs, 켜), 고름: false, 자동: true } : { p: p, 단: 1, 고름: false, 자동: false });
   상태.고른 = xs.length - 1;
-  try { if (tg && tg.HapticFeedback) tg.HapticFeedback.selectionChanged(); } catch (e) {}
+  떨림(); 저장(); 그리기();
+}
+/** 고침이 지금 야드 · 그 줄에 아직 맞나 → 고침 | null */
+function 지금고침() {
+  var xs = 지금줄들();
+  return 고침 && 고침.야드 === 상태.야드 && xs[고침.i] && xs[고침.i].p === 고침.p ? 고침 : null;
+}
+function 고침켜기(k) {
+  var xs = 지금줄들(), i = 상태.고른, 지 = 지금고침();
+  if (!xs[i]) return;
+  고침 = 지 && 지.k === k ? null : { k: k, 야드: 상태.야드, i: i, p: xs[i].p, n: 0 };
+  그리기();
+}
+function 빼기() {
+  var 야 = 상태.야드, xs = 지금줄들(), i = 상태.고른, x = xs[i];
+  if (!x) return;
+  상태.야드들[야] = 뺀줄(xs, i);
+  if (!상태.야드들[야].length) delete 상태.자동[야];
+  상태.고른 = 상태.야드들[야].length - 1; 고침 = null;
   저장(); 그리기();
+  토스트('✕ ' + (i + 1) + '번 ' + 뒤(x.p) + ' 뺐어요', '↩ 되살리기', function () {
+    var ys = 상태.야드들[야];
+    if (!ys) return;
+    if (쓴곳()[x.p]) { 알림(x.p + ' 는 이미 다시 넣었어요'); return; }
+    상태.야드들[야] = ys.slice(0, i).concat([x], ys.slice(i));
+    상태.야드 = 야; 상태.고른 = Math.min(i, 상태.야드들[야].length - 1); 고침 = null;
+    저장(); 그리기();
+  });
+}
+function 모드그리기() {
+  var 지 = 지금고침();
+  if (!지) 고침 = null;
+  $('mode').hidden = !지;
+  if (!지) return;
+  $('mode').className = 'mode ' + (지.k === '바꿈' ? 'm-fix' : 'm-ins');
+  $('modeT').textContent = 지.k === '바꿈'
+    ? '✏ ' + (지.i + 1) + '번 ' + 뒤(지.p) + ' → 바꿀 번호를 누르세요'
+    : '⤴ ' + 뒤(지.p) + ' 앞에 끼울 번호를 누르세요' + (지.n ? ' — ' + 지.n + '개 끼움 · 더 누르면 그 뒤로' : ' · 여러 개면 차례대로');
+  $('modeX').textContent = 지.k === '끼움' && 지.n ? '끝' : '그만';
+}
+function 레일그리기() {
+  var g = $('grid'), tr = $('track');
+  if (!g || !tr) return;
+  var 자 = 레일자리(tr.clientHeight, g.scrollHeight, g.clientHeight, g.scrollTop);
+  $('thumb').style.height = 자.키 + 'px';
+  $('thumb').style.top = 자.위 + 'px';
+  $('rail').classList.toggle('still', !자.넘침);
+  $('railUp').disabled = !자.넘침 || g.scrollTop <= 0;
+  $('railDn').disabled = !자.넘침 || g.scrollTop + g.clientHeight >= g.scrollHeight - 2;
+}
+/** 막대 · ▲▼ 로 굴림 — 번호판 굴림 막기가 '구름'으로 안 치게(_조용) */
+function 레일굴림(top) { var g = $('grid'); g._조용 = Date.now(); g.scrollTop = Math.max(0, top); 레일그리기(); }
+function 레일잇기() {
+  var g = $('grid'), tr = $('track'), 끄는 = false;
+  function 옮김(e) {
+    var r = tr.getBoundingClientRect();
+    레일굴림(손굴림(r.height, $('thumb').offsetHeight, g.scrollHeight, g.clientHeight, e.clientY - r.top));
+  }
+  tr.addEventListener('pointerdown', function (e) { 끄는 = true; try { tr.setPointerCapture(e.pointerId); } catch (x) {} 옮김(e); e.preventDefault(); });
+  tr.addEventListener('pointermove', function (e) { if (끄는) 옮김(e); });
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function (k) { tr.addEventListener(k, function () { 끄는 = false; }); });
+  $('railUp').onclick = function () { 레일굴림(g.scrollTop - Math.round(g.clientHeight * 0.8)); };
+  $('railDn').onclick = function () { 레일굴림(g.scrollTop + Math.round(g.clientHeight * 0.8)); };
+  g.addEventListener('scroll', 레일그리기, { passive: true });
+  window.addEventListener('resize', 레일그리기);
+}
+function 보기바꿈(v) {
+  보기 = v === 'pic' ? 'pic' : 'list';
+  document.body.classList.toggle('v-list', 보기 === 'list');
+  document.body.classList.toggle('v-pic', 보기 === 'pic');
+  try { localStorage.setItem('yard|보기', 보기); } catch (e) {}
 }
 function 단고름(t) {
   var xs = 지금줄들(), x = xs[상태.고른];
@@ -527,6 +779,7 @@ function 야드고르기열기() {
   $('sheetBg').hidden = false;
 }
 function 야드정함(y) {
+  고침 = null;
   if (!상태.야드들[y]) 상태.야드들[y] = [];
   상태.야드 = y; 상태.고른 = 상태.야드들[y].length - 1;
   닫기(); 저장(); 그리기();
@@ -569,6 +822,9 @@ function 시작() {
   if (해시.c) { try { 자료 = JSON.parse(b64url풀기(해시.c)); } catch (e) { 오류 = e.message; } }
   if (!자료 && 시험) 자료 = JSON.parse(JSON.stringify(예시자료));
   if (텔레그램안) { try { tg.ready(); tg.expand(); } catch (e) {} }
+  if (텔레그램안) { try { if (tg.disableVerticalSwipes) tg.disableVerticalSwipes(); } catch (e) {} }   // 목록을 내리다 앱이 접히지 않게
+  try { 보기 = localStorage.getItem('yard|보기') || 'list'; } catch (e) {}
+  보기바꿈(보기);
   $('testStrip').hidden = !시험;
   if (!자료 || !자료.L) {
     $('main').innerHTML = '<div class="empty">📍 G1 목록이 없어요' + (오류 ? '(' + esc(오류) + ')' : '') +
@@ -600,7 +856,16 @@ function 시작() {
   if (노트.length) { $('note').hidden = false; $('note').textContent = 노트.join(' · '); }
   if (!상태.야드 && !Object.keys(상태.야드들).length) setTimeout(야드고르기열기, 0);
   Array.prototype.forEach.call(document.querySelectorAll('.tier .k3'), function (b) { b.onclick = function () { 단고름(parseInt(b.getAttribute('data-t'), 10)); }; });
-  $('undo').onclick = function () { var xs = 지금줄들(); xs.pop(); 상태.고른 = xs.length - 1; if (!xs.length) delete 상태.자동[상태.야드]; 저장(); 그리기(); };
+  $('del').onclick = 빼기;
+  $('fix').onclick = function () { 고침켜기('바꿈'); };
+  $('ins').onclick = function () { 고침켜기('끼움'); };
+  $('modeX').onclick = function () { 고침 = null; 그리기(); };
+  $('note').onclick = function () { $('note').classList.toggle('open'); };
+  Array.prototype.forEach.call(document.querySelectorAll('.viewtog button'), function (b) {
+    b.onclick = function () { 보기바꿈(b.getAttribute('data-v')); 그리기(); };
+  });
+  ['grid', 'stackBox', 'picBox', 'chips'].forEach(function (id) { 지킴($(id)); });
+  레일잇기();
   $('q').oninput = 판그리기;
   $('addTyped').onclick = function () { var p = 번호꼴($('q').value); if (p) { 누름(p); $('q').value = ''; 판그리기(); } };
   $('send').onclick = 보내기;
