@@ -161,6 +161,7 @@
     color: var(--hint); }
   .tag.eye { background: var(--eye-bg); color: var(--eye); } .tag.ok { background: var(--ok-bg); color: var(--ok); }
   .tag.m3 { background: var(--m3-bg); color: var(--m3); } .tag.nobc { background: var(--warn-bg); color: var(--warn); }
+  .tag.pos { background: #e0f2fe; color: #075985; margin-right: 3px; }   /* 📍 적재 자리 '2-07'(11-19 — 가까운 자리부터) */
   .row.tap { cursor: pointer; }
   .row.tap:active { background: var(--eye-bg); }
   .eye-mode .row.todo-row .ic.todo { border-color: var(--eye); border-style: dashed; }
@@ -411,7 +412,7 @@ function 계획다듬기(x) {
     if (P.length) 자리 = { W: +x.자리.W || 245, H: +x.자리.H || 0, P: P };
   }
   // 👁 눈 모드에 더 보일 번호(2026-11-18) — ◀ ▶ 앞뒤 차 · 📍 야드 칸(예정 아님). 번호 · 순번 · 칸 · 표만
-  var 더 = { 이웃: [], 칸: [], 야드: [] }, 예정표 = {};
+  var 더 = { 이웃: [], 칸: [], 야드: [], 야드칸: [] }, 예정표 = {};
   예정.forEach(function (e) { 예정표[e.p] = 1; });
   function 더번호들(a) {
     return (Array.isArray(a) ? a : []).map(function (p) { return _s(p).toUpperCase(); })
@@ -426,6 +427,15 @@ function 계획다듬기(x) {
     (Array.isArray(x.더.야드) ? x.더.야드 : []).forEach(function (g) {
       var ps = Array.isArray(g) ? 더번호들(g[1]) : [];
       if (ps.length) 더.야드.push({ 표: _s(g[0]).slice(0, 10), ps: ps });
+    });
+    // 📍 칸마다 빠진 예정 관 가까운 자리부터(2026-11-19) — [[머리, [[번호, 자리, 표?]…]]…] · 표가 없으면 재고
+    (Array.isArray(x.더.야드칸) ? x.더.야드칸 : []).forEach(function (g) {
+      if (!Array.isArray(g)) return;
+      var 줄들 = (Array.isArray(g[1]) ? g[1] : []).map(function (e) {
+        e = Array.isArray(e) ? e : [e];
+        return { p: _s(e[0]).toUpperCase(), 자리: _s(e[1]).slice(0, 6), 표: _s(e[2]).slice(0, 10) || '재고' };
+      }).filter(function (o) { return 번호꼴(o.p) && !예정표[o.p]; });
+      if (줄들.length) 더.야드칸.push({ 머리: _s(g[0]).slice(0, 60), 줄: 줄들 });
     });
   }
   return { 순번: 순번, 차4: 차4, 날: _s(x.날), sid: _s(x.sid),      // 차 머리는 '7번 6610' 만(차번호 · 도착지는 안 받는다)
@@ -922,13 +932,14 @@ function 보냄그리기() {
  *  (그 차 몫 · 재고 — 봇이 가림) · 들어옴 후보, 다시 누르면 취소. QR · 손으로 이미 넣은 번호는 누를 수 없이 ⚠ 만 */
 function 더그리기() {
   var 더 = 판.계획.더, h = '';
-  if (!더 || (!더.이웃.length && !더.야드.length)) return '';
-  function 줄(p, 글) {
+  if (!더 || (!더.이웃.length && !더.야드.length && !더.야드칸.length)) return '';
+  function 줄(p, 글, 자리, 보임) {
     var o = 밖찾기(판, 'p:' + p), 내것 = !o || o.how === '눈';
     return '<div class="row more' + (내것 ? ' tap' : '') + (o ? '' : ' todo-out') + '"' +
       (내것 ? ' data-eyeout="' + esc(p) + '" data-pyo="' + esc(글) + '"' : '') + '>' +
       (o ? '<span class="ic warn">⚠</span>' : '<span class="ic todo"></span>') +
-      '<span class="p num' + (o ? ' outd' : '') + '">' + esc(p) + '</span><span class="meta"><span class="tag">' + esc(글) + '</span>' +
+      '<span class="p num' + (o ? ' outd' : '') + '">' + esc(p) + '</span><span class="meta">' +
+      (자리 ? '<span class="tag pos">' + esc(자리) + '</span>' : '') + '<span class="tag">' + esc(보임 || 글) + '</span>' +
       (o ? ' ' + esc(o.at) : '') + '</span></div>';
   }
   if (더.이웃.length) {
@@ -939,6 +950,10 @@ function 더그리기() {
     h += '<div class="tier">📍 야드 ' + esc(더.칸.join(' · ')) + ' 의 검수 안 된 번호 — 이 차에 실려 있으면 누르세요</div>';
     더.야드.forEach(function (g) { g.ps.forEach(function (p) { h += 줄(p, '📍 ' + g.표); }); });
   }
+  더.야드칸.forEach(function (g) {                       // 칸마다 빠진 예정 관 가까운 자리부터(2026-11-19)
+    h += '<div class="tier">📍 ' + esc(g.머리) + ' — 가까운 자리부터 · 이 차에 실려 있으면 누르세요</div>';
+    g.줄.forEach(function (o) { h += 줄(o.p, '📍 ' + o.표, o.자리, o.표); });
+  });
   return h;
 }
 
