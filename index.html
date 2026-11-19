@@ -16,6 +16,9 @@
   · 관 QR 을 showScanQrPopup 로 연달아 읽고 예정 바코드 · 번호와 견줘 화면에만 ✓ · ⚠ · 기타 · 이미 를 보인다(판정 · 기록은 봇).
   · 모드 구분 없음(2026-11-19) — 번호 누르기 ✓(눈) · 다시 누르면 취소 · 번호 치기 · 앞뒤 차 · 야드 번호와 [📷 관 QR 찍기] 가 늘 한 화면.
     전엔 [👁 눈으로 확인] 단추로 켜고 껐는데, 잘못 눌러 꺼지면 번호가 안 눌려 당황했다 — 그 단추를 뺐다.
+  · 🔫 M3 스캔 단추(2026-11-19 — 검수 전용 M3): 스캐너(ScanEmul 붙여 넣기 + Enter)가 넣는 글을 보이지 않는 칸 #scanIn
+    (inputmode=none — 화면 자판 안 뜸)으로 받아 QR 찍기와 같은 길(받은글)로. 번호 치기 중이 아니면 늘 그 칸에 초점(누르면 · 1.5초마다).
+    M3 텔레그램 안 브라우저에서 시험: 붙여 넣기(insertFromPaste) 뒤 Enter 로 관 QR 글 전체가 들어왔다. 번호 치기 칸도 관 QR 글이면 같은 길.
   · [📨 봇에 보내기](MainButton) → 보내기만 / 보내고 검수 끝 → sendData(JSON ≤ 4096바이트)
       {k:'검수', v, id, 검수:'7-6610', 날, sid, 끝, qr:[QR 글 그대로 · 찍은 차례], 눈:[번호], 손:[번호], 기타:[글], n, 때}
   · QR 글 가르기(위에서부터): '*P…' 관 · 'N-차4' · 'N_차4_…' 상차요청서(차 확인만, 안 보냄) · 첫 낱말이 번호 꼴 → 번호 · 그 밖 기타
@@ -125,6 +128,7 @@
     background: var(--btn); color: var(--btn-text); font-size: 17px; font-weight: 700; box-shadow: 0 2px 6px rgba(0, 0, 0, .12); }
   .btn-scan:active { transform: translateY(1px); }
   .hint { text-align: center; color: var(--hint); font-size: 12px; margin: 2px 0 0; }
+  #scanIn { position: fixed; left: 0; bottom: 0; width: 1px; height: 1px; opacity: 0; border: 0; padding: 0; pointer-events: none; }
 
   /* 목록 */
   .sec { margin-top: 14px; }
@@ -262,7 +266,7 @@
 
     <div class="actions">
       <button class="btn-scan" id="btnScan" type="button"><span>📷</span><span id="btnScanText">관 QR 찍기</span></button>
-      <div class="hint" id="scanHint">연달아 찍어요 · ✓ 면 떨림 한 번 · ⚠ 예정 밖도 적고 계속</div>
+      <div class="hint" id="scanHint">연달아 찍어요 · ✓ 면 떨림 한 번 · ⚠ 예정 밖도 적고 계속 · M3 는 스캔 단추로 바로</div>
     </div>
 
     <div class="sec" id="truckSec" hidden>
@@ -282,6 +286,7 @@
       <div class="card" id="unkCard"></div>
     </div>
 
+    <input id="scanIn" inputmode="none" autocomplete="off" autocapitalize="off" spellcheck="false" tabindex="-1" aria-hidden="true">
     <div class="notes" id="notes">
       두 번 찍음 → <b>이미</b> · 상차요청서 QR → <b>차 확인만</b><br>
       위 단은 망원으로 라벨 'PIPE NO' 를 보고 그 번호를 누르면 <b>✓(눈)</b> — QR 찍기와 같이 써도 돼요<br>
@@ -1189,6 +1194,33 @@ function 시안차림(무엇) {
   }
 }
 
+/* 🔫 M3 스캔 단추(2026-11-19) — 스캐너가 붙여 넣은 글을 보이지 않는 칸으로 받아 QR 찍기와 같은 길 */
+var 스캔칸 = $('scanIn'), 스캔때 = null;
+function 받은글줄(raw) {
+  if (!판 || 묻는중) return;
+  마지막 = { raw: '', t: 0 };                       // 카메라처럼 '같은 글 잠깐 무시' 는 안 한다 — 다시 찍으면 '이미' 를 알려 준다
+  받은글(_s(raw), false);
+}
+function 스캔받기() {
+  if (스캔때) { clearTimeout(스캔때); 스캔때 = null; }
+  var v = _s(스캔칸.value);
+  스캔칸.value = '';
+  if (v) 받은글줄(v);
+}
+function 스캔초점() {
+  var a = document.activeElement;
+  if (a && a !== 스캔칸 && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA')) return;   // 번호 치기 중이면 안 뺏는다
+  if (a !== 스캔칸) { try { 스캔칸.focus({ preventScroll: true }); } catch (e) {} }
+}
+스캔칸.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' || ev.keyCode === 13) { ev.preventDefault(); 스캔받기(); } });
+스캔칸.addEventListener('input', function () {        // 끝 글자(Enter)가 안 오는 설정이어도 — 붙여 넣은 뒤 0.4초
+  if (스캔때) clearTimeout(스캔때);
+  스캔때 = setTimeout(스캔받기, 400);
+});
+document.addEventListener('click', function () { 소리준비(); setTimeout(스캔초점, 0); });
+window.addEventListener('focus', 스캔초점);
+setInterval(스캔초점, 1500);
+
 $('btnScan').addEventListener('click', 찍기열기);
 $('btnFakeMain').addEventListener('click', 보내기누름);
 $('sent').addEventListener('click', function (ev) { if (ev.target.closest('[data-resend]')) 보내기누름(); });
@@ -1214,7 +1246,9 @@ $('planCard').addEventListener('click', function (ev) {
     return;
   }
   if (ev.target.id === 'typeBtn') {
-    var inp = $('typeIn'), r = 손셈(판, inp.value);
+    var inp = $('typeIn'), 꼴 = 가르기(inp.value).꼴;
+    if (꼴 === '관' || 꼴 === '차') { var qr = inp.value; inp.value = ''; 받은글줄(qr); return; }   // 🔫 이 칸에 초점이 있을 때 M3 로 찍음
+    var r = 손셈(판, inp.value);
     if (r.바뀜) 남기기({ t: '손', p: _s(inp.value).toUpperCase() });
     알림(r.말, r.결과); 떨림(r.결과); 저장(); 그리기();
   }
@@ -1240,6 +1274,7 @@ $('btnReset').addEventListener('click', async function () {
   기록 = []; 보냄들 = []; 받은때 = ''; 판 = 새판(판.계획); 막말 = null; 시험차례 = 0; 저장(); 그리기();
 });
 시작();
+스캔초점();
 </script>
 </body>
 </html>
