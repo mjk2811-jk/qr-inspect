@@ -14,6 +14,7 @@
       순번-차4 · 예정 바코드 · 파이프 번호(· 단)만 — 도착지 · 차량번호 전체 · 무게 · 고객은 넣지 않는다(봇 inspect_miniapp.조각)
       이미 = 봇이 이 검수에서 벌써 ✓ 로 아는 번호(M3 · 앞서 보낸 것) · 받음 = 봇이 받은 sendData 의 id
   · 관 QR 을 showScanQrPopup 로 연달아 읽고 예정 바코드 · 번호와 견줘 화면에만 ✓ · ⚠ · 기타 · 이미 를 보인다(판정 · 기록은 봇).
+  · 열면 처음은 👁 눈으로 확인이 켜진 채(2026-11-19) — 번호를 눌러 ✓(눈), [👁 눈으로 확인 중] 을 누르면 끈다. QR 찍기는 그대로.
   · [📨 봇에 보내기](MainButton) → 보내기만 / 보내고 검수 끝 → sendData(JSON ≤ 4096바이트)
       {k:'검수', v, id, 검수:'7-6610', 날, sid, 끝, qr:[QR 글 그대로 · 찍은 차례], 눈:[번호], 손:[번호], 기타:[글], n, 때}
   · QR 글 가르기(위에서부터): '*P…' 관 · 'N-차4' · 'N_차4_…' 상차요청서(차 확인만, 안 보냄) · 첫 낱말이 번호 꼴 → 번호 · 그 밖 기타
@@ -681,7 +682,8 @@ var 텔레그램안 = !!(tg && tg.platform && tg.platform !== 'unknown');
 var 시안 = 텔레그램안 ? '' : (해시.shot || '');
 var 시험 = !텔레그램안 && !시안;
 var 판 = null, 기록 = [], 보냄들 = [], 받은때 = '', 묻는중 = false;
-var 눈켬 = false, 스캔중 = false, 마지막 = { raw: '', t: 0 }, 시험차례 = 0, 막말 = null, 고르기끝 = null;
+// 눈켬: 처음은 👁 눈으로 확인 켠 채(2026-11-19 — 전엔 꺼진 채 QR 찍기만). [📷 관 QR 찍기] 는 그대로 쓴다
+var 눈켬 = true, 스캔중 = false, 마지막 = { raw: '', t: 0 }, 시험차례 = 0, 막말 = null, 고르기끝 = null;
 var $ = function (id) { return document.getElementById(id); };
 
 function 판짓기(v) { return tg && tg.isVersionAtLeast ? tg.isVersionAtLeast(v) : false; }
