@@ -383,6 +383,8 @@ function 끼운줄(줄들, i, p) {
   return out;
 }
 function 뺀줄(줄들, i) { var out = 줄들.slice(); if (i >= 0 && i < out.length) out.splice(i, 1); return out; }
+/** 그림 동그라미 글 — 뒤 4자리에서 앞 0 하나만 뺌(번호 단추와 같은 꼴): 0694 → 694 · 1212 → 1212(11-19 — 예전엔 뒤 3자리라 1212 가 212) */
+function 원글(p) { return _s(p).slice(-4).replace(/^0/, ''); }
 /** 굴리다 눌림 막기 — 손 {t: 손 댄 때, 굴림: 그 전에 판이 마지막으로 구른 때, x, y, top, left(판 자리)} · 뗌 {x, y, top, left}
  *  → 누름으로 칠까. 구르던 판을 멈추려 댄 손(0.35초 안) · 누르는 동안 판이 구름 · 손가락이 8px 넘게 밀림은 아니다 */
 function 누름인가(손, 뗌) {
@@ -485,14 +487,15 @@ function 그림그리기() {
     '" stroke="#94a3b8" stroke-width="3"/>';
   옛자리.forEach(function (a) {                                        // DB 더미 — 회색
     h += '<circle cx="' + cx(a.x) + '" cy="' + cy(a.단) + '" r="' + (R - 2) + '" fill="#e5e7eb" stroke="#9ca3af" stroke-width="2"/>' +
-      '<text x="' + cx(a.x) + '" y="' + (cy(a.단) + 6) + '" font-size="16" text-anchor="middle" fill="#4b5563">' + esc(옛[a.i].p.slice(-3)) + '</text>';
+      '<text x="' + cx(a.x) + '" y="' + (cy(a.단) + 6) + '" font-size="' + (원글(옛[a.i].p).length > 3 ? 14 : 16) + '" text-anchor="middle" fill="#4b5563">' +
+      esc(원글(옛[a.i].p)) + '</text>';
   });
   자리들.forEach(function (a) {
     var r = xs[a.i], 끝 = a.i === xs.length - 1, 고 = a.i === 상태.고른;
     h += '<g data-i="' + a.i + '" style="cursor:pointer"><circle cx="' + cx(a.x) + '" cy="' + cy(a.단) + '" r="' + (R - 2) + '" fill="' + 색[a.단][0] +
       '" stroke="' + (끝 ? '#dc2626' : 색[a.단][1]) + '" stroke-width="' + (끝 || 고 ? 4 : 2.5) + '"' + (r.자동 ? ' stroke-dasharray="7 3"' : '') + '/>' +
-      '<text x="' + cx(a.x) + '" y="' + (cy(a.단) + 6) + '" font-size="17" font-weight="bold" text-anchor="middle" fill="#15191e">' +
-      esc(r.p.slice(-3)) + '</text></g>';
+      '<text x="' + cx(a.x) + '" y="' + (cy(a.단) + 6) + '" font-size="' + (원글(r.p).length > 3 ? 15 : 17) + '" font-weight="bold" text-anchor="middle" fill="#15191e">' +
+      esc(원글(r.p)) + '</text></g>';
   });
   h += '<circle cx="' + cx(다음x) + '" cy="' + cy(다음) + '" r="' + (R - 2) + '" fill="none" stroke="#94a3b8" stroke-width="2" stroke-dasharray="6 5"/>' +
     '<text x="' + cx(다음x) + '" y="' + (cy(다음) + 5) + '" font-size="12" fill="#64748b" text-anchor="middle">다음</text></svg>';
