@@ -15,6 +15,10 @@
     'B03' 처럼 반쪽 글자 없는 재고는 그 칸 전체(두 반쪽)에 센다. 관 번호 찾기 — 뒤 4자리 · 번호 전체.
   · 지도는 폰에서 옆으로 밀어 보고 [− +] 로 크기. 압축 풀기는 DecompressionStream('deflate')(웹뷰 80+).
   · 가로 넓은 화면(폭 1000px 이상 — 태블릿 가로)은 왼쪽 지도 · 오른쪽 재고 목록 나란히, 지도는 화면 높이에 맞춰 한눈에(2026-11-19).
+  · ⛶ 전체화면(2026-11-20 '미니맵에서 전체화면으로 지도가 안나오는데'): 태블릿 텔레그램은 미니 앱을 가운데 좁은 창(폭 660px 쯤)으로
+    띄워 폰 꼴로 잘렸다 → 태블릿(화면 짧은 변 600px 이상)이면 열 때 tg.requestFullscreen()(Bot API 8.0), 지도 머리 [⛶ 전체화면]
+    단추로 켜고 끔. 전체화면 위쪽은 텔레그램 단추가 덮으므로 --tg-safe-area-inset · --tg-content-safe-area-inset 만큼 띄운다.
+    넓은 꼴 ↔ 좁은 꼴이 바뀌면 지도를 다시 맞춘다. 태블릿은 좁은 창에서도 지도를 폭에 맞춤(밀어 보기 없음).
   · 🚚 옮기기(2026-11-19): 관 번호 칩을 눌러 고르고(작지마다 '모두') [➡ 받을 야드 고르기] → 지도 칸(또는 G1)을 누르면 옮김에 담김 →
     아래 띠 [📨 봇에 보내기] → sendData {k:'지도옮김', v:1, id, t, m:[[에서, 로, [번호…]]…]}(4096바이트 안) — 봇이 바로 반영하고
     [↩ 되돌리기] 를 단다(단 · 적재순번은 비움 — PC 에서 다시). sendData 는 답장 자판 단추로 연 앱에서만 — 인라인 단추로 열면 보기만.
@@ -23,13 +27,16 @@
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
   :root { --bg:#F1F5F9; --card:#FFFFFF; --text:#0F172A; --sub:#64748B; --line:#CBD5E1; --empty:#F8FAFC; --sel:#F97316;
-          --c1:#DBEAFE; --c2:#93C5FD; --c3:#3B82F6; --c4:#1D4ED8; --chip:#EEF2FF; --chiptext:#1E3A8A; --hit:#FDE68A; }
+          --c1:#DBEAFE; --c2:#93C5FD; --c3:#3B82F6; --c4:#1D4ED8; --chip:#EEF2FF; --chiptext:#1E3A8A; --hit:#FDE68A;
+          /* 텔레그램 전체화면 — 위는 상태 줄 + 텔레그램 단추, 아래는 내비 줄(telegram-web-app.js 가 --tg-… 를 채운다 · 창 모드면 0) */
+          --top: calc(var(--tg-safe-area-inset-top, 0px) + var(--tg-content-safe-area-inset-top, 0px));
+          --bot: var(--tg-safe-area-inset-bottom, 0px); }
   [data-theme="dark"] { --bg:#0F172A; --card:#1E293B; --text:#E2E8F0; --sub:#94A3B8; --line:#475569; --empty:#1E293B;
           --c1:#1E3A8A; --c2:#1D4ED8; --c3:#3B82F6; --c4:#93C5FD; --chip:#1E293B; --chiptext:#BFDBFE; --hit:#92400E; }
   * { box-sizing: border-box; }
   html, body { margin: 0; background: var(--bg); color: var(--text); font-family: "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
                -webkit-tap-highlight-color: transparent; }
-  main { padding: 10px 10px 28px; max-width: 1100px; margin: 0 auto; }
+  main { padding: calc(10px + var(--top)) 10px calc(28px + var(--bot)); max-width: 1100px; margin: 0 auto; }
   .card { background: var(--card); border-radius: 14px; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08); margin-bottom: 10px; }
   .test { background: #F3E8FF; color: #6B21A8; border-radius: 10px; padding: 8px 10px; font-size: 13px; margin-bottom: 10px; }
   h1 { font-size: 19px; margin: 0; display: flex; align-items: baseline; gap: 8px; }
@@ -47,6 +54,7 @@
   .maphead { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
   .maphead span { font-size: 13px; color: var(--sub); }
   .zoom button { width: 38px; height: 34px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--text); font-size: 18px; }
+  .zoom .full { width: auto; padding: 0 10px; font-size: 14px; font-weight: 700; margin-right: 6px; }
   #wrap { overflow: auto; -webkit-overflow-scrolling: touch; border-radius: 10px; border: 1px solid var(--line); background: var(--empty); }
   svg { display: block; }
   .cell rect { stroke: var(--line); stroke-width: 1; }
@@ -81,7 +89,7 @@
   .all { border: 1px solid var(--line); background: var(--card); color: var(--chiptext); border-radius: 8px; font-size: 12px;
          padding: 2px 8px; margin-left: 6px; }
   #bar { position: fixed; left: 0; right: 0; bottom: 0; background: var(--card); box-shadow: 0 -2px 12px rgba(0,0,0,.18);
-         padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); z-index: 10; }
+         padding: 10px 12px calc(10px + max(env(safe-area-inset-bottom), var(--bot))); z-index: 10; }
   #bar .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   #bar .msg { flex: 1; font-size: 14px; font-weight: 700; min-width: 150px; }
   #bar button { border: 0; border-radius: 10px; padding: 9px 12px; font-size: 14px; font-weight: 700; }
@@ -94,10 +102,10 @@
   body.hasbar main { padding-bottom: 200px; }
   @media (min-width: 1000px) {                       /* 태블릿 가로 — 왼쪽 지도 · 오른쪽 재고 */
     main { max-width: none; display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 10px; align-items: start; }
-    #side { position: sticky; top: 10px; max-height: calc(100vh - 20px); overflow: auto; }
+    #side { position: sticky; top: calc(10px + var(--top)); max-height: calc(100vh - 20px - var(--top) - var(--bot)); overflow: auto; }
     #side .card { margin-bottom: 0; }
     .foot { grid-column: 1 / -1; }
-    #bar { left: auto; right: 10px; bottom: 10px; width: 400px; border-radius: 14px; }   /* 오른쪽 재고 칸 아래 — 지도를 안 가림 */
+    #bar { left: auto; right: 10px; bottom: calc(10px + var(--bot)); width: 400px; border-radius: 14px; }   /* 오른쪽 재고 칸 아래 — 지도를 안 가림 */
     body.hasbar main { padding-bottom: 10px; }
     body.hasbar #side .card { padding-bottom: 190px; }
   }
@@ -118,7 +126,7 @@
   </div>
   <div class="card">
     <div class="maphead"><span>칸을 누르면 그 야드 재고</span>
-      <span class="zoom"><button type="button" id="zoomOut">−</button> <button type="button" id="zoomIn">＋</button></span></div>
+      <span class="zoom"><button type="button" class="full" id="fullBtn" hidden>⛶ 전체화면</button><button type="button" id="zoomOut">−</button> <button type="button" id="zoomIn">＋</button></span></div>
     <div id="wrap"><svg id="map"></svg></div>
     <div class="legend" id="legend"></div>
   </div>
@@ -283,15 +291,28 @@ function 찾기그리기() {
   지도그리기();
   if (고른) 자세히(고른);
 }
+var 넓던 = null;                                       // 마지막으로 맞춘 꼴(넓은 꼴인가) — 꼴이 바뀌면 다시 맞춤
 function 크기(d) {
   var 폭 = $('wrap').clientWidth || 360, 맞춤 = 폭 / 자료.W[0];
-  if (넓은가()) {                                       // 태블릿 가로 — 화면 높이에도 맞춰 지도 전체가 한눈에
+  넓던 = 넓은가();
+  if (넓던) {                                           // 태블릿 가로 — 화면 높이에도 맞춰 지도 전체가 한눈에
     var 남은높이 = window.innerHeight - $('wrap').getBoundingClientRect().top - 48;
     if (남은높이 > 150) 맞춤 = Math.min(맞춤, 남은높이 / 자료.W[1]);
   }
-  배율 = Math.max(맞춤, Math.min(3, d == null ? (맞춤 >= 0.9 || 넓은가() ? 맞춤 : 1.15) : 배율 * d));   // 태블릿은 맞춤 · 폰은 밀어 보기
+  배율 = Math.max(맞춤, Math.min(3, d == null ? (맞춤 >= 0.9 || 넓던 || 태블릿인가() ? 맞춤 : 1.15) : 배율 * d));   // 태블릿은 맞춤 · 폰은 밀어 보기
   지도그리기();
   if (고른) 칸으로(고른);
+}
+function 빈자리() {                                    // 고른 칸이 없을 때 — 넓은 꼴은 오른쪽 재고 칸에 안내, 좁은 꼴은 숨김
+  if (고른) return;
+  $('detail').innerHTML = '<div class="wait">칸을 누르면 여기에 그 야드 재고<br>(작지 · 규격 · 본수 · 관 번호)</div>';
+  $('detail').hidden = !넓은가();
+}
+function 다시맞춤() {                                  // 창 크기 · 안전 여백이 바뀜 — 꼴이 바뀌었으면 처음처럼 맞추고, 아니면 키운 배율 그대로
+  if (!자료) return;
+  var 바뀜 = 넓은가() !== 넓던;
+  크기(바뀜 ? null : 1);
+  if (바뀜) 빈자리();
 }
 
 function 시작(d) {
@@ -300,7 +321,7 @@ function 시작(d) {
   머리그리기(); 밖그리기();
   크기(null);
   if (자료.열) { 자세히(자료.열); 칸으로(자료.열); }
-  else if (넓은가()) { $('detail').innerHTML = '<div class="wait">칸을 누르면 여기에 그 야드 재고<br>(작지 · 규격 · 본수 · 관 번호)</div>'; $('detail').hidden = false; }
+  else 빈자리();
 }
 function 오류(말) { $('err').hidden = false; $('err').textContent = 말; }
 
@@ -375,6 +396,15 @@ $('bar').addEventListener('click', function (ev) {
 });
 
 function 넓은가() { return !!(window.matchMedia && window.matchMedia('(min-width: 1000px)').matches); }
+function 판짓기(v) { try { return !!(tg && tg.isVersionAtLeast && tg.isVersionAtLeast(v)); } catch (e) { return false; } }
+function 태블릿인가() { var s = window.screen || {}; return Math.min(s.width || 0, s.height || 0) >= 600; }   // 폰 짧은 변 360~430
+function 전체화면되나() { return 텔레그램안 && 판짓기('8.0') && typeof tg.requestFullscreen === 'function'; }
+function 전체단추() {
+  var b = $('fullBtn');
+  b.hidden = !전체화면되나();
+  b.textContent = tg && tg.isFullscreen ? '⛶ 창으로' : '⛶ 전체화면';
+}
+function 전체바꾸기() { try { if (tg.isFullscreen) tg.exitFullscreen(); else tg.requestFullscreen(); } catch (e) {} }
 function 보이기() { if (!넓은가()) $('detail').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 $('map').addEventListener('click', function (ev) {
   var g = ev.target.closest && ev.target.closest('[data-y]');
@@ -396,11 +426,26 @@ $('hits').addEventListener('click', function (ev) {
 $('findIn').addEventListener('input', 찾기그리기);
 $('zoomIn').addEventListener('click', function () { 크기(1.25); });
 $('zoomOut').addEventListener('click', function () { 크기(0.8); });
-window.addEventListener('resize', function () { if (자료) 크기(1); });
+$('fullBtn').addEventListener('click', 전체바꾸기);
+window.addEventListener('resize', 다시맞춤);
 
 (function () {
   if (텔레그램안) {
     try { tg.ready(); tg.expand(); } catch (e) {}
+    if (판짓기('7.7')) { try { tg.disableVerticalSwipes(); } catch (e) {} }   // 재고 목록을 올리다 앱이 접히지 않게
+    if (전체화면되나()) {                                // 태블릿은 좁은 가운데 창으로 떠서 지도가 잘린다 — 열 때 전체화면(11-20)
+      try {
+        tg.onEvent('fullscreenChanged', function () {
+          전체단추();
+          setTimeout(function () { if (자료) { 크기(null); 빈자리(); } }, 350);   // 창 크기가 다 바뀐 뒤 처음처럼 맞춤
+        });
+        tg.onEvent('fullscreenFailed', 전체단추);
+        tg.onEvent('safeAreaChanged', 다시맞춤);
+        tg.onEvent('contentSafeAreaChanged', 다시맞춤);
+      } catch (e) {}
+      if (태블릿인가() && !tg.isFullscreen) { try { tg.requestFullscreen(); } catch (e) {} }
+    }
+    전체단추();
     var 테마 = function () { document.documentElement.setAttribute('data-theme', tg.colorScheme === 'dark' ? 'dark' : 'light'); };
     테마(); try { tg.onEvent('themeChanged', 테마); } catch (e) {}
   }
