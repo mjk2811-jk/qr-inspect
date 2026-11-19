@@ -14,7 +14,8 @@
       순번-차4 · 예정 바코드 · 파이프 번호(· 단)만 — 도착지 · 차량번호 전체 · 무게 · 고객은 넣지 않는다(봇 inspect_miniapp.조각)
       이미 = 봇이 이 검수에서 벌써 ✓ 로 아는 번호(M3 · 앞서 보낸 것) · 받음 = 봇이 받은 sendData 의 id
   · 관 QR 을 showScanQrPopup 로 연달아 읽고 예정 바코드 · 번호와 견줘 화면에만 ✓ · ⚠ · 기타 · 이미 를 보인다(판정 · 기록은 봇).
-  · 열면 처음은 👁 눈으로 확인이 켜진 채(2026-11-19) — 번호를 눌러 ✓(눈), [👁 눈으로 확인 중] 을 누르면 끈다. QR 찍기는 그대로.
+  · 모드 구분 없음(2026-11-19) — 번호 누르기 ✓(눈) · 다시 누르면 취소 · 번호 치기 · 앞뒤 차 · 야드 번호와 [📷 관 QR 찍기] 가 늘 한 화면.
+    전엔 [👁 눈으로 확인] 단추로 켜고 껐는데, 잘못 눌러 꺼지면 번호가 안 눌려 당황했다 — 그 단추를 뺐다.
   · [📨 봇에 보내기](MainButton) → 보내기만 / 보내고 검수 끝 → sendData(JSON ≤ 4096바이트)
       {k:'검수', v, id, 검수:'7-6610', 날, sid, 끝, qr:[QR 글 그대로 · 찍은 차례], 눈:[번호], 손:[번호], 기타:[글], n, 때}
   · QR 글 가르기(위에서부터): '*P…' 관 · 'N-차4' · 'N_차4_…' 상차요청서(차 확인만, 안 보냄) · 첫 낱말이 번호 꼴 → 번호 · 그 밖 기타
@@ -124,9 +125,6 @@
     background: var(--btn); color: var(--btn-text); font-size: 17px; font-weight: 700; box-shadow: 0 2px 6px rgba(0, 0, 0, .12); }
   .btn-scan:active { transform: translateY(1px); }
   .hint { text-align: center; color: var(--hint); font-size: 12px; margin: 2px 0 0; }
-  .btn-eye { height: 44px; border-radius: 12px; background: var(--card); color: var(--eye); font-weight: 700; font-size: 15px;
-    border: 1.5px solid transparent; }
-  .btn-eye.on { background: var(--eye-bg); border-color: var(--eye); }
 
   /* 목록 */
   .sec { margin-top: 14px; }
@@ -265,7 +263,6 @@
     <div class="actions">
       <button class="btn-scan" id="btnScan" type="button"><span>📷</span><span id="btnScanText">관 QR 찍기</span></button>
       <div class="hint" id="scanHint">연달아 찍어요 · ✓ 면 떨림 한 번 · ⚠ 예정 밖도 적고 계속</div>
-      <button class="btn-eye" id="btnEye" type="button">👁 눈으로 확인</button>
     </div>
 
     <div class="sec" id="truckSec" hidden>
@@ -287,7 +284,7 @@
 
     <div class="notes" id="notes">
       두 번 찍음 → <b>이미</b> · 상차요청서 QR → <b>차 확인만</b><br>
-      위 단은 망원으로 라벨 'PIPE NO' 를 보고 <b>👁 눈으로 확인</b><br>
+      위 단은 망원으로 라벨 'PIPE NO' 를 보고 그 번호를 누르면 <b>✓(눈)</b> — QR 찍기와 같이 써도 돼요<br>
       ⚠ 줄이 잘못 읽힌 것이면 <b>빼기</b> — 봇에 안 가요(다시 찍으면 들어와요)<br>
       M3 와 같이 찍는 차면 <b>📨 보내기만</b> — [✅ 검수 끝] 은 봇 목록에서 한 번<br>
       보낸 뒤에도 폰에 남아요 — 봇이 받았다고 알려 오면 지우고, 아니면 <b>다시 보내기</b>
@@ -682,8 +679,8 @@ var 텔레그램안 = !!(tg && tg.platform && tg.platform !== 'unknown');
 var 시안 = 텔레그램안 ? '' : (해시.shot || '');
 var 시험 = !텔레그램안 && !시안;
 var 판 = null, 기록 = [], 보냄들 = [], 받은때 = '', 묻는중 = false;
-// 눈켬: 처음은 👁 눈으로 확인 켠 채(2026-11-19 — 전엔 꺼진 채 QR 찍기만). [📷 관 QR 찍기] 는 그대로 쓴다
-var 눈켬 = true, 스캔중 = false, 마지막 = { raw: '', t: 0 }, 시험차례 = 0, 막말 = null, 고르기끝 = null;
+// 👁 눈 확인(번호 누르기 · 치기 · 앞뒤 차)은 늘 켜져 있다 — 켜고 끄는 단추를 뺐다(2026-11-19, 잘못 눌러 꺼지면 번호가 안 눌렸다)
+var 스캔중 = false, 마지막 = { raw: '', t: 0 }, 시험차례 = 0, 막말 = null, 고르기끝 = null;
 var $ = function (id) { return document.getElementById(id); };
 
 function 판짓기(v) { return tg && tg.isVersionAtLeast ? tg.isVersionAtLeast(v) : false; }
@@ -819,8 +816,6 @@ function 그리기() {
   보냄그리기();
   $('btnScan').firstElementChild.textContent = 시험 ? '🧪' : '📷';
   $('btnScanText').textContent = 시험 ? '시험 스캔(가짜 QR 창)' : (판.사건.length ? '관 QR 이어 찍기' : '관 QR 찍기');
-  $('btnEye').classList.toggle('on', 눈켬);
-  $('btnEye').textContent = 눈켬 ? '👁 눈으로 확인 중 — 다 됐으면 누르기' : '👁 눈으로 확인';
   트럭그리기();
   목록그리기(c);
   메인단추();
@@ -946,8 +941,8 @@ function 목록그리기(c) {
   var 계획 = 판.계획, html = '';
   $('planH').textContent = '예정 ' + c.예정 + '본';
   $('planR').textContent = c.남음 ? '남음 ' + c.남음 : '다 확인';
-  $('planCard').classList.toggle('eye-mode', 눈켬);
-  if (눈켬) html += '<div class="eye-guide">망원으로 라벨 <b>PIPE NO</b> 를 읽고 맞는 번호를 누르면 <b>✓(눈)</b> — 다시 누르면 취소</div>';
+  $('planCard').classList.add('eye-mode');
+  html += '<div class="eye-guide">망원으로 라벨 <b>PIPE NO</b> 를 읽고 맞는 번호를 누르면 <b>✓(눈)</b> — 다시 누르면 취소 · QR 은 위 [📷 관 QR 찍기]</div>';
   var 단들 = {}, 차례 = [];
   계획.예정.forEach(function (e) { var k = e.단 == null ? '?' : e.단; if (!단들[k]) { 단들[k] = []; 차례.push(k); } 단들[k].push(e); });
   var 숫단 = 차례.filter(function (k) { return k !== '?'; }).sort(function (a, b) { return b - a; });
@@ -963,13 +958,13 @@ function 목록그리기(c) {
       else if (d.how === '눈') { ic = '<span class="ic eye">👁</span>'; pc = 'eyed'; meta = '<span class="tag eye">눈</span> ' + esc(d.at); }
       else if (d.how === '손') { ic = '<span class="ic ok">✓</span>'; pc = 'done'; meta = '<span class="tag ok">손</span> ' + esc(d.at); }
       else { ic = '<span class="ic m3">✓</span>'; pc = 'm3d'; meta = '<span class="tag m3">봇에 있음</span>'; }
-      var tap = 눈켬 && (!d || d.how === '눈');
+      var tap = !d || d.how === '눈';
       html += '<div class="row' + (tap ? ' tap' : '') + (!d ? ' todo-row' : '') + '"' + (tap ? ' data-eye="' + esc(e.p) + '"' : '') + '>' + ic +
         '<span class="p num ' + pc + '">' + esc(e.p) + '</span><span class="meta">' + meta + '</span></div>';
     });
   });
-  if (눈켬) html += '<div class="type"><input id="typeIn" placeholder="예정에 없는 번호 치기 — 26J0311" autocomplete="off" inputmode="text"><button type="button" id="typeBtn">넣기</button></div>';
-  if (눈켬) html += 더그리기();
+  html += '<div class="type"><input id="typeIn" placeholder="예정에 없는 번호 치기 — 26J0311" autocomplete="off" inputmode="text"><button type="button" id="typeBtn">넣기</button></div>';
+  html += 더그리기();
   $('planCard').innerHTML = html;
 
   var 밖 = 판.밖.filter(function (o) { return !o.뺌; });
@@ -1195,7 +1190,6 @@ function 시안차림(무엇) {
 }
 
 $('btnScan').addEventListener('click', 찍기열기);
-$('btnEye').addEventListener('click', function () { 눈켬 = !눈켬; 그리기(); });
 $('btnFakeMain').addEventListener('click', 보내기누름);
 $('sent').addEventListener('click', function (ev) { if (ev.target.closest('[data-resend]')) 보내기누름(); });
 $('pickBtns').addEventListener('click', function (ev) {
