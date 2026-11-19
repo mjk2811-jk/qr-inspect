@@ -26,7 +26,8 @@
     파랑 1단 · 노랑 2단 · 초록 3단 · 빨강 테 = 마지막 · 점선 = 다음 자리(자동이면 그 단). 동그라미를 누르면 그 줄을 고른다.
   · 📱 폰 · 중간 고치기(2026-11-19 — 폰으로 야드 조사해 보고 '번호 단추를 조금 줄이고 · 단추 사이가 붙어 굴리다 눌림 ·
     중간에 잘못 넣은 번호를 빼거나 고치기'): 폰(폭 600 아래)은 번호 단추를 작게(한 줄 4개 · 사이 띄움) · 차례 목록을 늘 보이게
-    ([📋 차례] / [🔵 모양] 바꿔 보기 — 예전엔 폰에서 목록 칸이 0 이 되어 안 보였다). 태블릿은 크기 그대로.
+    ([📋 차례] / [🔵 모양] 바꿔 보기 — 예전엔 폰에서 목록 칸이 0 이 되어 안 보였다). 번호 단추는 같은 날 태블릿도 폰 크기로
+    ('한 화면에 더 많은 번호' — 가로 태블릿 한 줄 9개쯤). 태블릿의 나머지(두 칸 배치 · 큰 단 · 보내기 단추)는 그대로.
     굴리다 눌림 막기(누름인가 — 번호판 · 목록 · 그림 · 작지): 구르던 판을 멈추려 댄 손 · 누르는 동안 판이 구름 · 손가락이 밀림은 안 친다.
     번호판 오른쪽 굴림 막대(같은 날 '번호를 왼쪽으로 몰고 우측에 스크롤바나 단추') — [▲] · 끄는 손잡이(막대를 누르면 그 자리로) ·
     [▼](한 쪽씩). 번호는 왼쪽에서 누르기만, 굴리기는 오른쪽에서(번호 위를 밀어 굴리는 것도 그대로 됨 — 굴림 막기가 지킴).
@@ -77,7 +78,8 @@
   .grid { flex: 1; overflow-y: auto; padding: 0 10px 14px; position: relative; }
   .lot { margin: 14px 0 6px; font-size: 15px; color: var(--hint); }
   .lot b { color: var(--text); }
-  .nums { display: grid; grid-template-columns: repeat(auto-fill, minmax(108px, 1fr)); grid-gap: 9px; }
+  /* 번호 단추 — 폰 · 태블릿 같은 작은 크기(11-19 '태블릿도 폰 크기로 — 한 화면에 더 많은 번호'). 사이를 띄워 굴릴 자리 */
+  .nums { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); grid-gap: 14px 10px; }
   .gridrow { flex: 1; display: flex; min-height: 0; }
   .gridrow .grid { flex: 1; min-width: 0; }
   .rail { flex: none; width: 68px; display: flex; flex-direction: column; padding: 4px 8px 8px 2px; }
@@ -89,9 +91,9 @@
   .thumb::after { content: '≡'; position: absolute; left: 0; right: 0; top: 50%; margin-top: -11px; line-height: 22px;
                   text-align: center; color: #fff; font-size: 18px; }
   .rail.still .thumb { opacity: .25; }
-  .num { height: 82px; padding: 2px 0; text-align: center; position: relative; }
-  .num .p { display: block; font-size: 13px; color: var(--hint); padding-top: 4px; }
-  .num .t { display: block; font-size: 32px; font-weight: bold; letter-spacing: .5px; }
+  .num { height: 50px; padding: 2px 0; text-align: center; position: relative; border-bottom-width: 3px; }
+  .num .p { display: block; font-size: 10px; color: var(--hint); padding-top: 2px; }
+  .num .t { display: block; font-size: 22px; font-weight: bold; letter-spacing: 0; }
   .num.used { background: #eef0f3; border-color: var(--used); color: #9aa3ad; }
   .num.used .t { font-weight: normal; }
   .num .badge { color: var(--sel); font-weight: bold; }
@@ -160,7 +162,7 @@
     .left { flex: 50; border-right: 0; border-bottom: 2px solid var(--sep); }
     .right { flex: 50; }
   }
-  /* 📱 폰(폭 600 아래 — 11-19 '번호 단추를 조금 줄이고 · 사이를 띄워 굴리다 눌림 없게 · 차례 목록이 보이게'). 태블릿은 위 그대로 */
+  /* 📱 폰(폭 600 아래 — 11-19 '번호 단추를 조금 줄이고 · 사이를 띄워 굴리다 눌림 없게 · 차례 목록이 보이게'). 번호 단추는 위(폰 · 태블릿 같음) */
   @media (max-width: 600px) {
     .bar { padding: 6px 10px; }
     .bar h1 { font-size: 18px; }
@@ -174,10 +176,6 @@
     .rail { width: 50px; padding: 2px 6px 6px 0; }
     .rail .rb { height: 46px; font-size: 18px; }
     .lot { margin: 12px 0 6px; font-size: 13px; }
-    .nums { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); grid-gap: 14px 10px; }
-    .num { height: 50px; border-bottom-width: 3px; }
-    .num .p { font-size: 10px; padding-top: 2px; }
-    .num .t { font-size: 22px; letter-spacing: 0; }
     .mode { font-size: 14px; padding: 6px 8px; margin: 0 10px 4px; }
     .main .left { flex: 1; }
     .main .right { flex: none; }
