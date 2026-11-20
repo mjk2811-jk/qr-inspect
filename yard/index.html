@@ -37,10 +37,24 @@
   · ⛶ 전체화면(2026-11-20 '야드등록에서 테블릿 가로 전체화면이 안되'): 태블릿 텔레그램은 미니 앱을 가운데 좁은 창(세로로 긴 창)으로
     띄워 가로로 들어도 세로 꼴(@media orientation)로 그려졌다 → 태블릿(화면 짧은 변 600px 이상)은 열 때 tg.requestFullscreen()
     (Bot API 8.0) · 머리 줄 [⛶ 전체화면 / 창으로] · body 위아래를 --tg-safe-area-inset · --tg-content-safe-area-inset 만큼 띄움(지도 · 검수와 같다).
-  함수  셈: 해시읽기 · b64url풀기 · 범위풀기 · 번호꼴 · 보낼글 · 더미풀기 · 보낼묶음 · 반복켜 · 자동켜찾기 · 다음단 · 쌓은자리
-            · 바꾼줄 · 끼운줄 · 뺀줄 · 누름인가 · 레일자리 · 손굴림
-        화면: 그리기 · 칩그리기 · 판그리기 · 야드그리기 · 차례그리기 · 누름 · 단고름 · 야드고르기열기 · 보내기 · 시작
+  · 2026-11-20 더한 것 여섯(시안 '야드등록_추가기능_시안_20261120'):
+    ① 압축 링크 #z=<base64url(zlib(JSON))> 판 2 — DecompressionStream('deflate'), 없는 옛 웹뷰(크롬 79)는 제 풀기(인플레이트).
+       옛 #c= (판 1)도 읽는다. 봇이 G1 전부 · 배치도 칸(K · W) · 야드마다 DB 본수(N) · 남는 자리만큼 야드 더미(Y)를 싣는다.
+    ② 맞춰 보기 — 더미가 실린 야드는 오른쪽 위 상자에 ✓ 같음 · ❓ 안 누름 · ➕ 새로. [❓ 처리] 로 실제 야드에 없는 관을 골라
+       📦 G1 · 다른 야드로 옮김에 담고(상태.옮김), 📤 보내기 때 m:[[에서, 로, [번호]]] 로 같이 — 봇이 바로 반영 · [↩ 되돌리기].
+    ③ 📨 보낸 것 — 봇이 받은 목록은 지우지 않고 하루 남긴다(상태.보낸). 링크 w(관마다 확인 — 줄 자리로) · s(채팅 저장 야드)를
+       줄에 붙이고 [✏ 고쳐서 다시 보내기] 로 목록에 되살린다(QR 바코드 줄은 봇이 찾은 번호로).
+    ④ 채팅 저장은 봇 쪽([✅ 저장] — yard_tablet_save). 앱은 s 를 보여 줄 뿐.
+    ⑤ 🔫 스캐너 · 📷 QR — 보이지 않는 칸 #scanIn(검수 앱 M3 칸과 같은 방법) · tg.showScanQrPopup(6.4+). 번호 꼴 QR 은 번호로,
+       ERP QR(*P…)은 줄 p '#B통'(보낼 때 '#B 통.단' 묶음 — 봇이 바코드 → 번호), 상차요청서 QR 은 알림만.
+    ⑥ [＋ 야드] — 🗺 배치도(K) 탭 · ⌨ 글자로 탭. 칸에 DB 본수 · 더미 실림 점. 더미 없는 칸은 [🔎 DB 더미 받기] → sendData
+       q:[야드](앱이 닫히고 봇이 그 야드를 실은 단추로). 옮길 곳 고르기도 같은 판(📦 G1 단추 더).
+  함수  셈: 해시읽기 · b64url풀기 · b64바이트 · 인플레이트 · 풀기 · 범위풀기 · 번호꼴 · 보낼글 · 더미풀기 · 보낼묶음 · 반복켜 ·
+            자동켜찾기 · 다음단 · 쌓은자리 · 바꾼줄 · 끼운줄 · 뺀줄 · 누름인가 · 레일자리 · 손굴림 · 맞춤셈 · 옮김더하기 ·
+            QR가르기 · 칸야드 · 칸본수 · 되살릴줄
+        화면: 그리기 · 칩그리기 · 판그리기 · 야드그리기 · 차례그리기 · 누름 · 단고름 · 야드고르기열기 · 보내기 · 시작 · 이어
             · 지킴 · 눌러도 · 지금고침 · 고침켜기 · 빼기 · 모드그리기 · 토스트 · 보기바꿈 · 레일그리기 · 레일굴림 · 레일잇기
+            · 맞춤그리기 · 없는것열기 · 보낸것열기 · 되살리기 · 더미부탁 · 머리단추 · QR받음 · 스캔받기 · 스캔초점 · 카메라
 -->
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
@@ -164,6 +178,40 @@
   .ygrid .k3 { padding: 14px 0; font-size: 20px; }
   .sheet .btns { display: flex; justify-content: flex-end; margin-top: 8px; }
   .sheet .btns .k3 { padding: 14px 20px; font-size: 18px; margin-left: 8px; }
+  /* 2026-11-20 — ② 맞춰 보기 · ③ 보낸 것 · ⑤ 스캐너 · ⑥ 배치도 */
+  .bar .hb { padding: 6px 12px; font-size: 15px; white-space: nowrap; }
+  .scanin { position: fixed; left: -400px; top: 0; width: 10px; height: 10px; opacity: 0; border: 0; padding: 0; }
+  .chk { margin: 6px 10px 2px; padding: 6px 8px; border-radius: 8px; background: #fffbf3; border: 1px solid #fdba74; font-size: 14px; }
+  .chk .t { display: flex; align-items: center; flex-wrap: wrap; }
+  .chk .t b { margin-right: 6px; }
+  .chk .c { display: inline-block; border-radius: 10px; padding: 1px 8px; margin: 2px 4px 2px 0; white-space: nowrap; }
+  .c.ok { background: #dcfce7; color: #166534; } .c.miss { background: #ffedd5; color: #9a3412; } .c.new { background: #dbeafe; color: #1d4ed8; }
+  .c.mv { background: #ede9fe; color: #5b21b6; }
+  .chk .k3 { padding: 5px 10px; font-size: 14px; margin-left: auto; }
+  .chk .mvline { margin-top: 4px; color: #5b21b6; display: flex; align-items: center; }
+  .chk .mvline .k3 { margin-left: 8px; }
+  .num.mvq { background: #f5f3ff; border-color: #a78bfa; color: #5b21b6; }
+  .num.missq { box-shadow: 0 0 0 3px #fb923c; }
+  .sheet.wide { max-width: 1180px; }
+  .tabs { display: flex; margin-bottom: 8px; }
+  .tabs .k3 { padding: 8px 14px; font-size: 16px; margin-right: 6px; }
+  .mapbox { border: 1px solid var(--sep); border-radius: 10px; background: #f8fafc; overflow: auto; max-height: 56vh; }
+  .mapbox svg { display: block; width: 100%; min-width: 600px; height: auto; max-height: 58vh; }
+  .mapbox g { cursor: pointer; }
+  .pickline { display: flex; align-items: center; flex-wrap: wrap; margin-top: 8px; font-size: 16px; }
+  .pickline .k3 { padding: 10px 14px; font-size: 16px; margin: 0 0 4px 8px; }
+  .pickline .info { flex: 1; min-width: 200px; }
+  .plist { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); grid-gap: 6px; margin: 6px 0 10px; }
+  .plist .k3 { padding: 10px 4px; font-size: 17px; }
+  .sentid { border: 1px solid var(--sep); border-radius: 10px; padding: 8px 10px; margin-bottom: 8px; }
+  .sentid h3 { margin: 0 0 4px; font-size: 16px; }
+  .sentyard { border-top: 1px dashed var(--sep); padding: 6px 0; }
+  .sentyard .hd { display: flex; align-items: center; flex-wrap: wrap; font-size: 16px; }
+  .sentyard .hd .k3 { margin-left: auto; padding: 7px 12px; font-size: 15px; }
+  .wrow { font-size: 15px; padding: 2px 0 2px 10px; }
+  .wrow .why { border-radius: 8px; padding: 0 6px; margin-left: 6px; font-size: 13px; }
+  .why.bad { background: #fee2e2; color: #b91c1c; } .why.info { background: #ffedd5; color: #9a3412; } .why.qr { background: #dbeafe; color: #1d4ed8; }
+  .saved { color: var(--ok); font-weight: bold; margin-left: 6px; font-size: 14px; }
   @media (orientation: portrait) {
     #info { display: none; }                         /* 세로는 위 띠가 좁다 — 기본 1단은 차례 칸의 회색 '1단'으로 보인다 */
     .main { flex-direction: column; }
@@ -212,6 +260,12 @@
     .foot .send { font-size: 16px; }
     .foot .wide { display: none; }
     .toast { bottom: 120px; font-size: 15px; }
+    .bar .hb { padding: 4px 7px; font-size: 13px; }
+    .bar .hb .wide { display: none; }
+    .chk { order: 1; font-size: 12px; margin: 4px 8px 0; padding: 4px 6px; }
+    .chk .k3 { font-size: 12px; padding: 3px 7px; }
+    .pickline { font-size: 14px; }
+    .pickline .k3 { padding: 8px 10px; font-size: 14px; }
   }
 </style>
 </head>
@@ -222,8 +276,11 @@
   <span class="hint" id="saved"></span>
   <span class="grow"></span>
   <span class="hint" id="info"></span>
+  <button type="button" class="k3 hb" id="sentBtn" hidden>📨 <span class="wide">보낸 것 </span><span id="sentN"></span></button>
+  <button type="button" class="k3 hb" id="qrBtn" hidden>📷 QR</button>
   <button type="button" class="k3 full" id="fullBtn" hidden>⛶ 전체화면</button>
 </div>
+<input id="scanIn" class="scanin" inputmode="none" autocomplete="off" autocapitalize="off" spellcheck="false" tabindex="-1" aria-hidden="true">
 <div class="main" id="main">
   <div class="left">
     <div class="chips" id="chips"></div>
@@ -241,6 +298,7 @@
   </div>
   <div class="right">
     <div class="yards" id="yards"></div>
+    <div class="chk" id="chk" hidden></div>
     <div class="pic" id="pic" hidden><div class="t" id="picT"></div><div class="picbox" id="picBox"></div></div>
     <div class="stackhead"><span id="sh"></span><span class="grow"></span><span class="danh">단</span>
       <span class="viewtog"><button data-v="list">📋 차례</button><button data-v="pic">🔵 모양</button></span></div>
@@ -263,10 +321,17 @@
 <script>
 'use strict';
 /* ── 셈 ─────────────────────────────────────────────────────────────── */
-var 예시자료 = { v: 1, d: '시험', t: '시험', r: [], n: 46, m: 12, L: [
+var 예시자료 = { v: 2, d: '시험', t: '시험', r: [], n: 46, m: 0, L: [
   ['RB00X003', '000 X 00 X 12M', '00X', '0101-0130'],
   ['RB00X002', '000 X 00 X 6M', '00X', '0201-0210,0215-0220'],
-  ['PB00W001', '000 X 00 X 12M', 'P00W', '0001-0004']] };
+  ['PB00W001', '000 X 00 X 12M', 'P00W', '0001-0004']],
+  K: (function () {                                   // 시험 배치도 — 🗺 지도 앱 시험 칸과 같은 꼴(회사 자료 없음)
+    var K = [];
+    ['A', 'C'].forEach(function (줄, r) { for (var i = 1; i <= 8; i++) K.push([줄 + ('0' + i).slice(-2), (8 - i) * 60, r * 160, 60, 100]); });
+    for (var j = 1; j <= 8; j++) { K.push(['B0' + j + 'A', (8 - j) * 60, 110, 60, 22]); K.push(['B0' + j + 'C', (8 - j) * 60, 132, 60, 22]); }
+    return K;
+  })(),
+  W: [480, 260], N: { A03: 6, C05: 12, B02A: 2 }, Y: { A03: '00Y 0100 0101 0102 0103.2 0104.2 0105.3' } };
 var 보낼한도 = 4096;
 
 function 해시읽기() {
@@ -286,6 +351,106 @@ function b64url풀기(s) {
   var bin = atob(s), bytes = new Uint8Array(bin.length);
   for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
   return new TextDecoder('utf-8').decode(bytes);
+}
+function b64바이트(s) {
+  s = String(s || '').replace(/-/g, '+').replace(/_/g, '/');
+  while (s.length % 4) s += '=';
+  var bin = atob(s), b = new Uint8Array(bin.length);
+  for (var i = 0; i < bin.length; i++) b[i] = bin.charCodeAt(i);
+  return b;
+}
+/** zlib(deflate) 풀기 — DecompressionStream 이 없는 옛 웹뷰(크롬 79)용(① 2026-11-20). zlib 바이트 → 풀린 바이트.
+ *  표준 deflate(고정 · 동적 허프만 · 그대로 묶음)를 그대로 — 머리 2바이트 건너뛰고 끝 adler32 는 안 본다 */
+function 인플레이트(src) {
+  var p = 2, 버 = 0, 수 = 0, out = [];
+  function 비트(n) {
+    while (수 < n) { if (p >= src.length) throw new Error('자료가 잘림'); 버 |= src[p++] << 수; 수 += 8; }
+    var v = 버 & ((1 << n) - 1);
+    버 >>>= n; 수 -= n;
+    return v;
+  }
+  function 표(길이들, n) {                            // 길이 → {count, symbol}(정규 허프만)
+    var count = [], symbol = [], offs = [], i;
+    for (i = 0; i < 16; i++) { count.push(0); offs.push(0); }
+    for (i = 0; i < n; i++) count[길이들[i] || 0]++;
+    count[0] = 0;
+    for (i = 1; i < 15; i++) offs[i + 1] = offs[i] + count[i];
+    for (i = 0; i < n; i++) if (길이들[i]) symbol[offs[길이들[i]]++] = i;
+    return { count: count, symbol: symbol };
+  }
+  function 읽기(h) {                                  // 한 기호(비트 하나씩 — 작은 자료라 충분)
+    var code = 0, first = 0, index = 0;
+    for (var len = 1; len <= 15; len++) {
+      code |= 비트(1);
+      var c = h.count[len];
+      if (code - c < first) return h.symbol[index + (code - first)];
+      index += c; first += c; first <<= 1; code <<= 1;
+    }
+    throw new Error('허프만 꼴이 틀림');
+  }
+  var LB = [3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, 35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258];
+  var LE = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0];
+  var DB = [1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193, 257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145,
+            8193, 12289, 16385, 24577];
+  var DE = [0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13];
+  function 묶음(lt, dt) {
+    for (;;) {
+      var s = 읽기(lt);
+      if (s < 256) out.push(s);
+      else if (s === 256) return;
+      else {
+        s -= 257;
+        if (s >= 29) throw new Error('길이 기호가 틀림');
+        var len = LB[s] + 비트(LE[s]), d = 읽기(dt), dist = DB[d] + 비트(DE[d]);
+        if (dist > out.length) throw new Error('거리가 틀림');
+        for (var k = 0; k < len; k++) out.push(out[out.length - dist]);
+      }
+    }
+  }
+  var 고정 = null, 끝 = 0, i;
+  do {
+    끝 = 비트(1);
+    var 꼴 = 비트(2);
+    if (꼴 === 0) {
+      버 = 0; 수 = 0;                                 // 바이트 경계로
+      var n = src[p] | (src[p + 1] << 8);
+      p += 4;
+      for (i = 0; i < n; i++) out.push(src[p++]);
+    } else if (꼴 === 1) {
+      if (!고정) {
+        var l = [], dl = [];
+        for (i = 0; i < 288; i++) l.push(i < 144 ? 8 : i < 256 ? 9 : i < 280 ? 7 : 8);
+        for (i = 0; i < 30; i++) dl.push(5);
+        고정 = [표(l, 288), 표(dl, 30)];
+      }
+      묶음(고정[0], 고정[1]);
+    } else if (꼴 === 2) {
+      var hlit = 비트(5) + 257, hdist = 비트(5) + 1, hclen = 비트(4) + 4, 차례 = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15];
+      var cl = [];
+      for (i = 0; i < 19; i++) cl.push(0);
+      for (i = 0; i < hclen; i++) cl[차례[i]] = 비트(3);
+      var ch = 표(cl, 19), 길이들 = [];
+      while (길이들.length < hlit + hdist) {
+        var sym = 읽기(ch), r;
+        if (sym < 16) 길이들.push(sym);
+        else if (sym === 16) { if (!길이들.length) throw new Error('길이 꼴이 틀림'); var 앞 = 길이들[길이들.length - 1]; for (r = 3 + 비트(2); r > 0; r--) 길이들.push(앞); }
+        else if (sym === 17) { for (r = 3 + 비트(3); r > 0; r--) 길이들.push(0); }
+        else { for (r = 11 + 비트(7); r > 0; r--) 길이들.push(0); }
+      }
+      묶음(표(길이들.slice(0, hlit), hlit), 표(길이들.slice(hlit), hdist));
+    } else throw new Error('deflate 꼴이 틀림');
+  } while (!끝);
+  return new Uint8Array(out);
+}
+/** 압축 조각(#z=) → Promise<자료> — DecompressionStream('deflate')(웹뷰 80+), 없거나 안 되면 인플레이트 */
+function 풀기(조) {
+  var b = b64바이트(조);
+  function 제풀기() { return JSON.parse(new TextDecoder('utf-8').decode(인플레이트(b))); }
+  if (typeof DecompressionStream === 'undefined' || typeof Response === 'undefined' || typeof Blob === 'undefined' || !Blob.prototype.stream) {
+    return new Promise(function (ok, no) { try { ok(제풀기()); } catch (e) { no(e); } });
+  }
+  return new Response(new Blob([b]).stream().pipeThrough(new DecompressionStream('deflate'))).text()
+    .then(function (t) { return JSON.parse(t); }, function () { return 제풀기(); });
 }
 function 바이트(글) { return new TextEncoder().encode(글).length; }
 function _s(v) { return v == null ? '' : String(v).trim(); }
@@ -307,14 +472,72 @@ function 번호꼴(글) {
   var m = /^([A-Z]*\d{2}[A-Z])[-_]?(\d{1,4})$/.exec(t);
   return m ? m[1] + ('000' + m[2]).slice(-4) : '';
 }
-/** 한 야드 → '26K 0805 0806.2;26J 0101' — 누른 차례, 접두가 바뀌면 ';' */
+/** 한 야드 → '26K 0805 0806.2;26J 0101' — 누른 차례, 접두가 바뀌면 ';'. ⑤ QR 바코드 줄(p '#B통')은 '#B 통' 묶음 */
 function 보낼글(줄들) {
   var 조각 = [], 앞 = '';
   줄들.forEach(function (x) {
-    var 접 = x.p.slice(0, -4), 뒤 = x.p.slice(-4) + (x.단 && x.단 !== 1 ? '.' + x.단 : '');
+    var 바 = x.p.indexOf('#B') === 0, 접 = 바 ? '#B' : x.p.slice(0, -4);
+    var 뒤 = (바 ? x.p.slice(2) : x.p.slice(-4)) + (x.단 && x.단 !== 1 ? '.' + x.단 : '');
     if (접 !== 앞) { 조각.push(접 + ' ' + 뒤); 앞 = 접; } else 조각[조각.length - 1] += ' ' + 뒤;
   });
   return 조각.join(';');
+}
+/** ② 맞춰 보기 — 그 야드 누른 줄 · DB 더미 · 담아 둔 옮김 → {같음, 안누름: [{p, 단}], 새로: [p], 바코드: 수, 옮김: [p]}.
+ *  안누름 = DB 에 있는데 안 누른 관(옮김에 담은 것은 뺌) · 새로 = 누른 것 가운데 이 야드 DB 에 없는 번호(G1 에서 온 새 관 등) */
+function 맞춤셈(xs, 더미목록, 옮김들, 야드) {
+  var 누른 = {}, 디 = {}, 옮 = {}, out = { 같음: 0, 안누름: [], 새로: [], 바코드: 0, 옮김: [] };
+  (옮김들 || []).forEach(function (o) { if (o.에서 === 야드) o.ps.forEach(function (p) { 옮[p] = o.로; }); });
+  (더미목록 || []).forEach(function (r) { 디[r.p] = 1; });
+  xs.forEach(function (x) {
+    if (x.p.indexOf('#B') === 0) { out.바코드++; return; }
+    누른[x.p] = 1;
+    if (디[x.p]) out.같음++; else out.새로.push(x.p);
+  });
+  (더미목록 || []).forEach(function (r) { if (누른[r.p]) return; if (옮[r.p]) out.옮김.push(r.p); else out.안누름.push(r); });
+  return out;
+}
+/** 옮김 담기 — ps 를 다른 옮김에서 빼고(한 관은 한 곳으로) (에서, 로) 묶음에 더한다. 로가 '' 면 빼기만 → 새 목록 */
+function 옮김더하기(옮김들, 에서, 로, ps) {
+  var out = [];
+  (옮김들 || []).forEach(function (o) {
+    var 남 = o.ps.filter(function (p) { return ps.indexOf(p) < 0; });
+    if (남.length) out.push({ 에서: o.에서, 로: o.로, ps: 남 });
+  });
+  if (!ps.length || !로) return out;
+  var 같 = out.filter(function (o) { return o.에서 === 에서 && o.로 === 로; })[0];
+  if (같) 같.ps = 같.ps.concat(ps); else out.push({ 에서: 에서, 로: 로, ps: ps.slice() });
+  return out;
+}
+/** ⑤ 스캐너 · 📷 QR 글 → {꼴: 번호 | 바코드 | 차 | 모름, p, 통} — 검수 앱 가르기와 같은 차례(ERP '*P…' · 상차요청서 · 첫 낱말 번호) */
+var 맨꼴 = /^\s*([1-9]\d{0,2}[A-Za-z]?)\s*-\s*(\d{3,4})\s*$/, 큰꼴 = /^\s*([1-9]\d{0,2}[A-Za-z]?)(?:\.0)?_(\d{3,4})(?:\.0)?_/;
+function QR가르기(raw) {
+  var t = _s(raw);
+  if (!t) return { 꼴: '모름' };
+  if (t.slice(0, 2).toUpperCase() === '*P') {
+    var 통 = t.slice(2).trim().split(/\s+/)[0] || '';
+    return /^[0-9A-Za-z]{4,30}$/.test(통) ? { 꼴: '바코드', 통: 통 } : { 꼴: '모름' };
+  }
+  if (맨꼴.test(t) || 큰꼴.test(t)) return { 꼴: '차' };
+  var 첫 = t.split(/[\s,;/]+/).filter(Boolean)[0] || '', p = 번호꼴(첫);
+  return p && 첫.replace(/[-_]/g, '').length >= 6 ? { 꼴: '번호', p: p } : { 꼴: '모름' };
+}
+/** ⑥ 배치도 — 칸 이름들 · 재고 야드 → 그릴 칸('B03' = B03A · B03C — 🗺 지도 앱과 같다) · 칸마다 DB 본수 */
+function 칸이름들(K) { var s = {}; (K || []).forEach(function (k) { s[k[0]] = 1; }); return s; }
+function 칸야드(야드, 이름들) {
+  if (이름들[야드]) return [야드];
+  if (/^B\d{2}$/.test(야드) && 이름들[야드 + 'A']) return [야드 + 'A', 야드 + 'C'];
+  return [];
+}
+function 칸본수(N, K) {
+  var 이름들 = 칸이름들(K), out = {};
+  Object.keys(N || {}).forEach(function (y) { 칸야드(y, 이름들).forEach(function (c) { out[c] = (out[c] || 0) + N[y]; }); });
+  return out;
+}
+/** ③ 보낸 줄 되살리기 — 줄 복사본, 봇이 QR 바코드를 번호로 찾은 줄(w '→ 26K…')은 그 번호로 */
+function 되살릴줄(줄들, w, 야드) {
+  var out = 줄들.map(function (x) { var y = {}; Object.keys(x).forEach(function (k) { y[k] = x[k]; }); return y; });
+  (w || []).forEach(function (e) { if (e[0] === 야드 && out[e[1]] && /^→ /.test(_s(e[3]))) out[e[1]].p = _s(e[3]).slice(2); });
+  return out;
 }
 /** 고른 단 한 줄기(시간 차례)가 '번갈아'인가 → 켜(단 수) | 0. 셋 넘게 · 켜 2 넘게 · 다음 = 앞 % 켜 + 1 · 한 번은 되돌아와야(1 · 2 · 1) */
 function 반복켜(단들) {
@@ -360,18 +583,20 @@ function 더미풀기(글) {
   });
   return out;
 }
-/** 보낼 묶음 — 한도 안에서 야드 차례대로(넘는 야드는 다음에). → {글, 야드들, n} */
-function 보낼묶음(야드들, id, 날) {
-  var y = {}, 들 = [], n = 0, 글 = '';
+/** 보낼 묶음(판 2) — ② 옮김(m)을 먼저 싣고, 한도 안에서 야드 차례대로(넘는 야드는 다음에). → {글, 야드들, n, m(옮김 묶음 수)} */
+function 보낼묶음(야드들, id, 날, 옮김) {
+  var y = {}, 들 = [], n = 0, m = (옮김 || []).map(function (o) { return [o.에서, o.로, o.ps]; });
+  function 짓기(nn) { var d = { k: '야드', v: 2, id: id, d: 날, y: y, n: nn }; if (m.length) d.m = m; return JSON.stringify(d); }
+  var 글 = m.length ? 짓기(0) : '';
   Object.keys(야드들).forEach(function (야) {
     var xs = 야드들[야];
     if (!xs.length) return;
     y[야] = 보낼글(xs);
-    var 시험글 = JSON.stringify({ k: '야드', v: 1, id: id, d: 날, y: y, n: n + xs.length });
+    var 시험글 = 짓기(n + xs.length);
     if (바이트(시험글) > 보낼한도) { delete y[야]; return; }
     들.push(야); n += xs.length; 글 = 시험글;
   });
-  return { 글: 글, 야드들: 들, n: n };
+  return { 글: 글, 야드들: 들, n: n, m: m.length };
 }
 /** 중간 고치기(11-19) — 새 줄들을 돌려준다(본 줄들은 그대로). 바꾼줄: i 번째 번호만 p 로(단 · 고름 · 자동 그대로) ·
  *  끼운줄: i 번째 앞에 p(기본 1단 — 자동 번갈아는 끝에 더할 때만) · 뺀줄: i 번째를 뺌 */
@@ -391,7 +616,9 @@ function 끼운줄(줄들, i, p) {
 }
 function 뺀줄(줄들, i) { var out = 줄들.slice(); if (i >= 0 && i < out.length) out.splice(i, 1); return out; }
 /** 그림 동그라미 글 — 뒤 4자리에서 앞 0 하나만 뺌(번호 단추와 같은 꼴): 0694 → 694 · 1212 → 1212(11-19 — 예전엔 뒤 3자리라 1212 가 212) */
-function 원글(p) { return _s(p).slice(-4).replace(/^0/, ''); }
+function 원글(p) { return _s(p).indexOf('#B') === 0 ? 'QR' : _s(p).slice(-4).replace(/^0/, ''); }
+/** 목록 · 알림에 보일 번호 — QR 바코드 줄은 '🔖 …뒤 7자리' */
+function 보일번호(p) { p = _s(p); return p.indexOf('#B') === 0 ? '🔖 …' + p.slice(-7) : p; }
 /** 굴리다 눌림 막기 — 손 {t: 손 댄 때, 굴림: 그 전에 판이 마지막으로 구른 때, x, y, top, left(판 자리)} · 뗌 {x, y, top, left}
  *  → 누름으로 칠까. 구르던 판을 멈추려 댄 손(0.35초 안) · 누르는 동안 판이 구름 · 손가락이 8px 넘게 밀림은 아니다 */
 function 누름인가(손, 뗌) {
@@ -422,7 +649,11 @@ var 텔레그램안 = !!(tg && tg.platform && tg.platform !== 'unknown');
 var 시험 = !텔레그램안;
 var 자료 = null;
 var 열쇠 = 'yard|v1';
-var 상태 = { 야드들: {}, 야드: '', 작지: '', 고른: -1, 보냄: {}, 자동: {} };   // 자동 = {야드: 켜}
+var 상태 = { 야드들: {}, 야드: '', 작지: '', 고른: -1, 보냄: {}, 자동: {}, 보낸: {}, 옮김: [] };   // 자동 = {야드: 켜}
+// 보낸 = {id: {때, 야드들: {야드: [줄]}, w: [[야드, 줄 자리, 번호, 까닭]], s: [야드], 되살림: {야드: 1}}} — 봇이 받은 목록(③ 하루)
+// 옮김 = [{에서, 로, ps: [번호]}] — ② 실제 야드에 없는 관(다음 📤 보내기에 m 으로)
+var 받을곳 = null;            // ⑥ 배치도 칸 이름(+ G1) — 옮길 곳(봇 받을곳들 과 같다) · 없으면 null(옛 링크)
+var 스캔앞 = { raw: '', t: 0 }; // 📷 카메라가 같은 QR 을 잇달아 읽을 때 한 번만
 var 모든번호 = {};            // 번호 → 작지 줄
 var 더미 = {};                // 야드 → [{p, 단}] — 봇이 실어 준 지금 DB 더미(태블릿에 저장 안 함 — 늘 링크의 것)
 var 고침 = null;              // {k: '바꿈' | '끼움', 야드, i(대상 줄), p(대상 번호), n(끼운 수)} — 저장 안 함(앱을 닫으면 그만)
@@ -453,7 +684,12 @@ function 지킴(판) {
   }, true);
 }
 function 눌러도(판, e) { return 누름인가(판 && 판._손, { x: e.clientX, y: e.clientY, top: 판.scrollTop, left: 판.scrollLeft }); }
-function 떨림() { try { if (tg && tg.HapticFeedback) tg.HapticFeedback.selectionChanged(); } catch (e) {} }
+function 떨림(꼴) {
+  try {
+    if (!tg || !tg.HapticFeedback) return;
+    if (꼴 === 'error') tg.HapticFeedback.notificationOccurred('error'); else tg.HapticFeedback.selectionChanged();
+  } catch (e) {}
+}
 function 토스트(글, 단추, 할일) {
   $('toastT').textContent = 글;
   $('toastB').hidden = !단추;
@@ -471,6 +707,8 @@ function 읽기() {
   try { var s = JSON.parse(localStorage.getItem(열쇠) || 'null'); if (s && s.야드들) 상태 = s; } catch (e) {}
   if (!상태.보냄) 상태.보냄 = {};
   if (!상태.자동) 상태.자동 = {};
+  if (!상태.보낸) 상태.보낸 = {};
+  if (!상태.옮김) 상태.옮김 = [];
 }
 function 쓴곳() {
   var m = {};
@@ -479,12 +717,18 @@ function 쓴곳() {
 }
 function 지금줄들() { return 상태.야드들[상태.야드] || []; }
 
-function 그리기() { 칩그리기(); 모드그리기(); 판그리기(); 야드그리기(); 그림그리기(); 차례그리기(); }   // 그림 먼저 — 목록 굴림이 자리를 맞게 잼
+function 그리기() { 칩그리기(); 모드그리기(); 판그리기(); 야드그리기(); 맞춤그리기(); 그림그리기(); 차례그리기(); 머리단추(); }   // 그림 먼저 — 목록 굴림이 자리를 맞게 잼
+/** 그 야드에서 옮김에 담긴 번호 → 갈 곳 */
+function 옮길곳(야드) {
+  var m = {};
+  상태.옮김.forEach(function (o) { if (o.에서 === 야드) o.ps.forEach(function (p) { m[p] = o.로; }); });
+  return m;
+}
 
 /** 쌓은 모양 — 파이프 단면 동그라미(가로로 넘치면 판 안에서 굴려 마지막이 보이게) */
 function 그림그리기() {
-  var xs = 지금줄들(), 켜 = 상태.자동[상태.야드], 쓴 = 쓴곳();
-  var 옛 = (더미[상태.야드] || []).filter(function (r) { return !쓴[r.p]; });   // 다시 눌러 목록에 넣은 DB 번호는 회색에서 빠짐
+  var xs = 지금줄들(), 켜 = 상태.자동[상태.야드], 쓴 = 쓴곳(), 옮 = 옮길곳(상태.야드);
+  var 옛 = (더미[상태.야드] || []).filter(function (r) { return !쓴[r.p] && !옮[r.p]; });   // 다시 눌러 넣은 · 옮김에 담은(실제 없음) DB 번호는 회색에서 빠짐
   $('pic').hidden = !xs.length && !옛.length;
   if (!xs.length && !옛.length) return;
   var R = 27, 높 = R * 1.72, 자리들 = 쌓은자리(xs), 색 = { 1: ['#dbeafe', '#2c6bd4'], 2: ['#fde68a', '#b45309'], 3: ['#dcfce7', '#16a34a'] };
@@ -557,11 +801,13 @@ function 판그리기() {
     var obox = document.createElement('div');
     obox.className = 'nums';
     g.appendChild(obox);
+    var 옮 = 옮길곳(상태.야드);                                    // ② 옮김에 담은 관은 보라 '🚚 G1'
     옛.forEach(function (r) {
       수++;
       var b = document.createElement('button');
-      b.className = 'k3 num' + (쓴[r.p] ? ' used' : '');
-      b.innerHTML = (쓴[r.p] ? '<span class="p badge">' + esc(쓴[r.p]) + '</span>' : '<span class="p">DB ' + r.단 + '단</span>') +
+      b.className = 'k3 num' + (쓴[r.p] ? ' used' : 옮[r.p] ? ' mvq' : '');
+      b.innerHTML = (쓴[r.p] ? '<span class="p badge">' + esc(쓴[r.p]) + '</span>' :
+        옮[r.p] ? '<span class="p">🚚 ' + esc(옮[r.p]) + '</span>' : '<span class="p">DB ' + r.단 + '단</span>') +
         '<span class="t">' + r.p.slice(-4).replace(/^0/, '') + '</span>';
       b.onclick = function (e) { if (눌러도(g, e)) 누름(r.p); };
       obox.appendChild(b);
@@ -629,7 +875,7 @@ function 차례그리기() {
   xs.forEach(function (x, i) {
     var tr = document.createElement('tr');
     tr.className = (i === 상태.고른 ? 'cur' : '') + (지 && i === 지.i ? (지.k === '바꿈' ? ' tgt-fix' : ' tgt-ins') : '');
-    tr.innerHTML = '<td class="n">' + (i + 1) + '</td><td class="p">' + esc(x.p) + '</td><td class="d"><span class="dan ' +
+    tr.innerHTML = '<td class="n">' + (i + 1) + '</td><td class="p">' + esc(보일번호(x.p)) + '</td><td class="d"><span class="dan ' +
       (x.고름 ? 'set' : x.자동 ? 'auto' : 'def') + '">' + x.단 + '단' + (x.자동 ? ' <small>자동</small>' : '') + '</span></td>';
     tr.onclick = function (e) {                                       // 고르기만 — 빼기 · 바꾸기 · 끼우기는 아래 단추(굴리다 지워지지 않게)
       if (!눌러도(판, e)) return;
@@ -662,29 +908,36 @@ function 차례그리기() {
     else if (cur.offsetTop + cur.offsetHeight > 판.scrollTop + 판.clientHeight) 판.scrollTop = cur.offsetTop + cur.offsetHeight - 판.clientHeight;
   }
 }
-function 누름(p) {
-  if (!상태.야드) { 야드고르기열기(); return; }
+/** 번호 누름 — 스캔(⑤ 스캐너 · 📷 QR)이면 겹침을 알림창 대신 토스트로(카메라 창 위에 알림창이 뜨지 않게). → 목록에 넣었나 */
+function 누름(p, 스캔) {
+  if (!상태.야드) { 야드고르기열기(); return false; }
   var 쓴 = 쓴곳(), xs = 지금줄들(), 지 = 지금고침();
+  var 겹침 = function (글) { if (스캔) { 토스트('⚠ ' + 글); 떨림('error'); } else 알림(글); };
+  if (옮길곳(상태.야드)[p]) {                                      // ② 옮김에 담았던 관을 찾았다 — 옮김에서 빼고 넣는다
+    상태.옮김 = 옮김더하기(상태.옮김, 상태.야드, '', [p]);
+    토스트('🚚 ' + 뒤(p) + ' 를 찾았어요 — 옮김에서 뺐어요');
+  }
   if (지 && 지.k === '바꿈') {                                      // ✏ 바꾸기 — 그 줄 번호만(자리 · 단 그대로)
-    if (p === 지.p) { 고침 = null; 그리기(); return; }
-    if (쓴[p]) { 알림(p + ' 는 이미 ' + 쓴[p] + ' 에 넣었어요 — 그 줄을 먼저 빼거나 바꾸세요'); return; }
+    if (p === 지.p) { 고침 = null; 그리기(); return false; }
+    if (쓴[p]) { 겹침(보일번호(p) + ' 는 이미 ' + 쓴[p] + ' 에 넣었어요 — 그 줄을 먼저 빼거나 바꾸세요'); return false; }
     상태.야드들[상태.야드] = 바꾼줄(xs, 지.i, p);
     상태.고른 = 지.i; 고침 = null;
     떨림(); 저장(); 그리기();
     토스트('✏ ' + (지.i + 1) + '번 ' + 뒤(지.p) + ' → ' + 뒤(p) + ' 로 바꿨어요');
-    return;
+    return true;
   }
-  if (쓴[p]) { 알림(p + ' 는 이미 ' + 쓴[p] + ' 에 넣었어요'); return; }
+  if (쓴[p]) { 겹침(보일번호(p) + ' 는 이미 ' + 쓴[p] + ' 에 넣었어요'); return false; }
   if (지 && 지.k === '끼움') {                                      // ⤴ 끼우기 — 대상 줄 앞에, 누른 차례로
     상태.야드들[상태.야드] = 끼운줄(xs, 지.i, p);
     상태.고른 = 지.i; 지.i += 1; 지.n += 1;
     떨림(); 저장(); 그리기();
-    return;
+    return true;
   }
   var 켜 = 상태.자동[상태.야드];
   xs.push(켜 ? { p: p, 단: 다음단(xs, 켜), 고름: false, 자동: true } : { p: p, 단: 1, 고름: false, 자동: false });
   상태.고른 = xs.length - 1;
   떨림(); 저장(); 그리기();
+  return true;
 }
 /** 고침이 지금 야드 · 그 줄에 아직 맞나 → 고침 | null */
 function 지금고침() {
@@ -769,36 +1022,111 @@ function 단고름(t) {
 }
 function 알림(글) { if (텔레그램안 && tg.showAlert) tg.showAlert(글); else alert(글); }
 
-/* 야드 고르기 — 줄 글자 · 번호 · (B 줄은 쪽 A/C) · 직접 */
-function 야드고르기열기() {
-  var 줄 = 'B', 쪽 = 'C';
+/* 야드 고르기 — ⑥ 🗺 배치도(링크 K · 칸에 DB 본수 · 초록 점 = 더미 있음) · ⌨ 글자로(줄 글자 · 번호 · B 줄은 쪽 A/C · 직접).
+   목적 = {옮김: {에서, ps}} 이면 ② 옮길 곳 고르기(📦 G1 단추 더 · 받을 칸만) */
+function 야드고르기열기(목적) {
+  var 줄 = 'B', 쪽 = 'C', 배치 = !!(자료.K && 자료.K.length && 자료.W), 탭 = 배치 ? '그림' : '글자', 고른칸 = '';
+  var 옮김 = 목적 && 목적.옮김, 이름들 = 칸이름들(자료.K), 본 = 칸본수(자료.N, 자료.K), 실린 = {}, 쓴야드 = {};
+  Object.keys(더미).forEach(function (y) { 칸야드(y, 이름들).forEach(function (c) { 실린[c] = 1; }); });
+  Object.keys(상태.야드들).forEach(function (y) { if (상태.야드들[y].length) 쓴야드[y] = 1; });
+  function 정함(y) {
+    if (!옮김) { 야드정함(y); return; }
+    if (y === 옮김.에서) { 알림('같은 야드예요 — 다른 곳을 고르세요'); return; }
+    if (받을곳 && !받을곳[y]) { 알림(y + ' 는 받을 칸이 아니에요 — 배치도 칸이나 📦 G1 으로'); return; }
+    상태.옮김 = 옮김더하기(상태.옮김, 옮김.에서, y, 옮김.ps);
+    닫기(); 저장(); 그리기();
+    토스트('🚚 ' + 옮김.에서 + ' → ' + y + ' ' + 옮김.ps.length + '본 담음 — 📤 보내기 때 같이(바로 반영)');
+  }
+  function 그림판() {
+    var W = 자료.W[0], H = 자료.W[1], s = '<svg viewBox="-2 -2 ' + (W + 4) + ' ' + (H + 4) + '">';
+    자료.K.forEach(function (k) {
+      var y = k[0], x = k[1], t = k[2], w = k[3], hh = k[4], n = 본[y] || 0, 반 = /^B\d{2}[AC]$/.test(y), 고 = y === 고른칸;
+      var 칠 = 고 ? '#2c6bd4' : 쓴야드[y] ? '#dbe8fb' : !n ? '#f3f4f6' : n < 10 ? '#eef2ff' : n < 30 ? '#c7d2fe' : n < 60 ? '#818cf8' : '#4f46e5';
+      var 글색 = 고 || n >= 30 ? '#ffffff' : '#1f2937';
+      s += '<g data-y="' + esc(y) + '"><rect x="' + x + '" y="' + t + '" width="' + w + '" height="' + hh + '" rx="2" fill="' + 칠 +
+        '" stroke="' + (쓴야드[y] || 고 ? '#2c6bd4' : '#94a3b8') + '" stroke-width="' + (쓴야드[y] || 고 ? 2 : 0.8) + '"/>' +
+        '<text x="' + (x + 2) + '" y="' + (t + 9) + '" font-size="8" fill="' + 글색 + '">' + esc(반 ? y.slice(1) : y) + '</text>' +
+        (n ? '<text x="' + (x + w / 2) + '" y="' + (t + hh / 2 + (반 ? 6 : 5)) + '" font-size="' + (반 ? 9 : 11) +
+          '" font-weight="bold" text-anchor="middle" fill="' + 글색 + '">' + n + '</text>' : '') +
+        (실린[y] ? '<circle cx="' + (x + w - 4) + '" cy="' + (t + 4) + '" r="2.6" fill="#16a34a"/>' : '') + '</g>';
+    });
+    return s + '</svg>';
+  }
+  function 고른줄() {
+    var el = $('pickLine');
+    if (!el) return;
+    if (!고른칸) {
+      el.innerHTML = '<span class="info hint">칸을 누르세요 — 숫자 = 지금 DB 본수 · 초록 점 = DB 더미가 앱에 있음(맞춰 보기) · 파란 테 = 오늘 누른 야드</span>';
+      return;
+    }
+    var n = 본[고른칸] || 0, 실 = 실린[고른칸];
+    var h = '<span class="info"><b>' + esc(고른칸) + '</b> — DB ' + n + '본' + (n ? (실 ? ' · 🗂 더미 있음' : ' · 더미가 앱에 없음') : '') + '</span>';
+    if (!옮김 && n && !실) h += '<button class="k3" id="askDummy">🔎 DB 더미 받기</button>';
+    h += '<button class="k3 blue" id="pickOk">' + (옮김 ? '여기로 옮기기' : '이 야드로') + '</button>';
+    el.innerHTML = h;
+    if ($('askDummy')) $('askDummy').onclick = function () { 더미부탁(고른칸); };
+    $('pickOk').onclick = function () { 정함(고른칸); };
+  }
   function 그림() {
-    var h = '<h2>야드 고르기</h2><div class="rowbtns">';
-    'ABCDEFZ'.split('').forEach(function (c) { h += '<button class="k3' + (c === 줄 ? ' on' : '') + '" data-line="' + c + '">' + c + '</button>'; });
-    h += '</div>';
-    if (줄 === 'B') {
+    var h = '<h2>' + (옮김 ? '🚚 어디로 옮길까요? — ' + esc(옮김.에서) + ' 에서 ' + 옮김.ps.length + '본' : '야드 고르기') + '</h2>';
+    if (배치 || 옮김) {
+      h += '<div class="tabs">' + (배치 ? '<button class="k3' + (탭 === '그림' ? ' on' : '') + '" data-tab="그림">🗺 배치도</button>' +
+        '<button class="k3' + (탭 === '글자' ? ' on' : '') + '" data-tab="글자">⌨ 글자로</button>' : '') +
+        (옮김 ? '<button class="k3" data-yard="G1">📦 G1 로</button>' : '') + '</div>';
+    }
+    if (탭 === '그림') {
+      h += '<div class="mapbox">' + 그림판() + '</div><div class="pickline" id="pickLine"></div>';
+    } else {
       h += '<div class="rowbtns">';
-      [['A', 'A 쪽'], ['C', 'C 쪽'], ['', '쪽 없음']].forEach(function (s) {
-        h += '<button class="k3' + (s[0] === 쪽 ? ' on' : '') + '" data-side="' + s[0] + '">' + s[1] + '</button>';
-      });
+      'ABCDEFZ'.split('').forEach(function (c) { h += '<button class="k3' + (c === 줄 ? ' on' : '') + '" data-line="' + c + '">' + c + '</button>'; });
       h += '</div>';
+      if (줄 === 'B') {
+        h += '<div class="rowbtns">';
+        [['A', 'A 쪽'], ['C', 'C 쪽'], ['', '쪽 없음']].forEach(function (s) {
+          h += '<button class="k3' + (s[0] === 쪽 ? ' on' : '') + '" data-side="' + s[0] + '">' + s[1] + '</button>';
+        });
+        h += '</div>';
+      }
+      h += '<div class="ygrid">';
+      for (var n = 1; n <= 25; n++) {
+        var 이름 = 줄 + ('0' + n).slice(-2) + (줄 === 'B' ? 쪽 : '');
+        h += '<button class="k3" data-yard="' + 이름 + '">' + 이름 + '</button>';
+      }
+      h += '</div><div class="find"><span class="hint">직접</span><input id="yardTyped" placeholder="예: 2-A01" autocomplete="off">' +
+        '<button class="k3" id="yardTypedOk">넣기</button></div>';
     }
-    h += '<div class="ygrid">';
-    for (var n = 1; n <= 25; n++) {
-      var 이름 = 줄 + ('0' + n).slice(-2) + (줄 === 'B' ? 쪽 : '');
-      h += '<button class="k3" data-yard="' + 이름 + '">' + 이름 + '</button>';
-    }
-    h += '</div><div class="find"><span class="hint">직접</span><input id="yardTyped" placeholder="예: 2-A01" autocomplete="off">' +
-      '<button class="k3" id="yardTypedOk">넣기</button></div><div class="btns"><button class="k3" id="sheetX">닫기</button></div>';
+    h += '<div class="btns"><button class="k3" id="sheetX">닫기</button></div>';
+    $('sheet').className = 'sheet' + (탭 === '그림' ? ' wide' : '');
     $('sheet').innerHTML = h;
+    Array.prototype.forEach.call($('sheet').querySelectorAll('[data-tab]'), function (b) { b.onclick = function () { 탭 = b.getAttribute('data-tab'); 그림(); }; });
     Array.prototype.forEach.call($('sheet').querySelectorAll('[data-line]'), function (b) { b.onclick = function () { 줄 = b.getAttribute('data-line'); 그림(); }; });
     Array.prototype.forEach.call($('sheet').querySelectorAll('[data-side]'), function (b) { b.onclick = function () { 쪽 = b.getAttribute('data-side'); 그림(); }; });
-    Array.prototype.forEach.call($('sheet').querySelectorAll('[data-yard]'), function (b) { b.onclick = function () { 야드정함(b.getAttribute('data-yard')); }; });
-    $('yardTypedOk').onclick = function () { var v = _s($('yardTyped').value).toUpperCase(); if (v) 야드정함(v); };
+    Array.prototype.forEach.call($('sheet').querySelectorAll('[data-yard]'), function (b) { b.onclick = function () { 정함(b.getAttribute('data-yard')); }; });
+    Array.prototype.forEach.call($('sheet').querySelectorAll('g[data-y]'), function (g) {
+      g.onclick = function () {
+        var y = g.getAttribute('data-y');
+        if (y === 고른칸) { 정함(y); return; }                      // 같은 칸을 두 번 누르면 바로
+        고른칸 = y; 그림();
+      };
+    });
+    if ($('yardTypedOk')) $('yardTypedOk').onclick = function () { var v = _s($('yardTyped').value).toUpperCase(); if (v) 정함(v); };
     $('sheetX').onclick = 닫기;
+    고른줄();
   }
   그림();
   $('sheetBg').hidden = false;
+}
+/** ⑥ 더미가 앱에 없는 야드 — 봇에 청한다(sendData q). 앱이 닫히고 봇이 그 야드를 먼저 실은 단추를 준다 */
+function 더미부탁(y) {
+  var 묻 = y + ' 의 지금 DB 더미를 봇에 청할까요?\n앱이 닫히고, 봇이 그 야드를 실은 [📍 야드 등록 열기] 단추를 줘요(누른 목록은 태블릿에 그대로).';
+  var 가 = function (ok) {
+    if (!ok) return;
+    야드정함(y);                                                    // 다시 열면 그 야드에서
+    var 글 = JSON.stringify({ k: '야드', v: 2, id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7), d: 자료.d, y: {}, q: [y] });
+    if (텔레그램안) { tg.sendData(글); return; }
+    alert('🧪 시험 — 실제로는 봇에 보냅니다\n' + 글);
+  };
+  if (텔레그램안 && tg.showConfirm) tg.showConfirm(묻, 가); else 가(confirm(묻));
 }
 function 야드정함(y) {
   고침 = null;
@@ -806,42 +1134,214 @@ function 야드정함(y) {
   상태.야드 = y; 상태.고른 = 상태.야드들[y].length - 1;
   닫기(); 저장(); 그리기();
 }
-function 닫기() { $('sheetBg').hidden = true; $('sheet').innerHTML = ''; }
+function 닫기() { $('sheetBg').hidden = true; $('sheet').innerHTML = ''; $('sheet').className = 'sheet'; }
+
+/* ② 맞춰 보기 — 더미가 실린 야드: 같음 · 안 누름 · 새로 · 옮김 */
+function 맞춤그리기() {
+  var y = 상태.야드, 디 = 더미[y], 박 = $('chk');
+  박.hidden = !디;
+  if (!디) return;
+  var c = 맞춤셈(지금줄들(), 디, 상태.옮김, y), 옮 = 옮길곳(y), 곳 = {};
+  Object.keys(옮).forEach(function (p) { 곳[옮[p]] = (곳[옮[p]] || 0) + 1; });
+  var h = '<div class="t"><b>🔎 DB 맞춰 보기</b><span class="c ok">✓ 같음 ' + c.같음 + '</span>' +
+    '<span class="c miss">❓ 안 누름 ' + c.안누름.length + '</span><span class="c new">➕ 새로 ' + c.새로.length + '</span>' +
+    (c.바코드 ? '<span class="c new">🔖 QR ' + c.바코드 + '</span>' : '') +
+    (c.안누름.length ? '<button class="k3" id="missBtn">❓ ' + c.안누름.length + ' 처리</button>' : '') + '</div>';
+  if (c.옮김.length) {
+    h += '<div class="mvline">🚚 옮김에 담음 ' + Object.keys(곳).map(function (k) { return '→ ' + esc(k) + ' ' + 곳[k]; }).join(' · ') +
+      ' (📤 보내기 때 바로 반영)<button class="k3" id="mvX">↩ 빼기</button></div>';
+  }
+  박.innerHTML = h;
+  if ($('missBtn')) $('missBtn').onclick = 없는것열기;
+  if ($('mvX')) $('mvX').onclick = function () {
+    상태.옮김 = 옮김더하기(상태.옮김, y, '', Object.keys(옮));
+    저장(); 그리기(); 토스트('🚚 ' + y + ' 옮김을 비웠어요');
+  };
+}
+/** ② 안 누른 DB 번호 — 실제 야드에 없는 관을 골라 📦 G1 · 다른 야드로(옮김에 담음) */
+function 없는것열기() {
+  var y = 상태.야드, c = 맞춤셈(지금줄들(), 더미[y], 상태.옮김, y), 고름 = {};
+  c.안누름.forEach(function (r) { 고름[r.p] = 1; });
+  function 그림() {
+    var 수 = Object.keys(고름).length;
+    var h = '<h2>❓ ' + esc(y) + ' — DB 에 있는데 안 누른 관 ' + c.안누름.length + '본</h2>' +
+      '<div class="hint">실제 야드에 없는 관을 골라(파랑 = 고름) 다른 곳으로 옮겨요. 📤 보내기 때 봇이 바로 반영하고 [↩ 되돌리기] 를 줘요. ' +
+      '찾으면 번호판에서 그냥 누르세요 — 옮김에서 빠져요.</div><div class="plist">';
+    c.안누름.forEach(function (r) {
+      h += '<button class="k3' + (고름[r.p] ? ' on' : '') + '" data-p="' + esc(r.p) + '">' + esc(r.p) + '<br><small>DB ' + r.단 + '단</small></button>';
+    });
+    h += '</div><div class="pickline"><span class="info">고른 ' + 수 + '본</span>' +
+      '<button class="k3" id="mvG1"' + (수 ? '' : ' disabled') + '>📦 G1 로</button>' +
+      '<button class="k3" id="mvYard"' + (수 ? '' : ' disabled') + '>🗺 다른 야드로…</button></div>' +
+      '<div class="btns"><button class="k3" id="sheetX">닫기</button></div>';
+    $('sheet').innerHTML = h;
+    Array.prototype.forEach.call($('sheet').querySelectorAll('[data-p]'), function (b) {
+      b.onclick = function () { var p = b.getAttribute('data-p'); if (고름[p]) delete 고름[p]; else 고름[p] = 1; 그림(); };
+    });
+    $('mvG1').onclick = function () {
+      var ps = Object.keys(고름);
+      상태.옮김 = 옮김더하기(상태.옮김, y, 'G1', ps);
+      닫기(); 저장(); 그리기();
+      토스트('🚚 ' + y + ' → G1 ' + ps.length + '본 담음 — 📤 보내기 때 같이(바로 반영)');
+    };
+    $('mvYard').onclick = function () { 야드고르기열기({ 옮김: { 에서: y, ps: Object.keys(고름) } }); };
+    $('sheetX').onclick = 닫기;
+  }
+  $('sheet').className = 'sheet';
+  그림();
+  $('sheetBg').hidden = false;
+}
+
+/* ③ 📨 보낸 것 — 봇이 받은 목록(하루) · 관마다 확인(w) · 채팅 저장(s) · 고쳐서 다시 보내기 */
+function 보낸것열기() {
+  var ids = Object.keys(상태.보낸).sort(function (a, b) { return (상태.보낸[b].때 || 0) - (상태.보낸[a].때 || 0); });
+  var h = '<h2>📨 보낸 것 — 봇이 받은 목록(하루 남김)</h2>';
+  if (!ids.length) h += '<div class="empty">아직 봇이 받은 목록이 없어요</div>';
+  ids.forEach(function (id) {
+    var x = 상태.보낸[id], d = new Date(x.때 || 0), 때 = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+    h += '<div class="sentid"><h3>' + 때 + ' 보냄 · ' + Object.keys(x.야드들).map(function (y) { return esc(y) + ' ' + x.야드들[y].length; }).join(' · ') + '</h3>';
+    Object.keys(x.야드들).forEach(function (y) {
+      var 줄 = x.야드들[y], 걸 = (x.w || []).filter(function (e) { return e[0] === y; }), 저 = (x.s || []).indexOf(y) >= 0;
+      var 나쁨 = 걸.filter(function (e) { return !/^(옮김 |→ )/.test(_s(e[3])); }).length;
+      h += '<div class="sentyard"><div class="hd"><b>' + esc(y) + '</b>&nbsp;' + 줄.length + '본' +
+        (저 ? '<span class="saved">✅ 텔레그램 저장</span>' : '') +
+        (나쁨 ? '<span class="why bad">⚠ ' + 나쁨 + '</span>' : '<span class="why info">✓ 걸릴 것 없음</span>') +
+        ((x.되살림 || {})[y] ? '<span class="hint">&nbsp;· 목록으로 되살림</span>' :
+          '<button class="k3" data-fix="' + esc(id) + '|' + esc(y) + '">✏ 고쳐서 다시 보내기</button>') + '</div>';
+      걸.forEach(function (e) {
+        var 왜 = _s(e[3]), 꼴 = /^→ /.test(왜) ? 'qr' : /^옮김 /.test(왜) ? 'info' : 'bad', r = 줄[e[1]];
+        h += '<div class="wrow">' + (e[1] + 1) + '번 ' + esc(보일번호(r ? r.p : e[2])) + '<span class="why ' + 꼴 + '">' + esc(왜) + '</span></div>';
+      });
+      h += '</div>';
+    });
+    h += '</div>';
+  });
+  h += '<div class="btns"><button class="k3" id="sheetX">닫기</button></div>';
+  $('sheet').className = 'sheet';
+  $('sheet').innerHTML = h;
+  Array.prototype.forEach.call($('sheet').querySelectorAll('[data-fix]'), function (b) {
+    b.onclick = function () { var v = b.getAttribute('data-fix').split('|'); 되살리기(v[0], v[1]); };
+  });
+  $('sheetX').onclick = 닫기;
+  $('sheetBg').hidden = false;
+}
+function 되살리기(id, y) {
+  var x = 상태.보낸[id];
+  if (!x || !x.야드들[y]) return;
+  if ((상태.야드들[y] || []).length) { 알림('지금 목록에 ' + y + ' 가 있어요 — 먼저 보내거나 비운 뒤 되살려 주세요'); return; }
+  상태.야드들[y] = 되살릴줄(x.야드들[y], x.w, y);
+  if (!x.되살림) x.되살림 = {};
+  x.되살림[y] = 1;
+  상태.야드 = y; 상태.고른 = 상태.야드들[y].length - 1; 고침 = null;
+  닫기(); 저장(); 그리기();
+  토스트('✏ ' + y + ' ' + 상태.야드들[y].length + '본을 목록으로 되살렸어요 — 고친 뒤 📤 보내기');
+}
+/** 머리 줄 [📨 보낸 것 n] · [📷 QR] */
+function 머리단추() {
+  var n = Object.keys(상태.보낸).length;
+  $('sentBtn').hidden = !n;
+  $('sentN').textContent = n ? String(n) : '';
+  $('qrBtn').hidden = !(텔레그램안 && 판짓기('6.4') && typeof tg.showScanQrPopup === 'function');
+}
+
+/* ⑤ 🔫 스캐너(키보드처럼 치는 블루투스 · M3) · 📷 QR — 라벨 QR 을 받아 번호로 누른다 */
+function QR받음(raw) {
+  var x = QR가르기(raw);
+  if (x.꼴 === '번호') { if (누름(x.p, true)) 토스트('🔫 ' + x.p + ' · ' + 상태.야드 + ' ' + 지금줄들().length + '번째'); return; }
+  if (x.꼴 === '바코드') {
+    if (누름('#B' + x.통, true)) 토스트('🔖 QR 바코드 …' + x.통.slice(-7) + ' · ' + 상태.야드 + ' — 번호는 보낼 때 봇이 찾아요');
+    return;
+  }
+  떨림('error');
+  토스트(x.꼴 === '차' ? '상차요청서 QR 이에요 — 관 라벨 QR 을 찍어 주세요' : '모르는 QR — ' + _s(raw).slice(0, 24));
+}
+var 스캔칸 = null, 스캔때 = null;
+function 스캔받기() {
+  if (스캔때) { clearTimeout(스캔때); 스캔때 = null; }
+  var v = _s(스캔칸.value);
+  스캔칸.value = '';
+  if (v) QR받음(v);
+}
+function 스캔초점() {
+  if (!스캔칸 || !$('sheetBg').hidden) return;                     // 고르기 창이 열려 있으면 안 뺏는다
+  var a = document.activeElement;
+  if (a && a !== 스캔칸 && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA')) return;   // 찾기 칸에 치는 중
+  if (a !== 스캔칸) { try { 스캔칸.focus({ preventScroll: true }); } catch (e) {} }
+}
+function 카메라() {
+  try {
+    tg.showScanQrPopup({ text: '관 라벨 QR 을 차례로 — 다 찍으면 닫기' }, function (t) {
+      if (t === 스캔앞.raw && Date.now() - 스캔앞.t < 2500) return false;   // 같은 QR 을 잇달아 읽으면 한 번만
+      스캔앞 = { raw: t, t: Date.now() };
+      QR받음(t);
+      return false;                                                // 열어 둔 채 다음 관
+    });
+  } catch (e) { 알림('QR 창을 못 열었어요 — 텔레그램을 업데이트해 주세요'); }
+}
 
 /* 보내기 — sendData 는 앱을 닫는다. 보낸 야드는 봇이 받았다고(r) 알려 오면 지운다 */
 function 보내기() {
   var id = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-  var 묶 = 보낼묶음(상태.야드들, id, 자료.d);
-  if (!묶.n) { 알림('보낼 번호가 없어요'); return; }
+  var 묶 = 보낼묶음(상태.야드들, id, 자료.d, 상태.옮김);
+  if (!묶.n && !묶.m) { 알림('보낼 번호가 없어요'); return; }
   var 남은 = Object.keys(상태.야드들).filter(function (y) { return 상태.야드들[y].length && 묶.야드들.indexOf(y) < 0; });
-  var 묻 = 묶.야드들.join(' · ') + ' — ' + 묶.n + '본을 보낼까요?' +
-    (남은.length ? '\n(목록이 커서 ' + 남은.join(' · ') + ' 는 다음에 보내요)' : '') + '\n메인에서 한 번 보고 DB 에 넣어요.';
+  var 줄 = [];
+  if (묶.n) 줄.push(묶.야드들.join(' · ') + ' — ' + 묶.n + '본을 보낼까요?');
+  상태.옮김.forEach(function (o) { 줄.push('🚚 ' + o.에서 + ' → ' + o.로 + ' ' + o.ps.length + '본 옮김(바로 반영 · 봇 답에 되돌리기)'); });
+  묶.야드들.forEach(function (y) {                                   // ② 맞춰 보기 — 안 누른 DB 번호가 남았으면 한 번 알림
+    if (!더미[y]) return;
+    var c = 맞춤셈(상태.야드들[y], 더미[y], 상태.옮김, y);
+    if (c.안누름.length) 줄.push('❓ ' + y + ' 안 누른 DB 번호 ' + c.안누름.length + '본 — 그대로면 PC 저장 때 물어요([❓ 처리] 로 G1 · 다른 야드로)');
+  });
+  if (남은.length) 줄.push('(목록이 커서 ' + 남은.join(' · ') + ' 는 다음에 보내요)');
+  if (묶.n) 줄.push('봇이 확인해 답하고, 경고 없는 야드는 채팅 [✅ 저장] 으로도 넣어요.');
   var 가 = function (ok) {
     if (!ok) return;
     상태.보냄[id] = { 때: Date.now(), 야드들: 묶.야드들 };
+    상태.옮김 = [];                                                // 옮김은 보낸 것으로(봇 답의 [↩ 되돌리기])
     저장();
     if (텔레그램안) { tg.sendData(묶.글); return; }          // 키보드 단추로 연 앱이면 여기서 닫힌다
     alert('🧪 시험 — 실제로는 텔레그램으로 보냅니다(' + 바이트(묶.글) + ' / ' + 보낼한도 + '바이트)\n\n' + 묶.글.slice(0, 800));
     그리기();
   };
-  if (텔레그램안 && tg.showConfirm) tg.showConfirm(묻, 가); else 가(confirm(묻));
+  var 묻 = 줄.join('\n');
+  if (텔레그램안 && tg.showConfirm) tg.showConfirm(묻.slice(0, 1000), 가); else 가(confirm(묻));
 }
-/** 링크 r(봇이 받은 id) — 그 보냄의 야드들을 지운다. 사흘 지난 보냄 기록은 그냥 지운다(야드 목록은 남김) */
+/** 링크 r(봇이 받은 id) — 그 보냄의 야드 목록을 ③ 보낸 것(하루)으로 옮긴다. 링크 w · s 를 붙이고, 하루 지난 보낸 것 · 사흘 지난
+ *  보냄 기록은 지운다(야드 목록은 남김). → 보낸 것으로 옮긴 야드들 */
 function 받은만큼() {
   var 받음 = 자료.r || [], 지운 = [];
   Object.keys(상태.보냄).forEach(function (id) {
     if (받음.indexOf(id) >= 0) {
-      (상태.보냄[id].야드들 || []).forEach(function (y) { if (상태.야드들[y]) { delete 상태.야드들[y]; 지운.push(y); } });
+      var 보낸 = { 때: 상태.보냄[id].때 || Date.now(), 야드들: {}, w: [], s: [] };
+      (상태.보냄[id].야드들 || []).forEach(function (y) {
+        if (상태.야드들[y]) { 보낸.야드들[y] = 상태.야드들[y]; delete 상태.야드들[y]; 지운.push(y); }
+      });
+      if (Object.keys(보낸.야드들).length) 상태.보낸[id] = 보낸;
       delete 상태.보냄[id];
     } else if (Date.now() - (상태.보냄[id].때 || 0) > 3 * 86400 * 1000) delete 상태.보냄[id];
+  });
+  Object.keys(상태.보낸).forEach(function (id) {
+    if (Date.now() - (상태.보낸[id].때 || 0) > 86400 * 1000) { delete 상태.보낸[id]; return; }
+    if ((자료.w || {})[id]) 상태.보낸[id].w = 자료.w[id];
+    if ((자료.s || {})[id]) 상태.보낸[id].s = 자료.s[id];
   });
   if (상태.야드 && !상태.야드들[상태.야드]) { 상태.야드 = Object.keys(상태.야드들)[0] || ''; 상태.고른 = -1; }
   return 지운;
 }
 
+/** 링크 풀기 — ① 압축 #z=(판 2 — 비동기) · 옛 #c=(판 1) → 이어 */
 function 시작() {
-  var 오류 = '';
-  if (해시.c) { try { 자료 = JSON.parse(b64url풀기(해시.c)); } catch (e) { 오류 = e.message; } }
+  if (해시.z) {
+    풀기(해시.z).then(function (d) { 이어(d, ''); }, function (e) { 이어(null, (e && e.message) || String(e)); });
+    return;
+  }
+  var d = null, 오류 = '';
+  if (해시.c) { try { d = JSON.parse(b64url풀기(해시.c)); } catch (e) { 오류 = e.message; } }
+  이어(d, 오류);
+}
+function 이어(d, 오류) {
+  자료 = d;
   if (!자료 && 시험) 자료 = JSON.parse(JSON.stringify(예시자료));
   if (텔레그램안) { try { tg.ready(); tg.expand(); } catch (e) {} }
   if (텔레그램안) { try { if (tg.disableVerticalSwipes) tg.disableVerticalSwipes(); } catch (e) {} }   // 목록을 내리다 앱이 접히지 않게
@@ -869,20 +1369,32 @@ function 시작() {
              야드: 'B06C', 작지: '', 고른: 9, 보냄: {}, 자동: {} };
     try { localStorage.setItem(열쇠, JSON.stringify(상태)); } catch (e) {}
   }
+  if (시험 && /^y6/.test(해시.shot || '')) {                        // 시안 그림용(11-20) — 맞춰 보기 · 옮김 · 보낸 것
+    상태 = { 야드들: { A03: [{ p: '00Y0100', 단: 1 }, { p: '00Y0101', 단: 1 }, { p: '00X0101', 단: 1 }, { p: '#B2015050799123', 단: 1 }] },
+             야드: 'A03', 작지: '', 고른: 3, 보냄: {}, 자동: {}, 옮김: [{ 에서: 'A03', 로: 'G1', ps: ['00Y0105'] }],
+             보낸: { s1: { 때: Date.now() - 600000, 야드들: { C05: [{ p: '00X0110', 단: 1 }, { p: '00X0111', 단: 1 }, { p: '#B2015050711111', 단: 2 }] },
+                          w: [['C05', 1, '00X0111', '이미 출고완료'], ['C05', 2, '#B2015050711111', '→ 00X0112']], s: [] } } };
+    try { localStorage.setItem(열쇠, JSON.stringify(상태)); } catch (e) {}
+  }
   자료.L.forEach(function (l) { l.번호들 = 범위풀기(l[3]).map(function (뒤) { return l[2] + 뒤; }); l.번호들.forEach(function (p) { 모든번호[p] = l; }); });
   읽기();
   var 지운 = 받은만큼();
-  Object.keys(자료.Y || {}).forEach(function (y) {                      // 봇이 실어 준 DB 더미 — 그 야드 탭을 만들어 둔다
-    더미[y] = 더미풀기(자료.Y[y]);
+  if (자료.K && 자료.K.length) { 받을곳 = 칸이름들(자료.K); 받을곳.G1 = 1; }
+  var 부탁 = 자료.Yq || (자료.v === 2 ? [] : Object.keys(자료.Y || {}));   // 판 1 은 실린 더미 = 부탁한 야드
+  Object.keys(자료.Y || {}).forEach(function (y) { 더미[y] = 더미풀기(자료.Y[y]); });   // 봇이 실어 준 DB 더미(② 맞춰 보기 · 회색)
+  부탁.forEach(function (y) {                                        // 부탁한 야드만 탭을 만들어 둔다(남는 자리 더미는 배치도에서 고르면)
+    if (!더미[y]) return;
     if (!상태.야드들[y]) 상태.야드들[y] = [];
-    if (!상태.야드) { 상태.야드 = y; 상태.고른 = -1; }
+    if (!상태.야드) { 상태.야드 = y; 상태.고른 = 상태.야드들[y].length - 1; }
   });
   $('info').textContent = (자료.t ? 자료.t + ' 기준 · ' : '') + '쌓은 차례대로 누르세요 · 단을 안 고르면 1단';
   var 노트 = [];
-  if (지운.length) 노트.push('📥 봇이 받았어요 — ' + 지운.join(' · ') + ' 목록을 비웠어요');
+  if (지운.length) 노트.push('📥 봇이 받았어요 — ' + 지운.join(' · ') + ' 목록은 📨 보낸 것으로(하루 — 줄마다 봇 확인)');
   if (자료.m) 노트.push('옛 작지 ' + 자료.m + '본은 목록에 없어요 — 찾기 칸에 번호 전체(예: 26G-145)를 치고 ＋ 넣기');
-  if (자료.Y) 노트.push('🗂 DB 더미 ' + Object.keys(자료.Y).map(function (y) { return y + ' ' + 더미[y].length + '본'; }).join(' · ') +
+  var 실린수 = Object.keys(자료.Y || {}).length, 부탁실린 = 부탁.filter(function (y) { return 더미[y]; });
+  if (부탁실린.length) 노트.push('🗂 DB 더미 ' + 부탁실린.map(function (y) { return y + ' ' + 더미[y].length + '본'; }).join(' · ') +
     ' — 회색 · 1-1 이 맨 앞(왼쪽)이라 앞에 추가했으면 그 야드 전체를 다시 조사(번호판 맨 위 DB 번호까지 앞에서부터 누르기)');
+  if (실린수 > 부탁실린.length) 노트.push('🗺 그 밖 ' + (실린수 - 부탁실린.length) + '곳 더미도 앱에 있어요(＋ 야드 배치도 초록 점 — 고르면 🔎 맞춰 보기)');
   if (자료.Yx && 자료.Yx.length) 노트.push(자료.Yx.join(' · ') + ' 더미는 너무 커서 못 실었어요');
   if (노트.length) { $('note').hidden = false; $('note').textContent = 노트.join(' · '); }
   if (!상태.야드 && !Object.keys(상태.야드들).length) setTimeout(야드고르기열기, 0);
@@ -901,8 +1413,23 @@ function 시작() {
   $('addTyped').onclick = function () { var p = 번호꼴($('q').value); if (p) { 누름(p); $('q').value = ''; 판그리기(); } };
   $('send').onclick = 보내기;
   $('sheetBg').onclick = function (e) { if (e.target === $('sheetBg')) 닫기(); };
+  $('sentBtn').onclick = 보낸것열기;
+  $('qrBtn').onclick = 카메라;
+  스캔칸 = $('scanIn');                                              // ⑤ 🔫 스캐너 — 보이지 않는 칸(Enter 로 끝, 없으면 0.4초 뒤)
+  스캔칸.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' || ev.keyCode === 13) { ev.preventDefault(); 스캔받기(); } });
+  스캔칸.addEventListener('input', function () { if (스캔때) clearTimeout(스캔때); 스캔때 = setTimeout(스캔받기, 400); });
+  $('q').addEventListener('keydown', function (ev) {                // 찾기 칸에 초점이 있을 때 스캐너로 찍어도
+    if ((ev.key === 'Enter' || ev.keyCode === 13) && QR가르기($('q').value).꼴 !== '모름') { ev.preventDefault(); var v = $('q').value; $('q').value = ''; QR받음(v); 판그리기(); }
+  });
+  document.addEventListener('click', function () { setTimeout(스캔초점, 0); });
+  window.addEventListener('focus', 스캔초점);
+  setInterval(스캔초점, 1500);
   저장();
   그리기();
+  스캔초점();
+  if (시험 && 해시.shot === 'y6map') 야드고르기열기();
+  if (시험 && 해시.shot === 'y6miss') 없는것열기();
+  if (시험 && 해시.shot === 'y6sent') 보낸것열기();
 }
 시작();
 </script>
