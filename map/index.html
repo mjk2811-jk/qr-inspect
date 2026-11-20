@@ -22,6 +22,9 @@
   · 🚚 옮기기(2026-11-19): 관 번호 칩을 눌러 고르고(작지마다 '모두') [➡ 받을 야드 고르기] → 지도 칸(또는 G1)을 누르면 옮김에 담김 →
     아래 띠 [📨 봇에 보내기] → sendData {k:'지도옮김', v:1, id, t, m:[[에서, 로, [번호…]]…]}(4096바이트 안) — 봇이 바로 반영하고
     [↩ 되돌리기] 를 단다(단 · 적재순번은 비움 — PC 에서 다시). sendData 는 답장 자판 단추로 연 앱에서만 — 인라인 단추로 열면 보기만.
+  · 📥 출고 예정(2026-11-20): 관 번호를 고르고 [📥 출고 예정] → 초록 칩 · 아래 띠 '📥 출고 예정 n본'(칩을 다시 누르면 뺌) →
+    [📨 봇에 보내기] 에 같이 p:[번호…](옮김 m 과 함께 · 혼자도). 봇이 재고인 관만 🧷 임시 묶음 '지도 임시 N' 으로 담고, 메인
+    📦 담아 둔 것 임시판에서 사람이 확인해 [→ 순번에 붙이기…] 로 차에 지정한다(저절로는 안 붙음 — yard_map_miniapp.예정담기).
   · 텔레그램 밖에서 열면 시험 모드(예시 칸 · 가짜 작지).
 -->
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -85,6 +88,8 @@
   .num.pick { background: #DBEAFE; border-color: #2563EB; color: #1E3A8A; font-weight: 700; }
   [data-theme="dark"] .num.pick { background: #1E3A8A; color: #DBEAFE; }
   .num.moved { opacity: .45; text-decoration: line-through; }
+  .num.plan { background: #DCFCE7; border-color: #16A34A; color: #14532D; font-weight: 700; }     /* 📥 출고 예정에 담음(11-20) */
+  [data-theme="dark"] .num.plan { background: #14532D; color: #DCFCE7; }
   .pickhint { font-size: 12px; color: var(--sub); margin: 0 0 6px; }
   .all { border: 1px solid var(--line); background: var(--card); color: var(--chiptext); border-radius: 8px; font-size: 12px;
          padding: 2px 8px; margin-left: 6px; }
@@ -94,6 +99,7 @@
   #bar .msg { flex: 1; font-size: 14px; font-weight: 700; min-width: 150px; }
   #bar button { border: 0; border-radius: 10px; padding: 9px 12px; font-size: 14px; font-weight: 700; }
   #bar .b1 { background: #2563EB; color: #fff; } #bar .b2 { background: var(--chip); color: var(--chiptext); }
+  #bar .b4 { background: #15803D; color: #fff; }
   #bar .b3 { background: #16A34A; color: #fff; width: 100%; margin-top: 6px; }
   #bar .mv { font-size: 13px; padding: 5px 0; display: flex; justify-content: space-between; align-items: center; gap: 8px;
              border-top: 1px solid var(--line); }
@@ -253,8 +259,8 @@ function 자세히(y) {
   var html = '<h2>' + esc(야드이름(y)) + ' · ' + n.toLocaleString() + '본</h2><div class="sub">' +
     (합.length ? '작지 ' + 합.filter(function (x) { return x[0][0] >= 0; }).length + ' · ' : '') + _s(자료.t).slice(11) + ' 기준' +
     (함께.length ? ' · ' + esc(y.slice(0, 3)) + '(반쪽 안 적힘) 포함' : '') + '</div>';
-  if (합.length) html += '<div class="pickhint">' + (할수 ? '🚚 관 번호를 눌러 고르면 다른 야드로 옮길 수 있어요'
-    : (텔레그램안 ? '🚚 옮기려면 봇 자판 맨 위 [🗺 지도 열기] 로 여세요(이 창은 보기만)' : '')) + '</div>';
+  if (합.length) html += '<div class="pickhint">' + (할수 ? '🚚 관 번호를 눌러 고르면 다른 야드로 옮기거나 📥 출고 예정으로 담을 수 있어요'
+    : (텔레그램안 ? '🚚 옮기기 · 📥 출고 예정은 봇 자판 맨 위 [🗺 지도 열기] 로 여세요(이 창은 보기만)' : '')) + '</div>';
   if (!합.length) html += '<div class="none">재고 없음</div>';
   합.forEach(function (x, i) {
     var m = x[0], 에서 = x[1], 작 = m[0] >= 0 ? 자료.L[m[0]] : null, 번호 = 번호풀기(m[2]);
@@ -262,9 +268,10 @@ function 자세히(y) {
       '</span><span class="cnt">' + m[1].toLocaleString() + '본</span>' +
       (할수 && 번호.length ? '<button type="button" class="all" data-all="' + i + '">모두</button>' : '') + '</div>';
     if (번호.length) html += '<div class="nums" data-from="' + esc(에서) + '">' + 번호.map(function (p) {
-      var 갈 = 옮긴[p];
+      var 갈 = 옮긴[p], 예 = 예정표[p];                // 📥 담은 번호는 초록 — 누르면 예정에서 뺀다
       return '<span class="num' + (찾은번호[p] ? ' hit' : '') + (할수 && !갈 ? ' can' : '') + (고른번호[p] !== undefined ? ' pick' : '') +
-        (갈 ? ' moved' : '') + '" data-p="' + esc(p) + '"' + (갈 ? ' title="→ ' + esc(갈) + '"' : '') + '>' + esc(p) + (갈 ? ' →' + esc(갈) : '') + '</span>';
+        (갈 ? ' moved' : '') + (예 ? ' plan' : '') + '" data-p="' + esc(p) + '"' + (갈 ? ' title="→ ' + esc(갈) + '"' : 예 ? ' title="📥 출고 예정"' : '') +
+        '>' + esc(p) + (갈 ? ' →' + esc(갈) : 예 ? ' 📥' : '') + '</span>';
     }).join('') + '</div>';
     else html += '<div class="none">' + (m[0] >= 0 ? '번호는 링크에 다 못 실었어요 — 본수만' : '작은 작지들을 묶었어요') + '</div>';
     html += '</div>';
@@ -326,7 +333,8 @@ function 시작(d) {
 function 오류(말) { $('err').hidden = false; $('err').textContent = 말; }
 
 /* ── 🚚 옮기기 ─────────────────────────────────────────────────── */
-var 고른번호 = {}, 옮김 = [], 받을고르기 = false;
+var 고른번호 = {}, 옮김 = [], 받을고르기 = false, 예정표 = {};   // 예정표 = {번호: 1} 📥 출고 예정(11-20)
+function 예정들() { return Object.keys(예정표); }
 function 보낼수() {                                    // 답장 자판 web_app 단추로 연 앱만 sendData 가 된다(인라인으로 열면 query_id 가 있다)
   if (!텔레그램안) return !$('testStrip').hidden;     // 시험 모드
   try { return typeof tg.sendData === 'function' && !(tg.initDataUnsafe && tg.initDataUnsafe.query_id); } catch (e) { return false; }
@@ -347,23 +355,32 @@ function 바그리기() {
   if (받을고르기) html += '<div class="row"><span class="msg">받을 야드 칸을 누르세요 · G1 은 위 단추(' + n + '본)</span>' +
     '<button type="button" class="b2" data-act="그만">취소</button></div>';
   else if (n) html += '<div class="row"><span class="msg">✓ ' + n + '본 고름</span>' +
-    '<button type="button" class="b1" data-act="받을곳">➡ 받을 야드 고르기</button><button type="button" class="b2" data-act="지움">✕</button></div>';
+    '<button type="button" class="b1" data-act="받을곳">➡ 받을 야드 고르기</button>' +
+    '<button type="button" class="b4" data-act="예정">📥 출고 예정</button><button type="button" class="b2" data-act="지움">✕</button></div>';
   옮김.forEach(function (m, i) {
     html += '<div class="mv"><span>' + esc(야드이름(m[0])) + ' → <b>' + esc(m[1]) + '</b> · ' + m[2].length + '본</span>' +
       '<button type="button" data-del="' + i + '">빼기</button></div>';
   });
-  if (옮김.length && !받을고르기) html += '<button type="button" class="b3" data-act="보내기">📨 봇에 보내기 — ' + 옮김.length + '건 · ' + 본 + '본</button>';
+  var 예 = 예정들();
+  if (예.length) html += '<div class="mv"><span>📥 출고 예정 <b>' + 예.length + '본</b> · ' + esc(예.slice(0, 4).join(' ')) +
+    (예.length > 4 ? ' …' : '') + '</span><button type="button" data-act="예정빼기">빼기</button></div>';
+  if ((옮김.length || 예.length) && !받을고르기)
+    html += '<button type="button" class="b3" data-act="보내기">📨 봇에 보내기 — ' +
+      [옮김.length ? '옮김 ' + 옮김.length + '건 · ' + 본 + '본' : '', 예.length ? '출고 예정 ' + 예.length + '본' : '']
+        .filter(Boolean).join(' · ') + '</button>';
   bar.innerHTML = html;
   bar.hidden = !html;
   document.body.classList.toggle('hasbar', !!html);
 }
 function 보내기() {
   var 자 = { k: '지도옮김', v: 1, id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), t: 자료.t, m: 옮김 };
+  if (예정들().length) 자.p = 예정들();               // 📥 출고 예정 — 봇이 🧷 '지도 임시 N' 으로 담는다(11-20)
   var 글 = JSON.stringify(자), 바이트 = new TextEncoder().encode(글).length;
   if (바이트 > 4096) { 알리기('한 번에 너무 많아요(' + 바이트 + '바이트) — 몇 건씩 나눠 보내 주세요'); return; }
   if (텔레그램안) { try { tg.sendData(글); } catch (e) { 알리기('보내지 못했어요 — ' + e.message); } return; }
-  알리기('시험 모드 — 보낼 것: ' + 옮김.map(function (m) { return (m[0] || '빈칸') + '→' + m[1] + ' ' + m[2].length + '본'; }).join(' · '));
-  옮김 = []; if (고른) 자세히(고른); else 바그리기();
+  알리기('시험 모드 — 보낼 것: ' + 옮김.map(function (m) { return (m[0] || '빈칸') + '→' + m[1] + ' ' + m[2].length + '본'; })
+    .concat(예정들().length ? ['📥 출고 예정 ' + 예정들().length + '본'] : []).join(' · '));
+  옮김 = []; 예정표 = {}; if (고른) 자세히(고른); else 바그리기();
 }
 function 알리기(말) { try { if (텔레그램안 && tg.showAlert) { tg.showAlert(말); return; } } catch (e) {} alert(말); }
 $('detail').addEventListener('click', function (ev) {
@@ -373,13 +390,14 @@ $('detail').addEventListener('click', function (ev) {
     var 묶 = a.closest('.lot').querySelector('.nums');
     if (!묶) return;
     var 에서 = 묶.getAttribute('data-from'), 옮긴 = 옮긴번호(), 칩들 = 묶.querySelectorAll('[data-p]'), 다 = true;
-    칩들.forEach(function (c) { var p = c.getAttribute('data-p'); if (!옮긴[p] && 고른번호[p] === undefined) 다 = false; });
-    칩들.forEach(function (c) { var p = c.getAttribute('data-p'); if (옮긴[p]) return; if (다) delete 고른번호[p]; else 고른번호[p] = 에서; });
+    칩들.forEach(function (c) { var p = c.getAttribute('data-p'); if (!옮긴[p] && !예정표[p] && 고른번호[p] === undefined) 다 = false; });
+    칩들.forEach(function (c) { var p = c.getAttribute('data-p'); if (옮긴[p] || 예정표[p]) return; if (다) delete 고른번호[p]; else 고른번호[p] = 에서; });
     떨림(); 자세히(고른); return;
   }
   var c = ev.target.closest('[data-p]');
   if (!c || c.classList.contains('moved')) return;
   var p = c.getAttribute('data-p'), 에서 = c.parentNode.getAttribute('data-from');
+  if (예정표[p]) { delete 예정표[p]; 떨림(); 자세히(고른); return; }     // 📥 담은 번호를 누르면 예정에서 뺀다
   if (고른번호[p] !== undefined) delete 고른번호[p]; else 고른번호[p] = 에서;
   떨림(); 자세히(고른);
 });
@@ -392,6 +410,12 @@ $('bar').addEventListener('click', function (ev) {
   if (할 === '받을곳') { 받을고르기 = true; 바그리기(); if (!넓은가()) $('wrap').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
   else if (할 === '그만') { 받을고르기 = false; 바그리기(); }
   else if (할 === '지움') { 고른번호 = {}; if (고른) 자세히(고른); else 바그리기(); }
+  else if (할 === '예정') {                              // 📥 고른 관을 출고 예정으로(옮김에 담은 것은 빼고)
+    var 옮긴 = 옮긴번호();
+    Object.keys(고른번호).forEach(function (p) { if (!옮긴[p]) 예정표[p] = 1; });
+    고른번호 = {}; 떨림(); if (고른) 자세히(고른); else 바그리기();
+  }
+  else if (할 === '예정빼기') { 예정표 = {}; if (고른) 자세히(고른); else 바그리기(); }
   else if (할 === '보내기') 보내기();
 });
 
