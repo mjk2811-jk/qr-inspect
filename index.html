@@ -29,6 +29,9 @@
   · ⛶ 전체화면(2026-11-20 '검수 미니앱도 전체화면으로'): 태블릿 텔레그램은 미니 앱을 가운데 좁은 창으로 띄운다 →
     태블릿(화면 짧은 변 600px 이상 — 폰 · M3 는 아님)은 열 때 tg.requestFullscreen()(Bot API 8.0), 머리 카드 [⛶ 전체화면 / 창으로].
     전체화면 위쪽은 텔레그램 단추가 덮으므로 --tg-safe-area-inset · --tg-content-safe-area-inset 만큼 띄우고 머리 카드도 그 아래에 붙인다.
+  · 가로 넓은 화면(폭 1000px 이상 — 태블릿 가로 전체화면, 2026-11-20 '재고맵처럼 가로모드에서 왼쪽그림 오른쪽 파이프번호'):
+    #colL(머리 · 찍기 · 🚛 실은 모양 — 화면에 붙어 있음) | #colR(예정 파이프 번호 · ⚠ 예정 아님 · 기타). 좁으면 두 묶음은 display: contents
+    — 폰 · M3 · 태블릿 세로는 예전 한 줄 그대로.
   · 텔레그램 밖에서 열면 시험 모드(예시 차 · 🧪 가짜 QR 창). #shot=open|scan 은 시안 그림용.
   · 저장소 web/inspect/index.html — 올리는 법 docs/설계_검수_미니앱_올리기.md(GitHub Pages). 봇 쪽은 inspect_miniapp.py(바닥) · telegram_inspect.미니앱받기.
   함수  셈: 해시읽기 · b64url풀기 · b64url짓기 · 계획다듬기 · 번호꼴 · 가르기 · 관찾기 · 새판 · 찍기셈 · 눈셈 · 눈밖셈 · 손셈 · 빼기셈 ·
@@ -256,6 +259,20 @@
   .sheet .btns { display: grid; gap: 8px; }
   .sheet .btns .ghost { background: var(--bg); color: var(--danger); }
   .center-msg { margin: 40px 16px; padding: 18px; background: var(--card); border-radius: 14px; text-align: center; line-height: 1.6; }
+
+  /* 가로 넓은 화면(폭 1000px 이상 — 태블릿 가로 전체화면) — 왼쪽 머리 · 찍기 · 실은 모양, 오른쪽 파이프 번호(2026-11-20).
+     좁은 화면은 묶음이 없는 것처럼(display: contents) — 머리 카드가 쪽 끝까지 위에 붙는 것 그대로 */
+  .col-l, .col-r { display: contents; }
+  @media (min-width: 1000px) {                  /* 두 칸이 화면 높이에 맞고 칸마다 따로 굴린다 — 번호를 내려도 그림은 그대로 */
+    .wrap { max-width: 1400px; padding-bottom: calc(10px + var(--bot)); }
+    #main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 14px;
+      height: calc(100vh - 20px - var(--top) - var(--bot)); }
+    .col-l, .col-r { display: block; min-width: 0; overflow: auto; overscroll-behavior: contain; }
+    .col-l .head { top: 0; }
+    .col-r { padding-bottom: 80px; }
+    .col-r > .sec:first-child { margin-top: 0; }
+    .truck svg { max-width: none; max-height: calc(100vh - 400px - var(--top) - var(--bot)); min-height: 220px; }
+  }
 </style>
 </head>
 <body>
@@ -266,6 +283,7 @@
   </div>
 
   <div id="main" hidden>
+   <div class="col-l" id="colL">
     <div class="head" id="head">
       <div class="title"><span>🔍</span><span id="tTitle" class="num"></span><span class="dest" id="tDest"></span><button class="full" id="fullBtn" type="button" hidden>⛶ 전체화면</button></div>
       <div class="sub" id="tSub"></div>
@@ -284,6 +302,8 @@
       <div class="sec-h"><span>🚛 실은 모양</span><span class="r" id="truckR"></span></div>
       <div class="card truck" id="truckCard"></div>
     </div>
+   </div>
+   <div class="col-r" id="colR">
     <div class="sec">
       <div class="sec-h"><span id="planH">예정</span><span class="r" id="planR"></span></div>
       <div class="card" id="planCard"></div>
@@ -309,6 +329,7 @@
       <summary>봇 쪽 참고(시험 모드에만)</summary>
       <div id="devBody"></div>
     </details>
+   </div>
   </div>
 
   <div class="center-msg" id="noPlan" hidden></div>
