@@ -25,6 +25,10 @@
   · 📥 출고 예정(2026-11-20): 관 번호를 고르고 [📥 출고 예정] → 초록 칩 · 아래 띠 '📥 출고 예정 n본'(칩을 다시 누르면 뺌) →
     [📨 봇에 보내기] 에 같이 p:[번호…](옮김 m 과 함께 · 혼자도). 봇이 재고인 관만 🧷 임시 묶음 '지도 임시 N' 으로 담고, 메인
     📦 담아 둔 것 임시판에서 사람이 확인해 [→ 순번에 붙이기…] 로 차에 지정한다(저절로는 안 붙음 — yard_map_miniapp.예정담기).
+  · 🔎 봇에서 찾기(2026-11-20): 링크에 번호를 다 못 싣는 G1 · 빈칸 관은 찾기에 안 나온다 → [🔎 봇에서 찾기 — 번호] 가 sendData q
+    (고른 옮김 · 출고 예정도 같이)를 보내고 앱이 닫힌다. 봇이 그 번호를 꼭 실은 지도(그 야드 열고 · 찾기 칸 q)를 자판 맨 위
+    [🗺 지도 열기] 로 준다 — 다시 열면 그 칩이 노랗게 · 골라 쓸 수 있다. '26g367' 처럼 0 을 빼도 찾는다. 그 몫은 'n / m본만 실었어요'.
+  · 번호 칩은 조금 크게(11-20 '번호단추를 조금만 키워줘' — 14.5px).
   · 텔레그램 밖에서 열면 시험 모드(예시 칸 · 가짜 작지).
 -->
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -52,6 +56,8 @@
   .find { display: flex; gap: 6px; }
   .find input { flex: 1; font-size: 16px; padding: 9px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--text); }
   .hits { margin-top: 6px; font-size: 14px; }
+  .hits .ask { margin-top: 8px; border: 0; border-radius: 10px; padding: 9px 12px; font-size: 14px; font-weight: 700;
+               background: #2563EB; color: #fff; }
   .hrow { padding: 7px 4px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; gap: 8px; }
   .hrow:last-child { border-bottom: 0; }
   .maphead { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
@@ -77,8 +83,9 @@
   .lothead .sz { font-size: 13px; color: var(--sub); flex: 1; }
   .lothead .cnt { font-size: 16px; font-weight: 800; color: var(--c4); white-space: nowrap; }
   [data-theme="dark"] .lothead .cnt { color: #93C5FD; }
-  .nums { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
-  .num { font-size: 13px; font-variant-numeric: tabular-nums; padding: 3px 7px; border-radius: 7px; background: var(--empty); border: 1px solid var(--line); }
+  .nums { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .num { font-size: 14.5px; font-variant-numeric: tabular-nums; padding: 5px 9px; border-radius: 8px; background: var(--empty);
+         border: 1px solid var(--line); }   /* 2026-11-20 '번호단추를 조금만 키워줘' — 13px · 3/7 → 14.5px · 5/9 */
   .num.hit { background: var(--hit); border-color: #F59E0B; }
   .none { font-size: 13px; color: var(--sub); margin-top: 4px; }
   .foot { font-size: 12px; color: var(--sub); text-align: center; margin-top: 4px; }
@@ -200,6 +207,8 @@ function 색(n) { return !n ? 'var(--empty)' : n < 10 ? 'var(--c1)' : n < 30 ? '
 function 글색(n) { return n >= 30 ? '#FFFFFF' : 'var(--text)'; }
 function 찾기(자료, q) {                              // 뒤 4자리 · 번호 전체 → [[번호, 야드, 작지]] (20개까지)
   q = _s(q).toUpperCase().replace(/\s+/g, '');
+  var 꼴 = /^(\d{2}[A-Z])0*(\d{1,4})$/.exec(q);       // '26G367' → '26G0367'(0 을 빼고 쳐도 — 봇 찾기꼴 과 같다, 11-20)
+  if (꼴) q = 꼴[1] + ('0000' + 꼴[2]).slice(-4);
   if (q.length < 3) return [];
   var out = [];
   Object.keys(자료.Y || {}).forEach(function (y) {
@@ -274,6 +283,8 @@ function 자세히(y) {
         '>' + esc(p) + (갈 ? ' →' + esc(갈) : 예 ? ' 📥' : '') + '</span>';
     }).join('') + '</div>';
     else html += '<div class="none">' + (m[0] >= 0 ? '번호는 링크에 다 못 실었어요 — 본수만' : '작은 작지들을 묶었어요') + '</div>';
+    if (번호.length && 번호.length < m[1])           // 🔎 찾은 번호만 실린 몫(G1 등 — 11-20)
+      html += '<div class="none">번호는 ' + 번호.length + ' / ' + m[1] + '본만 실었어요 — 다른 번호는 위 찾기 칸에서 🔎 봇에서 찾기</div>';
     html += '</div>';
   });
   $('detail').innerHTML = html;
@@ -287,6 +298,13 @@ function 칸으로(y) {                                  // 그 칸이 보이게
   var wrap = $('wrap');
   wrap.scrollLeft = Math.max(0, k[1] * 배율 - wrap.clientWidth / 2 + k[3] * 배율 / 2);
 }
+function 못찾음글(q) {                                // G1 · 빈칸은 번호를 다 못 실음 — 봇에 찾아 그 번호를 실은 지도를 다시(11-20)
+  var 글 = '<div class="none">못 찾았어요 — G1 · 빈칸은 번호를 다 못 실어요</div>';
+  if (보낼수()) return 글 + '<button type="button" class="ask" data-ask="1">🔎 봇에서 찾기 — ' + esc(q.toUpperCase()) + '</button>' +
+    '<div class="none">누르면 앱이 닫히고 봇이 그 번호를 실은 [🗺 지도 열기] 를 자판 맨 위에 줘요' +
+    (옮김.length || 예정들().length ? ' · 고른 옮김 · 출고 예정도 같이 보내요' : '') + '</div>';
+  return 글 + (텔레그램안 ? '<div class="none">봇 대화에 \'지도 ' + esc(q.toUpperCase()) + '\' 를 보내 주세요</div>' : '');
+}
 function 찾기그리기() {
   var r = 찾기(자료, $('findIn').value);
   찾은칸 = {}; 찾은번호 = {};
@@ -294,7 +312,7 @@ function 찾기그리기() {
   r.forEach(function (x) { 찾은번호[x[0]] = 1; 칸야드(x[1], 이름들).forEach(function (c) { 찾은칸[c] = 1; }); });
   $('hits').innerHTML = _s($('findIn').value).length < 3 ? '' : (r.length ? r.map(function (x) {
     return '<div class="hrow" data-y="' + esc(x[1]) + '"><b>' + esc(x[0]) + '</b><span>' + esc(야드이름(x[1])) + ' · ' + esc(x[2] || '그 밖') + '</span></div>';
-  }).join('') : '<div class="none">못 찾았어요(번호를 못 실은 G1 몫일 수 있어요)</div>');
+  }).join('') : 못찾음글(_s($('findIn').value)));
   지도그리기();
   if (고른) 자세히(고른);
 }
@@ -329,6 +347,7 @@ function 시작(d) {
   크기(null);
   if (자료.열) { 자세히(자료.열); 칸으로(자료.열); }
   else 빈자리();
+  if (자료.q) { $('findIn').value = 자료.q; 찾기그리기(); }   // 🔎 봇이 찾아 다시 연 지도 — 찾은 번호가 노랗게(11-20)
 }
 function 오류(말) { $('err').hidden = false; $('err').textContent = 말; }
 
@@ -372,14 +391,15 @@ function 바그리기() {
   bar.hidden = !html;
   document.body.classList.toggle('hasbar', !!html);
 }
-function 보내기() {
+function 보내기(q) {
   var 자 = { k: '지도옮김', v: 1, id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), t: 자료.t, m: 옮김 };
   if (예정들().length) 자.p = 예정들();               // 📥 출고 예정 — 봇이 🧷 '지도 임시 N' 으로 담는다(11-20)
+  if (q) 자.q = q;                                     // 🔎 봇에서 찾기 — 그 번호를 실은 지도를 다시 받는다(11-20)
   var 글 = JSON.stringify(자), 바이트 = new TextEncoder().encode(글).length;
   if (바이트 > 4096) { 알리기('한 번에 너무 많아요(' + 바이트 + '바이트) — 몇 건씩 나눠 보내 주세요'); return; }
   if (텔레그램안) { try { tg.sendData(글); } catch (e) { 알리기('보내지 못했어요 — ' + e.message); } return; }
   알리기('시험 모드 — 보낼 것: ' + 옮김.map(function (m) { return (m[0] || '빈칸') + '→' + m[1] + ' ' + m[2].length + '본'; })
-    .concat(예정들().length ? ['📥 출고 예정 ' + 예정들().length + '본'] : []).join(' · '));
+    .concat(예정들().length ? ['📥 출고 예정 ' + 예정들().length + '본'] : []).concat(q ? ['🔎 찾기 ' + q] : []).join(' · '));
   옮김 = []; 예정표 = {}; if (고른) 자세히(고른); else 바그리기();
 }
 function 알리기(말) { try { if (텔레그램안 && tg.showAlert) { tg.showAlert(말); return; } } catch (e) {} alert(말); }
@@ -444,6 +464,7 @@ $('outChips').addEventListener('click', function (ev) {
   if (b) { 자세히(b.getAttribute('data-y')); 보이기(); }
 });
 $('hits').addEventListener('click', function (ev) {
+  if (ev.target.closest('[data-ask]')) { 보내기(_s($('findIn').value).toUpperCase().replace(/\s+/g, '')); return; }   // 🔎 봇에서 찾기
   var h = ev.target.closest('[data-y]');
   if (h) { var y = h.getAttribute('data-y'); 자세히(y); 칸으로(y); 보이기(); }
 });
