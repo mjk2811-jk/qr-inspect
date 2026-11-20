@@ -34,6 +34,9 @@
     줄(또는 동그라미)을 눌러 고르고 [✕ 빼기](5초 [되살리기]) · [✏ 바꾸기](다음에 누른 번호로 — 자리 · 단 그대로) ·
     [⤴ 끼우기](그 줄 앞에 — 여러 개면 누른 차례로). 줄 끝 ✕ 는 없앰(목록을 굴리다 지워짐). [↩ 마지막 빼기] 는 [✕ 빼기] 로
     (번호를 누를 때마다 끝 줄이 골라지므로 같은 일 — 단추에 'n번 빼기' 로 어느 줄인지 보인다).
+  · ⛶ 전체화면(2026-11-20 '야드등록에서 테블릿 가로 전체화면이 안되'): 태블릿 텔레그램은 미니 앱을 가운데 좁은 창(세로로 긴 창)으로
+    띄워 가로로 들어도 세로 꼴(@media orientation)로 그려졌다 → 태블릿(화면 짧은 변 600px 이상)은 열 때 tg.requestFullscreen()
+    (Bot API 8.0) · 머리 줄 [⛶ 전체화면 / 창으로] · body 위아래를 --tg-safe-area-inset · --tg-content-safe-area-inset 만큼 띄움(지도 · 검수와 같다).
   함수  셈: 해시읽기 · b64url풀기 · 범위풀기 · 번호꼴 · 보낼글 · 더미풀기 · 보낼묶음 · 반복켜 · 자동켜찾기 · 다음단 · 쌓은자리
             · 바꾼줄 · 끼운줄 · 뺀줄 · 누름인가 · 레일자리 · 손굴림
         화면: 그리기 · 칩그리기 · 판그리기 · 야드그리기 · 차례그리기 · 누름 · 단고름 · 야드고르기열기 · 보내기 · 시작
@@ -48,12 +51,17 @@
   :root {
     --bg: var(--tg-theme-secondary-bg-color, var(--f-bg2)); --card: var(--tg-theme-bg-color, var(--f-bg));
     --text: var(--tg-theme-text-color, var(--f-text)); --hint: var(--tg-theme-hint-color, var(--f-hint));
+    /* 텔레그램 전체화면 — 위는 상태 줄 + 텔레그램 단추, 아래는 내비 줄(telegram-web-app.js 가 --tg-… 를 채운다 · 창 모드면 0) */
+    --top: calc(var(--tg-safe-area-inset-top, 0px) + var(--tg-content-safe-area-inset-top, 0px));
+    --bot: var(--tg-safe-area-inset-bottom, 0px);
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   [hidden] { display: none !important; }
   html, body { margin: 0; height: 100%; }
   body { background: var(--bg); color: var(--text); font: 17px/1.3 "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
-         display: flex; flex-direction: column; overflow: hidden; -webkit-user-select: none; user-select: none; }
+         display: flex; flex-direction: column; overflow: hidden; -webkit-user-select: none; user-select: none;
+         padding: var(--top) 0 var(--bot); }               /* 전체화면 — 머리 줄이 텔레그램 단추 아래 · 보내기 줄이 내비 줄 위(11-20) */
+  .bar .full { padding: 6px 12px; font-size: 15px; white-space: nowrap; }
   .bar { display: flex; align-items: center; padding: 8px 12px; background: var(--card); border-bottom: 1px solid var(--sep); }
   .bar > * + * { margin-left: 10px; }
   .bar h1 { font-size: 21px; margin: 0; white-space: nowrap; }
@@ -214,6 +222,7 @@
   <span class="hint" id="saved"></span>
   <span class="grow"></span>
   <span class="hint" id="info"></span>
+  <button type="button" class="k3 full" id="fullBtn" hidden>⛶ 전체화면</button>
 </div>
 <div class="main" id="main">
   <div class="left">
@@ -420,6 +429,18 @@ var 고침 = null;              // {k: '바꿈' | '끼움', 야드, i(대상 줄
 var 보기 = 'list';            // 폰 아래 칸 — 'list'(📋 차례) | 'pic'(🔵 모양)
 var 토스트때 = 0;
 var $ = function (id) { return document.getElementById(id); };
+// ⛶ 전체화면(2026-11-20 '야드등록에서 테블릿 가로 전체화면이 안되') — 태블릿 텔레그램은 미니 앱을 가운데 좁은 창(세로로 긴 창)으로
+// 띄워 가로로 들어도 세로 꼴(orientation)로 그려졌다. 태블릿(화면 짧은 변 600px 이상)은 열 때 전체화면 — 지도 · 검수 앱과 같은 규칙
+function 판짓기(v) { try { return !!(tg && tg.isVersionAtLeast && tg.isVersionAtLeast(v)); } catch (e) { return false; } }
+function 태블릿인가() { var s = window.screen || {}; return Math.min(s.width || 0, s.height || 0) >= 600; }   // 폰 짧은 변 360~430
+function 전체화면되나() { return 텔레그램안 && 판짓기('8.0') && typeof tg.requestFullscreen === 'function'; }
+function 전체단추() {
+  var b = $('fullBtn');
+  if (!b) return;
+  b.hidden = !전체화면되나();
+  b.textContent = tg && tg.isFullscreen ? '⛶ 창으로' : '⛶ 전체화면';
+}
+function 전체바꾸기() { try { if (tg.isFullscreen) tg.exitFullscreen(); else tg.requestFullscreen(); } catch (e) {} }
 function 뒤(p) { return _s(p).slice(-4); }
 
 /** 굴리는 판(번호판 · 목록 · 그림 · 작지)에 손 댄 때 · 구른 때를 적어 둔다 — 눌러도(판, e) 가 본다 */
@@ -824,6 +845,15 @@ function 시작() {
   if (!자료 && 시험) 자료 = JSON.parse(JSON.stringify(예시자료));
   if (텔레그램안) { try { tg.ready(); tg.expand(); } catch (e) {} }
   if (텔레그램안) { try { if (tg.disableVerticalSwipes) tg.disableVerticalSwipes(); } catch (e) {} }   // 목록을 내리다 앱이 접히지 않게
+  if (전체화면되나()) {                                // 태블릿은 좁은 가운데 창(세로 꼴)으로 뜬다 — 열 때 전체화면(11-20)
+    try {
+      tg.onEvent('fullscreenChanged', function () { 전체단추(); setTimeout(레일그리기, 300); });   // 창 크기가 다 바뀐 뒤 굴림 막대
+      tg.onEvent('fullscreenFailed', 전체단추);
+    } catch (e) {}
+    if (태블릿인가() && !tg.isFullscreen) { try { tg.requestFullscreen(); } catch (e) {} }
+  }
+  전체단추();
+  $('fullBtn').addEventListener('click', 전체바꾸기);
   try { 보기 = localStorage.getItem('yard|보기') || 'list'; } catch (e) {}
   보기바꿈(보기);
   $('testStrip').hidden = !시험;
