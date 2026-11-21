@@ -1,0 +1,711 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>상차 지시</title>
+<!--
+  🚜 상차 지시 — 텔레그램 미니 앱 한 파일(서버 · 밖 자료 없음 — telegram-web-app.js 만, 없으면 시험 모드). 지게차 · 야드 태블릿이
+  검수와 따로 지금 실을 차와 다음 차들의 관이 어느 칸 · 몇 단 몇 번째에 있고 무엇을 먼저 들어내야 하는지 보고 차례대로 든다(2026-11-21).
+  · 봇이 관리자 답장 자판 맨 위 [🚜 상차 지시 열기 HH:MM] 로 연다. 단추 링크 #c=<base64url(zlib(JSON))> 에 그때 값 — #조각은 호스팅
+    서버로 가지 않는다. 이 파일(공개)에는 값이 없다 — 차는 뒤 4자리 · 도착지는 짧은 코드 · 규격 · 관 번호 · 칸 · 단 · 순뿐.
+      {v:1, t:'YYYY-MM-DD HH:MM', 켬:📲 단계 스위치, 받음:[동작 id…], 기준, 앞, 뒤, 뒤순, 못:[…],
+       차:[[순번, 넷, 곳, 역(4 전송 · 5 상차 중 · 3 배정완료), 규격, 본, 찬, 송장대기, '관,관,…'(담은 차례), '실음,…', [단계 때 ×5]]…],
+       K:[[칸, x, y, w, h]…](배치도 칸), S:[[칸, [[단, 첫순, '번호,번호,,번호']…], [자리 모르는 관…], 자리 모르는 다른 관 수]…]}
+    S 는 검수 앱 🚜 어디서 들까의 &m= 과 같은 꼴(봇 inspect_pick_map — 보이는 차들의 관을 한꺼번에 예정으로).
+  · 위 차 고르기(지금 차 · 다음 차 …, ▶ 전송 중 · 상차 중 표시) → 고른 차의 ① 배치도(그 차 관이 남은 칸 칠 · 남은 본수) ② 칸마다 단 × 순
+    더미(들 관 주황 · 먼저 들어낼 관 빨간 점선 · 다음 차 몫 파랑 · ✓ 실음 초록 · 다른 관 회색) ③ 들 차례 목록(칸마다 위 단부터 —
+    '위 n본 먼저 — …'). 목록 줄(또는 더미의 그 차 관)을 누르면 '✓ 들었음'(이 폰에만 — localStorage, 그날만). 들었음 · 검수 ✓ 관은
+    야드에서 빠진 것으로 보고 덮개를 다시 셈한다. 자리 셈은 봇과 같다 — 그림 x = 순 + (단 - 1) × 0.5, (단, 순) 위 = (단 + 1, 순 - 1) · (단 + 1, 순).
+  · 차마다 [📲 상차중] [📲 상차완료] — 한 번 묻고(tg.showConfirm) sendData {k:'상차지시', v:1, id, t, a:'단계', s:순번, n:넷, g:단계}
+    (4096바이트 안) — 앱이 닫히고 봇이 📲 텔레그램 단계 단추(progress_stage)와 같은 길로 적고 답한다(스위치가 꺼져 있으면 그렇다고만).
+    sendData 는 답장 자판 단추로 연 앱에서만 — 인라인으로 열면 보기만. 보낸 것은 30분 '✓ 보냄'(봇이 다시 지은 링크의 받음에 id 가 있으면 지움).
+  · 링크 한도로 못 실은 뒤 차는 [🚚 다음 n대 — 봇에서 더](a:'더', s:뒤순) · 앞을 건너뛴 링크면 [◀ 처음 차부터](a:'새로') ·
+    지어 둔 지 30분이 지나면 '⌛ 다시 열기'(a:'새로').
+  · 화면: 폰 세로 · 태블릿 가로(폭 900px 이상 — 왼쪽 차 · 배치도 · 더미 | 오른쪽 들 차례) · 큰 글씨 · 큰 단추(장갑) · 텔레그램 테마 색.
+    태블릿(화면 짧은 변 600px 이상)은 열 때 tg.requestFullscreen() · 머리 [⛶ 전체화면 / 창으로].
+  · 압축 풀기는 DecompressionStream('deflate')(웹뷰 80+). 텔레그램 밖에서 열면 🧪 시험 모드(지어낸 차 · 가짜 번호).
+  함수  셈: _s · esc · 해시읽기 · b64바이트 · 풀기 · 두 · 때글 · 때값 · 지난분 · 새id · 줄풀기 · 지도다듬기 · 그림x · 칸맞음 · 덮개셈 ·
+            차다듬기 · 들기셈 · 들차례 · 자리글 · 보낸표
+        화면: 차칩그리기 · 차카드그리기 · 배치도그림 · 더미그림 · 목록그리기 · 다시그리기 · 들음바꾸기 · 하기 · 보내기 · 시작
+-->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root {
+    --f-bg: #ffffff; --f-bg2: #eef1f5; --f-text: #15191e; --f-hint: #6b7480; --f-link: #2563eb; --f-btn: #2563eb; --f-btntext: #ffffff;
+    --ok: #15803d; --okbg: rgba(22, 163, 74, .14); --warn: #c2410c; --warnbg: rgba(234, 88, 12, .14); --bad: #dc2626;
+    --badbg: rgba(220, 38, 38, .12); --info: #1d4ed8; --infobg: rgba(37, 99, 235, .13); --vio: #6d28d9; --viobg: rgba(124, 58, 237, .13);
+    --dim: rgba(127, 127, 127, .16); --empty: #b9c0c9;
+  }
+  :root {
+    --bg: var(--tg-theme-secondary-bg-color, var(--f-bg2)); --card: var(--tg-theme-section-bg-color, var(--tg-theme-bg-color, var(--f-bg)));
+    --head: var(--tg-theme-header-bg-color, var(--card));
+    --text: var(--tg-theme-text-color, var(--f-text)); --hint: var(--tg-theme-hint-color, var(--f-hint));
+    --link: var(--tg-theme-link-color, var(--f-link)); --btn: var(--tg-theme-button-color, var(--f-btn));
+    --btntext: var(--tg-theme-button-text-color, var(--f-btntext)); --sep: var(--tg-theme-section-separator-color, rgba(127, 127, 127, .25));
+    --red: var(--tg-theme-destructive-text-color, var(--bad));
+    /* 텔레그램 전체화면 — 위는 상태 줄 + 텔레그램 단추, 아래는 내비 줄(telegram-web-app.js 가 --tg-… 를 채운다 · 창 모드면 0) */
+    --top: calc(var(--tg-safe-area-inset-top, 0px) + var(--tg-content-safe-area-inset-top, 0px));
+    --bot: var(--tg-safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --f-bg: #17212b; --f-bg2: #0e1621; --f-text: #f5f5f5; --f-hint: #8b98a5; --ok: #4ade80; --warn: #fb923c;
+                                      --info: #93c5fd; --vio: #c4b5fd; --empty: #56606c; }
+  }
+  :root[data-theme="dark"] { --f-bg: #17212b; --f-bg2: #0e1621; --f-text: #f5f5f5; --f-hint: #8b98a5; --ok: #4ade80; --warn: #fb923c;
+                             --info: #93c5fd; --vio: #c4b5fd; --empty: #56606c; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; }
+  body { background: var(--bg); color: var(--text); font: 17px/1.35 "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+         padding: var(--top) 0 var(--bot); overflow-x: hidden; }
+  button { font: inherit; color: inherit; }
+  .num { font-variant-numeric: tabular-nums; }
+  header { position: sticky; top: 0; z-index: 5; background: var(--head); box-shadow: 0 1px 0 var(--sep); padding-top: var(--top);
+           margin-top: calc(0px - var(--top)); }
+  .bar { display: flex; align-items: center; gap: 10px; padding: 10px 14px 6px; }
+  .bar h1 { font-size: 21px; margin: 0; white-space: nowrap; }
+  .bar .when { flex: 1; font-size: 14px; color: var(--hint); }
+  .bar .full { border: 1px solid var(--sep); background: var(--card); color: var(--text); border-radius: 10px; padding: 6px 10px; font-size: 14px; }
+  .test { margin: 0 12px 8px; background: var(--viobg); color: var(--vio); border-radius: 10px; padding: 8px 10px; font-size: 14px; }
+  .stale, .note { margin: 0 12px 8px; border-radius: 12px; padding: 10px 12px; font-size: 15px; display: flex; gap: 10px; align-items: center; }
+  .stale { background: var(--warnbg); color: var(--warn); font-weight: 700; }
+  .stale button { margin-left: auto; border: 0; border-radius: 10px; background: var(--btn); color: var(--btntext); font-size: 16px; padding: 9px 14px; }
+  .note { background: var(--dim); color: var(--hint); }
+  /* 차 고르기 — 가로로 밀어 봄 */
+  .cars { display: flex; gap: 8px; overflow-x: auto; overscroll-behavior-x: contain; padding: 2px 12px 10px; scrollbar-width: none; }
+  .cars::-webkit-scrollbar { display: none; }
+  .car { flex: 0 0 auto; min-width: 104px; min-height: 64px; border: 2px solid transparent; border-radius: 14px; background: var(--dim);
+         padding: 6px 12px; text-align: left; cursor: pointer; }
+  .car .l1 { display: flex; align-items: baseline; gap: 6px; white-space: nowrap; }
+  .car .cq { font-size: 15px; font-weight: 800; }
+  .car .cq::after { content: "번"; font-size: 12px; font-weight: 600; margin-left: 1px; }
+  .car b { font-size: 21px; font-weight: 800; letter-spacing: .4px; }
+  .car small { display: block; font-size: 13px; color: var(--hint); white-space: nowrap; margin-top: 1px; }
+  .car .go { display: inline-block; font-size: 12px; font-weight: 800; border-radius: 6px; padding: 0 5px; background: var(--warnbg); color: var(--warn); }
+  .car .nx { display: inline-block; font-size: 12px; font-weight: 700; border-radius: 6px; padding: 0 5px; background: var(--card); color: var(--hint); }
+  .car.on { background: var(--card); border-color: var(--btn); box-shadow: 0 2px 8px rgba(0, 0, 0, .12); }
+  .car.fin { opacity: .6; }
+  .car.more { background: var(--infobg); color: var(--info); text-align: center; }
+  .car.more b { font-size: 16px; }
+  main { padding: 12px 12px 28px; max-width: 760px; margin: 0 auto; }
+  .card { background: var(--card); border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; box-shadow: 0 1px 2px rgba(0, 0, 0, .08); }
+  .r1 { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .q { font-size: 17px; font-weight: 800; background: var(--dim); border-radius: 8px; padding: 1px 8px; }
+  .q::after { content: "번"; font-weight: 600; font-size: 13px; margin-left: 1px; }
+  .plate { font-size: 28px; font-weight: 800; letter-spacing: .5px; }
+  .dest { font-size: 18px; font-weight: 700; color: var(--hint); }
+  .badge { margin-left: auto; font-size: 14px; font-weight: 800; border-radius: 8px; padding: 3px 9px; background: var(--dim); white-space: nowrap; }
+  .badge.s4 { background: var(--infobg); color: var(--info); } .badge.s5 { background: var(--warnbg); color: var(--warn); }
+  .badge.fin { background: var(--okbg); color: var(--ok); }
+  .sub { font-size: 15px; color: var(--hint); margin-top: 3px; }
+  .prog { display: flex; align-items: baseline; gap: 8px; margin-top: 8px; font-size: 15px; color: var(--hint); flex-wrap: wrap; }
+  .prog b { font-size: 26px; font-weight: 800; color: var(--warn); }
+  .prog b.all { color: var(--ok); }
+  .bar2 { height: 9px; border-radius: 6px; background: var(--dim); margin-top: 6px; overflow: hidden; display: flex; }
+  .bar2 i { display: block; height: 100%; }
+  .acts { display: flex; gap: 8px; margin-top: 12px; }
+  .act { flex: 1; min-height: 56px; border: 0; border-radius: 12px; font-size: 18px; font-weight: 800; padding: 8px 10px;
+         background: var(--btn); color: var(--btntext); cursor: pointer; }
+  .act.ok { background: #16a34a; color: #fff; }
+  .stg { flex: 1; min-height: 56px; display: flex; align-items: center; justify-content: center; text-align: center; border-radius: 12px;
+         padding: 6px 8px; font-size: 16px; font-weight: 800; }
+  .stg.ok { background: var(--okbg); color: var(--ok); } .stg.sent { background: var(--infobg); color: var(--info); font-size: 14px; }
+  .stgoff { margin-top: 8px; font-size: 13.5px; color: var(--warn); }
+  h2 { font-size: 18px; margin: 16px 2px 8px; display: flex; align-items: baseline; gap: 2px 8px; flex-wrap: wrap; }
+  h2 > span { white-space: nowrap; }
+  h2 small { font-size: 13px; color: var(--hint); font-weight: 600; }
+  .empty { color: var(--hint); font-size: 15px; padding: 10px 4px; }
+  /* ① 배치도 · 칸 고르기 · ② 더미 */
+  .map { padding: 8px; }
+  .map svg { display: block; width: 100%; height: auto; max-height: 210px; }
+  .k { fill: var(--bg); stroke: var(--sep); stroke-width: 1; }
+  .k.todo { fill: var(--warnbg); stroke: var(--warn); stroke-width: 2.5; }
+  .k.done { fill: var(--okbg); stroke: var(--ok); stroke-width: 1.5; opacity: .7; }
+  .k.nxt { fill: var(--infobg); stroke: var(--info); stroke-width: 1; stroke-dasharray: 4 3; }
+  .k.sel { stroke: var(--btn); stroke-width: 4.5; }
+  .kt { font-size: 9px; fill: var(--hint); }
+  .kn { font-size: 17px; font-weight: 800; fill: var(--warn); }
+  .kn.done { fill: var(--ok); font-size: 13px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 2px 8px; }
+  .chips button { min-height: 40px; border: 0; padding: 6px 12px; border-radius: 999px; background: var(--dim); font-size: 15px; font-weight: 700;
+                  color: var(--hint); cursor: pointer; }
+  .chips button.todo { background: var(--warnbg); color: var(--warn); }
+  .chips button.done { background: var(--okbg); color: var(--ok); }
+  .chips button.on { box-shadow: inset 0 0 0 2.5px var(--btn); }
+  .pile { overflow-x: auto; overscroll-behavior-x: contain; padding: 4px 4px 2px; }
+  .pile svg { display: block; margin: 0 auto; }
+  .pl-todo { fill: var(--warnbg); stroke: var(--warn); stroke-width: 3.5; }
+  .pl-cover { fill: rgba(220, 38, 38, .12); stroke: var(--red); stroke-width: 2.6; stroke-dasharray: 5 3; }
+  .pl-done { fill: var(--okbg); stroke: var(--ok); stroke-width: 1.5; opacity: .55; }
+  .pl-nxt { fill: var(--infobg); stroke: var(--info); stroke-width: 2; }
+  .pl-gone { fill: none; stroke: var(--empty); stroke-width: 1; stroke-dasharray: 2 3; opacity: .6; }
+  .pl-other { fill: var(--bg); stroke: var(--empty); stroke-width: 1.2; }
+  .pt { font-size: 11px; fill: var(--hint); }
+  .pt.todo { fill: var(--warn); font-weight: 800; font-size: 12.5px; } .pt.cover { fill: var(--red); font-weight: 700; }
+  .pt.done { fill: var(--ok); } .pt.nxt { fill: var(--info); font-weight: 700; } .pt.gone { opacity: .5; }
+  .ps { font-size: 9.5px; fill: var(--hint); }
+  .ps.nx { font-size: 10.5px; font-weight: 800; fill: var(--info); }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 13px; color: var(--hint); margin: 6px 4px 2px; }
+  .legend i { display: inline-block; width: 11px; height: 11px; border-radius: 6px; margin-right: 4px; vertical-align: -1px; }
+  .legend i.todo { background: var(--warn); } .legend i.cover { background: var(--red); } .legend i.done { background: var(--ok); }
+  .legend i.nxt { background: var(--info); } .legend i.other { background: var(--empty); }
+  /* ③ 들 차례 */
+  .grp { font-size: 15px; font-weight: 800; color: var(--hint); margin: 12px 4px 6px; display: flex; gap: 8px; align-items: baseline; cursor: pointer; }
+  .grp .gk { color: var(--text); font-size: 17px; }
+  .row { display: flex; align-items: center; gap: 10px; background: var(--card); border-radius: 14px; padding: 10px 12px; margin-bottom: 8px;
+         min-height: 64px; box-shadow: 0 1px 2px rgba(0, 0, 0, .08); border-left: 6px solid var(--warn); cursor: pointer; }
+  .row .rn { flex: 0 0 34px; height: 34px; border-radius: 17px; background: var(--warnbg); color: var(--warn); font-weight: 800; font-size: 17px;
+             display: flex; align-items: center; justify-content: center; }
+  .row .rb { flex: 1; min-width: 0; }
+  .row .rp { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .row .rp b { font-size: 22px; font-weight: 800; letter-spacing: .3px; }
+  .row .pos { font-size: 15px; font-weight: 800; border-radius: 8px; padding: 1px 8px; background: var(--dim); white-space: nowrap; }
+  .row .rc { font-size: 15px; margin-top: 3px; }
+  .row .cov { color: var(--red); font-weight: 700; } .row .own { color: var(--warn); font-weight: 700; } .row .free { color: var(--ok); font-weight: 700; }
+  .row .chk { flex: 0 0 auto; min-width: 64px; min-height: 48px; border-radius: 12px; border: 2px solid var(--sep); background: var(--bg);
+              font-size: 15px; font-weight: 800; color: var(--hint); display: flex; align-items: center; justify-content: center; text-align: center; padding: 0 6px; }
+  .row.first { border-left-color: var(--red); box-shadow: 0 0 0 2px var(--warn) inset, 0 1px 2px rgba(0, 0, 0, .08); }
+  .row.done { border-left-color: var(--ok); opacity: .62; min-height: 52px; }
+  .row.done .rn { background: var(--okbg); color: var(--ok); }
+  .row.done .rp b { font-size: 18px; text-decoration: line-through; text-decoration-thickness: 2px; }
+  .row.done .chk { border-color: var(--ok); color: var(--ok); background: var(--okbg); }
+  .row.bot { cursor: default; }
+  #footNote { font-size: 12.5px; color: var(--hint); margin-top: 14px; text-align: center; }
+  .err { padding: 40px 18px; text-align: center; color: var(--hint); font-size: 16px; }
+  /* 폰 세로 — 차 카드 · ① 배치도 · ② 더미 · ③ 들 차례 한 줄로(묶음은 없는 것처럼) */
+  .cols { display: flex; flex-direction: column; }
+  .colL, .colR { display: contents; }
+  #carCard { order: 1; } #mapSec { order: 2; } #pileSec { order: 3; } #listSec { order: 4; }
+  @media (min-width: 900px) {                         /* 태블릿 가로 — 왼쪽 ① 배치도 · ② 더미(붙어 있음) | 오른쪽 차 카드 · ③ 들 차례 */
+    main { max-width: 1400px; padding-bottom: 10px; }
+    .cols { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr); gap: 0 14px; align-items: start; }
+    .colL, .colR { display: block; min-width: 0; }
+    .colL { position: sticky; top: calc(var(--hh, 160px) + 8px); max-height: calc(100vh - var(--hh, 160px) - 16px); overflow: auto;
+            overscroll-behavior: contain; }
+    .colL > section:first-child > h2:first-child { margin-top: 0; }
+    .map svg { max-height: 250px; }
+  }
+</style>
+</head>
+<body>
+<header id="head">
+  <div class="bar"><h1>🚜 상차 지시</h1><span class="when" id="when"></span><button type="button" class="full" id="fullBtn" hidden>⛶ 전체화면</button></div>
+  <div class="test" id="testStrip" hidden>🧪 시험 모드 — 텔레그램 밖에서 열었어요(지어낸 차 · 가짜 번호 · 보내기는 흉내만)</div>
+  <div class="stale" id="stale" hidden></div>
+  <div class="note" id="viewOnly" hidden>👀 보기만 — [📲] 단추는 봇 대화 아래 자판 맨 위 [🚜 상차 지시 열기] 로 연 앱에서만 보낼 수 있어요</div>
+  <nav class="cars" id="cars"></nav>
+</header>
+<main id="main">
+  <div class="cols">
+    <div class="colL">
+      <section id="mapSec"></section>
+      <section id="pileSec"></section>
+    </div>
+    <div class="colR">
+      <section class="card" id="carCard"></section>
+      <section id="listSec"></section>
+    </div>
+  </div>
+  <div id="footNote"></div>
+</main>
+<div class="err" id="err" hidden></div>
+<script>
+'use strict';
+var tg = window.Telegram && window.Telegram.WebApp;
+var 텔레그램안 = !!(tg && tg.platform && tg.platform !== 'unknown');
+var $ = function (id) { return document.getElementById(id); };
+
+/* ── 셈 ─────────────────────────────────────────────────────────── */
+function _s(v) { return v == null ? '' : String(v).trim(); }
+function esc(t) { return _s(t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function 해시읽기(h) {
+  var out = {};
+  _s(h).replace(/^#/, '').split('&').forEach(function (kv) { var i = kv.indexOf('='); if (i > 0) out[kv.slice(0, i)] = decodeURIComponent(kv.slice(i + 1)); });
+  return out;
+}
+function b64바이트(t) {
+  t = _s(t).replace(/-/g, '+').replace(/_/g, '/');
+  while (t.length % 4) t += '=';
+  var s = atob(t), b = new Uint8Array(s.length);
+  for (var i = 0; i < s.length; i++) b[i] = s.charCodeAt(i);
+  return b;
+}
+function 풀기(조) {                                   // base64url(zlib(JSON)) → Promise<자료>
+  var 흐름 = new Blob([b64바이트(조)]).stream().pipeThrough(new DecompressionStream('deflate'));
+  return new Response(흐름).text().then(function (t) { return JSON.parse(t); });
+}
+function 두(n) { return ('0' + n).slice(-2); }
+function 때글(d) { return 두(d.getHours()) + ':' + 두(d.getMinutes()); }
+function 때값(t) {                                     // 'YYYY-MM-DD HH:MM' → ms(이 폰 시계 — PC 와 같은 한국 시각) | 0
+  var m = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})/.exec(_s(t));
+  return m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]).getTime() : 0;
+}
+function 지난분(t, 지금ms) { var v = 때값(t); return v ? Math.max(0, Math.floor((지금ms - v) / 60000)) : 0; }
+function 새id() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+/** [[단, 첫순, '번호,…']] → {번호: [단, 순]} — 단마다 첫순부터 순 차례(빈 자리 '') · 봇 inspect_pick_map.줄풀기 와 같은 셈 */
+function 줄풀기(줄들) {
+  var out = {};
+  (Array.isArray(줄들) ? 줄들 : []).forEach(function (r) {
+    if (!Array.isArray(r)) return;
+    var 단 = parseInt(r[0], 10), 첫 = parseInt(r[1], 10);
+    if (!(단 >= 1) || !(첫 >= 1)) return;
+    _s(r[2]).split(',').forEach(function (p, i) {
+      p = _s(p).toUpperCase();
+      if (p && !(p in out)) out[p] = [단, 첫 + i];
+    });
+  });
+  return out;
+}
+/** 자료 → {K: [[칸, x, y, w, h]…], S: [{칸, 관: {번호: [단, 순]}, 모름: [번호], 다른모름: n}]} | null(더미 없음) */
+function 지도다듬기(x) {
+  if (!x || typeof x !== 'object' || !Array.isArray(x.S)) return null;
+  var K = (Array.isArray(x.K) ? x.K : []).filter(function (k) {
+    return Array.isArray(k) && k.length >= 5 && _s(k[0]) && k.slice(1, 5).every(function (v) { return typeof v === 'number' && isFinite(v); });
+  }).map(function (k) { return [_s(k[0]).toUpperCase().slice(0, 8), k[1], k[2], k[3], k[4]]; });
+  var S = [];
+  x.S.forEach(function (g) {
+    if (!Array.isArray(g)) return;
+    var 관 = 줄풀기(g[1]);
+    var 모름 = (Array.isArray(g[2]) ? g[2] : []).map(function (p) { return _s(p).toUpperCase(); }).filter(Boolean);
+    if (!Object.keys(관).length && !모름.length) return;
+    S.push({ 칸: _s(g[0]).toUpperCase().slice(0, 8), 관: 관, 모름: 모름, 다른모름: Math.max(0, parseInt(g[3], 10) || 0) });
+  });
+  return S.length ? { K: K, S: S } : null;
+}
+function 그림x(단, 순) { return 순 + (단 - 1) * 0.5; }
+/** 배치도 칸(k칸)이 더미 칸인가 — 'B03'(반쪽 글자 없음)은 B03A · B03C 둘 다 */
+function 칸맞음(k칸, 칸) { return k칸 === 칸 || (/^B\d{2}$/.test(칸) && (k칸 === 칸 + 'A' || k칸 === 칸 + 'C')); }
+/** 관(지금 야드에 있는 {번호: [단, 순]}) · 남은(아직 안 든 관) → {관: [위에 (거슬러) 얹힌 번호…]}(단 · 순 차례) — 봇 덮개셈 과 같은 셈 */
+function 덮개셈(관, 남은) {
+  var 자리표 = {}, out = {};
+  Object.keys(관).forEach(function (p) { 자리표[관[p][0] + '-' + 관[p][1]] = p; });
+  남은.forEach(function (p) {
+    if (!관[p]) return;
+    var 본 = {}, 목록 = [], 볼 = [관[p]];
+    while (볼.length) {
+      var z = 볼.pop();
+      [[z[0] + 1, z[1] - 1], [z[0] + 1, z[1]]].forEach(function (w) {
+        var q = 자리표[w[0] + '-' + w[1]];
+        if (q && !본[q]) { 본[q] = 1; 목록.push(q); 볼.push(w); }
+      });
+    }
+    목록.sort(function (a, b) { return 관[a][0] - 관[b][0] || 관[a][1] - 관[b][1]; });
+    out[p] = 목록;
+  });
+  return out;
+}
+/** 자료.차 → [{순번, 넷, 곳, 역, 규격, 본, 찬, 송장대기, 관: [번호…](담은 차례), 실음: {번호: 1}, 단계: [때 ×5]}] — 관이 없는 차는 뺌 */
+function 차다듬기(x) {
+  return (Array.isArray(x && x.차) ? x.차 : []).filter(Array.isArray).map(function (r) {
+    var 관 = [], 본 = {}, 실음 = {};
+    _s(r[8]).split(',').forEach(function (p) { p = _s(p).toUpperCase(); if (p && !본[p]) { 본[p] = 1; 관.push(p); } });
+    _s(r[9]).split(',').forEach(function (p) { p = _s(p).toUpperCase(); if (p) 실음[p] = 1; });
+    var 단 = (Array.isArray(r[10]) ? r[10] : []).map(_s).slice(0, 5);
+    while (단.length < 5) 단.push('');
+    return { 순번: _s(r[0]).toUpperCase(), 넷: _s(r[1]), 곳: _s(r[2]), 역: parseInt(r[3], 10) || 3, 규격: _s(r[4]),
+             본: parseInt(r[5], 10) || 관.length, 찬: parseInt(r[6], 10) || 0, 송장대기: !!r[7], 관: 관, 실음: 실음, 단계: 단 };
+  }).filter(function (c) { return c.순번 && c.관.length; });
+}
+/** 고른 차(i)의 칸마다 들 것 — 지도 · 차들 · 들음({번호: 'HH:MM'} 이 폰) → {칸들: [{칸, 관, 남은, 끝, 덮개, 덮개표, 모름, 모름남은, 다른모름, 첫}],
+ *  이차: {번호: 담은 차례}, 다른: {번호: 다른 차 순번}, 실림: {번호: 1}}
+ *  실림 = 보이는 차들의 실음(봇 — 검수 ✓) + 들음 — 야드에서 빠진 것으로 보고 덮개를 다시 셈(봇 inspect_pick_map.덮개셈 과 같은 셈) ·
+ *  덮개표 = 남은 관마다 위에 얹힌 관 가운데 이 차 것이 아닌 것(먼저 들어낼 것). 칸 차례 = 그 차 관이 처음 나오는 차례(담은 차례) */
+function 들기셈(지도, 차들, i, 들음) {
+  var 차 = 차들[i], out = { 칸들: [], 이차: {}, 다른: {}, 실림: {} };
+  if (!차) return out;
+  var 이차 = out.이차, 다른 = out.다른, 실림 = out.실림;
+  차.관.forEach(function (p, k) { if (!(p in 이차)) 이차[p] = k; });
+  차들.forEach(function (c, j) {
+    Object.keys(c.실음).forEach(function (p) { 실림[p] = 1; });
+    if (j !== i) c.관.forEach(function (p) { if (!(p in 이차) && !다른[p]) 다른[p] = c.순번; });
+  });
+  Object.keys(들음 || {}).forEach(function (p) { 실림[p] = 1; });
+  var 본 = {}, 빈칸 = null;
+  ((지도 && 지도.S) || []).forEach(function (g) {
+    var 관내 = Object.keys(g.관).filter(function (p) { return p in 이차; });
+    var 모름내 = g.모름.filter(function (p) { return p in 이차; });
+    if (!관내.length && !모름내.length) return;
+    관내.concat(모름내).forEach(function (p) { 본[p] = 1; });
+    var 있는 = {};
+    Object.keys(g.관).forEach(function (p) { if (!실림[p]) 있는[p] = g.관[p]; });
+    var 남은 = 관내.filter(function (p) { return !실림[p]; }).sort(function (a, b) { return 이차[a] - 이차[b]; });
+    var 덮개 = 덮개셈(있는, 남은), 덮개표 = {};
+    남은.forEach(function (p) { 덮개[p].forEach(function (q) { if (!(q in 이차)) 덮개표[q] = 1; }); });
+    var x = { 칸: g.칸, 관: g.관, 남은: 남은, 끝: 관내.filter(function (p) { return 실림[p]; }), 덮개: 덮개, 덮개표: 덮개표, 모름: 모름내,
+              모름남은: 모름내.filter(function (p) { return !실림[p]; }), 다른모름: g.다른모름,
+              첫: Math.min.apply(null, 관내.concat(모름내).map(function (p) { return 이차[p]; })) };
+    if (!g.칸) 빈칸 = x;
+    out.칸들.push(x);
+  });
+  var 없는 = 차.관.filter(function (p) { return !본[p]; });        // 링크에 자리가 없는 관 — '칸 모름' 묶음에
+  if (없는.length) {
+    if (!빈칸) { 빈칸 = { 칸: '', 관: {}, 남은: [], 끝: [], 덮개: {}, 덮개표: {}, 모름: [], 모름남은: [], 다른모름: 0, 첫: 1e9 }; out.칸들.push(빈칸); }
+    없는.forEach(function (p) { 빈칸.모름.push(p); if (!실림[p]) 빈칸.모름남은.push(p); });
+    빈칸.첫 = Math.min(빈칸.첫, Math.min.apply(null, 없는.map(function (p) { return 이차[p]; })));
+  }
+  out.칸들.sort(function (a, b) { return (a.칸 === '') - (b.칸 === '') || a.첫 - b.첫; });
+  return out;
+}
+/** 들 차례 줄 — 칸 차례대로, 칸 안은 위 단부터(같은 단이면 앞 순번) · 자리 모르는 관 · 끝난 관(✓)은 칸 끝에
+ *  → [{p, 칸, z: [단, 순] | null, 남: [먼저 들어낼 남의 관], 내: [위에 얹힌 이 차 관], 끝: bool}] */
+function 들차례(셈) {
+  var out = [];
+  셈.칸들.forEach(function (g) {
+    var 위먼저 = function (a, b) { return g.관[b][0] - g.관[a][0] || g.관[a][1] - g.관[b][1]; };
+    g.남은.slice().sort(위먼저).forEach(function (p) {
+      var 덮 = g.덮개[p] || [];
+      out.push({ p: p, 칸: g.칸, z: g.관[p], 남: 덮.filter(function (q) { return g.덮개표[q]; }),
+                 내: 덮.filter(function (q) { return !g.덮개표[q]; }), 끝: false });
+    });
+    g.모름남은.forEach(function (p) { out.push({ p: p, 칸: g.칸, z: null, 남: [], 내: [], 끝: false }); });
+    g.끝.concat(g.모름.filter(function (p) { return g.모름남은.indexOf(p) < 0; })).forEach(function (p) {
+      out.push({ p: p, 칸: g.칸, z: g.관[p] || null, 남: [], 내: [], 끝: true });
+    });
+  });
+  return out;
+}
+function 자리글(z) { return z ? z[0] + '-' + 두(z[1]) : ''; }
+function 보낸표(기록, 받음, 지금ms) {                 // {id: [열쇠, ms]} → {열쇠: ms} — 30분 안 · 봇이 받았다고 실어 온 id(받음)는 뺌
+  var 받 = {}, out = {};
+  (받음 || []).forEach(function (i) { 받[i] = 1; });
+  Object.keys(기록 || {}).forEach(function (id) {
+    var x = 기록[id];
+    if (!x || 받[id] || 지금ms - x[1] > 30 * 60000) return;
+    out[x[0]] = Math.max(out[x[0]] || 0, x[1]);
+  });
+  return out;
+}
+
+/* ── 화면 ───────────────────────────────────────────────────────── */
+var 자료 = null, 지도 = null, 차들 = [], 고른 = 0, 고른칸 = null, 굴린칸 = null, 들음 = {}, 보낸 = {}, 시험 = false;
+var 역글 = { 4: '▶ 전송 중', 5: '▶ 상차 중', 3: '배정완료' };
+
+function 날() { return _s(자료 && 자료.t).slice(0, 10) || '오늘'; }
+function 들음열쇠() { return 'load.done|' + 날(); }
+function 들음읽기() {
+  try {
+    for (var i = localStorage.length - 1; i >= 0; i--) {     // 그날만 — 다른 날 표시는 지운다
+      var k = localStorage.key(i);
+      if (k && k.indexOf('load.done|') === 0 && k !== 들음열쇠()) localStorage.removeItem(k);
+    }
+    return JSON.parse(localStorage.getItem(들음열쇠()) || '{}') || {};
+  } catch (e) { return {}; }
+}
+function 들음쓰기() { try { localStorage.setItem(들음열쇠(), JSON.stringify(들음)); } catch (e) {} }
+function 보낸읽기() { try { return JSON.parse(localStorage.getItem('load.sent') || '{}') || {}; } catch (e) { return {}; } }
+function 보낸적기(id, 열쇠) {
+  var 기록 = 보낸읽기(), 지금 = Date.now();
+  Object.keys(기록).forEach(function (k) { if (지금 - 기록[k][1] > 30 * 60000) delete 기록[k]; });
+  기록[id] = [열쇠, 지금];
+  try { localStorage.setItem('load.sent', JSON.stringify(기록)); } catch (e) {}
+}
+function 보낼수() {                                    // 답장 자판 web_app 단추로 연 앱만 sendData 가 된다(인라인으로 열면 query_id 가 있다)
+  if (!텔레그램안) return 시험;
+  try { return typeof tg.sendData === 'function' && !(tg.initDataUnsafe && tg.initDataUnsafe.query_id); } catch (e) { return false; }
+}
+function 판짓기(v) { try { return !!(tg && tg.isVersionAtLeast && tg.isVersionAtLeast(v)); } catch (e) { return false; } }
+function 떨림(k) { try { if (tg && tg.HapticFeedback && 판짓기('6.1')) tg.HapticFeedback.impactOccurred(k || 'light'); } catch (e) {} }
+function 알리기(말) { try { if (텔레그램안 && 판짓기('6.2')) { tg.showAlert(말.slice(0, 250)); return; } } catch (e) {} alert(말); }
+function 묻기(말, 가) {
+  try { if (텔레그램안 && 판짓기('6.2')) { tg.showConfirm(말.slice(0, 250), 가); return; } } catch (e) {}
+  가(window.confirm(말));
+}
+function 보내기(동) {
+  var 자 = { k: '상차지시', v: 1, id: 새id(), t: 자료.t };
+  Object.keys(동).forEach(function (k) { if (!/^(k|v|id|t)$/.test(k)) 자[k] = 동[k]; });   // 동작 칸이 머리(k · v · id · t)를 덮지 않게
+  var 글 = JSON.stringify(자);
+  if (new TextEncoder().encode(글).length > 4096) { 알리기('보낼 것이 너무 길어요'); return; }
+  if (동.a === '단계') 보낸적기(자.id, 'stg:' + 동.s + ':' + 동.g);
+  떨림('medium');
+  if (텔레그램안) { try { tg.sendData(글); } catch (e) { 알리기('보내지 못했어요 — ' + e.message); } return; }
+  알리기('🧪 시험 모드 — 보낼 것: ' + 글);
+  다시그리기();
+}
+function 하기(동, 물음) {
+  if (!보낼수()) { 알리기('이 창에서는 보기만 돼요 — 봇 대화 아래 자판 맨 위 [🚜 상차 지시 열기] 로 열어 주세요.'); return; }
+  var 분 = 지난분(자료.t, Date.now());
+  if (분 >= 30) 물음 = '⌛ ' + 분 + '분 전 값이에요 — 봇이 지금 상태로 다시 봅니다.\n' + 물음;
+  묻기(물음, function (ok) { if (ok) 보내기(동); });
+}
+
+function 지금셈() { return 들기셈(지도, 차들, 고른, 들음); }
+function 남은수(g) { return g.남은.length + g.모름남은.length; }
+function 차남은(c) { return c.관.filter(function (p) { return !c.실음[p] && !들음[p]; }).length; }
+function 다했나(c) { return c.송장대기 || !!c.단계[2] || !차남은(c); }
+
+function 차칩그리기() {
+  var h = '';
+  if ((자료.앞 || 0) > 0) h += '<button type="button" class="car more" data-act="새로"><b>◀ 처음 차부터</b><small>앞 ' + 자료.앞 + '대</small></button>';
+  h += 차들.map(function (c, i) {
+    var 남 = 차남은(c), 다 = 다했나(c);
+    var 딱 = c.역 === 4 || c.역 === 5 ? '<span class="go">' + (c.역 === 4 ? '▶ 전송' : '▶ 상차 중') + '</span>' : '<span class="nx">' + (i === 0 ? '먼저' : '다음') + '</span>';
+    return '<button type="button" class="car' + (i === 고른 ? ' on' : '') + (다 ? ' fin' : '') + '" data-car="' + i + '"><span class="l1"><span class="cq">'
+      + esc(c.순번) + '</span><b class="num">' + esc(c.넷 || '?') + '</b></span><small>' + 딱 + ' ' + (다 ? '✓ 다 함' : '남음 ' + 남 + ' / ' + c.관.length) + '</small></button>';
+  }).join('');
+  if ((자료.뒤 || 0) > 0) h += '<button type="button" class="car more" data-act="더"><b>🚚 다음 ' + 자료.뒤 + '대</b><small>봇에서 더 · ' + esc(자료.뒤순) + '번부터</small></button>';
+  $('cars').innerHTML = h;
+  var on = $('cars').querySelector('.car.on');
+  if (on && on.scrollIntoView) { try { on.scrollIntoView({ block: 'nearest', inline: 'center' }); } catch (e) {} }
+}
+function 단계단추(c, 이름, k) {
+  if (c.단계[k]) return '<span class="stg ok">✓ ' + 이름 + ' ' + esc(c.단계[k]) + '</span>';
+  var m = 보낸['stg:' + c.순번 + ':' + 이름];
+  if (m) return '<span class="stg sent">✓ 보냄 ' + 때글(new Date(m)) + ' — 봇 답을 보세요</span>';
+  return '<button type="button" class="act' + (k === 2 ? ' ok' : '') + '" data-stage="' + 이름 + '">📲 ' + 이름 + '</button>';
+}
+function 차카드그리기(셈) {
+  var c = 차들[고른];
+  if (!c) { $('carCard').innerHTML = '<div class="empty">지금 실을 차가 없어요 — 오늘 순번에 관이 붙은 차 가운데 안 나간 차가 없어요.</div>'; return; }
+  var 다 = 다했나(c), 끝봇 = c.관.filter(function (p) { return c.실음[p]; }).length, 끝폰 = c.관.filter(function (p) { return !c.실음[p] && 들음[p]; }).length;
+  var 남 = c.관.length - 끝봇 - 끝폰, w = function (n) { return (100 * n / c.관.length).toFixed(1) + '%'; };
+  var h = '<div class="r1"><span class="q">' + esc(c.순번) + '</span><b class="plate num">' + esc(c.넷 || '?') + '</b>'
+    + (c.곳 ? '<span class="dest">→ ' + esc(c.곳) + '</span>' : '')
+    + '<span class="badge ' + (다 ? 'fin' : 's' + c.역) + '">' + (c.송장대기 ? '🧾 송장 출력 대기' : 다 ? '✓ 상차 다 함' : 역글[c.역] || '') + '</span></div>'
+    + '<div class="sub">' + esc([c.규격, c.관.length + '본', c.찬 ? '스캔 ' + c.찬 + '/' + c.관.length : ''].filter(Boolean).join(' · ')) + '</div>'
+    + '<div class="prog"><b class="num' + (남 ? '' : ' all') + '">' + (남 ? '남음 ' + 남 : '다 들었어요') + '</b><span>/ ' + c.관.length + '본'
+    + (끝폰 ? ' · ✓ 들었음 ' + 끝폰 : '') + (끝봇 ? ' · ✓ 검수 ' + 끝봇 : '') + '</span></div>'
+    + '<div class="bar2"><i style="width:' + w(끝봇) + ';background:var(--ok)"></i><i style="width:' + w(끝폰) + ';background:#86efac"></i></div>'
+    + '<div class="acts">' + 단계단추(c, '상차중', 1) + 단계단추(c, '상차완료', 2) + '</div>'
+    + (자료.켬 ? '' : '<div class="stgoff">📴 📲 텔레그램 단계가 꺼져 있어 [📲] 를 눌러도 봇이 적지 않아요(🎬 진행 그림 위 스위치)</div>');
+  $('carCard').innerHTML = h;
+}
+function 네모(ks) {
+  return { x1: Math.min.apply(null, ks.map(function (k) { return k[1]; })), y1: Math.min.apply(null, ks.map(function (k) { return k[2]; })),
+           x2: Math.max.apply(null, ks.map(function (k) { return k[1] + k[3]; })), y2: Math.max.apply(null, ks.map(function (k) { return k[2] + k[4]; })) };
+}
+function 배치도그림(셈) {
+  var K = (지도 && 지도.K) || [], 칸표 = {}, 다음표 = {};
+  if (!K.length) return '';
+  셈.칸들.forEach(function (g) { if (g.칸) K.forEach(function (k) { if (칸맞음(k[0], g.칸)) 칸표[k[0]] = g; }); });
+  지도.S.forEach(function (g) {                       // 다음 차 몫이 남은 칸(옅은 파랑 점선)
+    if (Object.keys(g.관).some(function (p) { return 셈.다른[p] && !셈.실림[p]; })) K.forEach(function (k) { if (칸맞음(k[0], g.칸)) 다음표[k[0]] = 1; });
+  });
+  var 대상 = K.filter(function (k) { return 칸표[k[0]]; });
+  if (!대상.length) return '';
+  var 범 = 네모(K), 눈 = 네모(대상), 여 = 90;
+  var x1 = Math.max(범.x1, 눈.x1 - 여), y1 = Math.max(범.y1, 눈.y1 - 여), x2 = Math.min(범.x2, 눈.x2 + 여), y2 = Math.min(범.y2, 눈.y2 + 여);
+  var h = '<svg viewBox="' + (x1 - 2) + ' ' + (y1 - 2) + ' ' + (x2 - x1 + 4) + ' ' + (y2 - y1 + 4) + '" role="img" aria-label="야드 배치도">';
+  K.forEach(function (k) {
+    if (k[1] > x2 || k[1] + k[3] < x1 || k[2] > y2 || k[2] + k[4] < y1) return;
+    var g = 칸표[k[0]], n = g ? 남은수(g) : 0, 반 = /^B\d{2}[AC]$/.test(k[0]);
+    var cls = 'k' + (g ? (n ? ' todo' : ' done') : 다음표[k[0]] ? ' nxt' : '') + (g && g.칸 === 고른칸 ? ' sel' : '');
+    h += '<g' + (g ? ' data-kan="' + esc(g.칸) + '" style="cursor:pointer"' : '') + '><rect class="' + cls + '" x="' + k[1] + '" y="' + k[2] +
+      '" width="' + k[3] + '" height="' + k[4] + '" rx="2"/><text class="kt" x="' + (k[1] + 2) + '" y="' + (k[2] + 9) + '">' +
+      esc(반 ? k[0].slice(1) : k[0]) + '</text>' +
+      (g ? '<text class="kn' + (n ? '' : ' done') + '" x="' + (k[1] + k[3] / 2) + '" y="' + (k[2] + k[4] / 2 + 6) + '" text-anchor="middle">' +
+        (n ? n : '✓') + '</text>' : '') + '</g>';
+  });
+  return '<div class="card map">' + h + '</svg></div>';
+}
+function 더미그림(g, 셈) {
+  var ps = Object.keys(g.관);
+  if (!ps.length) return '<div class="card empty">' + (g.칸 ? '이 칸은 적재 자리(단-순)가 적힌 관이 없어요 — 칸만 보세요' : '자리(칸)를 모르는 관이에요 — 목록을 보세요') + '</div>';
+  var R = 19, 높 = R * 1.72, 패 = 7, 아래 = 15, 위 = 12;                 // 위 = 다음 차 순번 글자 자리
+  var xs = ps.map(function (p) { return 그림x(g.관[p][0], g.관[p][1]); });
+  var x0 = Math.min.apply(null, xs), xn = Math.max.apply(null, xs), 위단 = Math.max.apply(null, ps.map(function (p) { return g.관[p][0]; }));
+  var W = Math.round((xn - x0) * 2 * R + 2 * R + 2 * 패), H = Math.round(2 * R + (위단 - 1) * 높 + 2 * 패 + 아래 + 위), 바닥 = H - 아래 - 패;
+  var cx = function (x) { return 패 + R + (x - x0) * 2 * R; }, cy = function (단) { return 바닥 - R - (단 - 1) * 높; };
+  var 남표 = {}, 초점 = null;
+  g.남은.forEach(function (p) { 남표[p] = 1; });
+  var h = '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(g.칸) + ' 더미">';
+  for (var x = Math.ceil(x0); x <= xn; x++) h += '<text class="ps" x="' + cx(x) + '" y="' + (H - 3) + '" text-anchor="middle">' + x + '</text>';
+  ps.forEach(function (p) {
+    var z = g.관[p], x = cx(그림x(z[0], z[1])), y = cy(z[0]), 내것 = p in 셈.이차;
+    var k = 남표[p] ? 'todo' : 내것 ? 'done' : 셈.실림[p] ? 'gone' : g.덮개표[p] ? 'cover' : 셈.다른[p] ? 'nxt' : 'other';
+    if (k === 'todo' && (초점 === null || x < 초점)) 초점 = x;
+    var 글 = (k === 'done' ? '✓' : '') + p.slice(-4);
+    h += '<g' + (내것 ? ' data-p="' + esc(p) + '" style="cursor:pointer"' : '') + '><title>' + esc(p + ' · ' + 자리글(z) + (셈.다른[p] ? ' · ' + 셈.다른[p] + '번 차' : '')) +
+      '</title><circle class="pl-' + k + '" cx="' + x + '" cy="' + y + '" r="' + (R - 1.5) + '"/><text class="pt ' + k + '" x="' + x + '" y="' + (y + 4) +
+      '" text-anchor="middle">' + esc(글) + '</text>' +
+      (k === 'nxt' || (k === 'cover' && 셈.다른[p]) ? '<text class="ps nx" x="' + x + '" y="' + (y - R - 2) + '" text-anchor="middle">' + esc(셈.다른[p]) + '번</text>' : '') + '</g>';
+  });
+  return '<div class="card pile" data-focus="' + (초점 === null ? '' : Math.round(초점)) + '">' + h + '</svg></div>';
+}
+function 칸그리기(셈) {
+  var 칸들 = 셈.칸들;
+  if (!칸들.length) { $('mapSec').innerHTML = ''; $('pileSec').innerHTML = ''; return; }
+  if (고른칸 === null || !칸들.some(function (g) { return g.칸 === 고른칸; })) 고른칸 = (칸들.filter(남은수)[0] || 칸들[0]).칸;
+  var g = 칸들.filter(function (x) { return x.칸 === 고른칸; })[0];
+  var 전체 = 칸들.reduce(function (n, x) { return n + 남은수(x); }, 0);
+  var h = '<h2><span>① 배치도</span><small>' + (전체 ? '그 차 관이 남은 칸 ' + 칸들.filter(남은수).length + ' · 남음 ' + 전체 + '본' : '다 들었어요') + '</small></h2>' + 배치도그림(셈)
+    + '<div class="chips">' + 칸들.map(function (x) {
+      var n = 남은수(x), 다 = x.남은.length + x.끝.length + x.모름.length;
+      return '<button type="button" data-kan="' + esc(x.칸) + '" class="' + (n ? 'todo' : 'done') + (x.칸 === 고른칸 ? ' on' : '') + '">'
+        + esc(x.칸 || '칸 모름') + ' ' + (n ? '남음 ' + n + ' / ' + 다 : '✓ ' + 다) + '</button>';
+    }).join('') + '</div>';
+  $('mapSec').innerHTML = h;
+  $('pileSec').innerHTML = '<h2><span>② ' + esc(g.칸 || '칸 모름') + ' 더미</span><small>왼쪽 = 1번(앞) · 아래 = 1단 · 그 차 관을 누르면 ✓ 들었음</small></h2>' + 더미그림(g, 셈)
+    + '<div class="legend"><span><i class="todo"></i>들 관</span><span><i class="cover"></i>먼저 들어낼 관</span><span><i class="nxt"></i>다음 차 몫</span>'
+    + '<span><i class="done"></i>✓ 들었음 · 검수</span><span><i class="other"></i>다른 관</span></div>';
+  var pile = $('pileSec').querySelector('.pile'), sv = pile && pile.querySelector('svg'), 배 = 1;
+  if (sv) {                                           // 자리가 남으면 크게(태블릿 — 1.8배까지) · 좁으면 그대로 가로로 밀어 봄
+    var W0 = +sv.getAttribute('width'), H0 = +sv.getAttribute('height');
+    배 = Math.min(1.8, Math.max(1, (pile.clientWidth - 12) / W0));
+    sv.setAttribute('width', Math.round(W0 * 배)); sv.setAttribute('height', Math.round(H0 * 배));
+  }
+  if (굴린칸 !== 고른칸) {                             // 칸을 바꿨을 때만 들 관이 가운데 오게(누를 때마다 밀지 않게)
+    var f = pile ? parseFloat(pile.getAttribute('data-focus')) : NaN;
+    if (pile && isFinite(f)) pile.scrollLeft = Math.max(0, f * 배 - pile.clientWidth / 2);
+    굴린칸 = 고른칸;
+  }
+}
+function 덮글(q, g, 셈) { return esc(q.slice(-4) + '(' + 자리글(g.관[q]) + (셈.다른[q] ? ' · ' + 셈.다른[q] + '번 차' : '') + ')'); }
+function 목록그리기(셈) {
+  var c = 차들[고른];
+  if (!c) { $('listSec').innerHTML = ''; return; }
+  var 줄 = 들차례(셈), 칸별 = {}, 번 = 0, 첫 = true;
+  셈.칸들.forEach(function (g) { 칸별[g.칸] = g; });
+  var h = '<h2><span>③ 들 차례</span><small>칸마다 위 단부터 · 줄을 누르면 ✓ 들었음(이 폰에만)</small></h2>', 앞칸 = null;
+  if (!줄.length) h += '<div class="empty">그 차에 붙은 관이 없어요</div>';
+  줄.forEach(function (r) {
+    var g = 칸별[r.칸];
+    if (r.칸 !== 앞칸) {
+      앞칸 = r.칸;
+      h += '<div class="grp" data-kan="' + esc(r.칸) + '"><span class="gk">' + esc(r.칸 || '칸 모름') + '</span><span>' + (남은수(g) ? '남음 ' + 남은수(g) + ' / ' + (g.남은.length + g.끝.length + g.모름.length) : '✓ 다 들었음') + '</span></div>';
+    }
+    var 봇 = !!c.실음[r.p], 때 = 들음[r.p];
+    if (r.끝) {
+      h += '<div class="row done' + (봇 ? ' bot' : '') + '"' + (봇 ? '' : ' data-p="' + esc(r.p) + '"') + '><div class="rn">✓</div><div class="rb"><div class="rp"><b class="num">' + esc(r.p) + '</b>'
+        + (r.z ? '<span class="pos">' + esc(자리글(r.z)) + '</span>' : '') + '</div><div class="rc">' + (봇 ? '✓ 검수됨(봇)' : '✓ 들었음 ' + esc(때 || '') + ' · 다시 누르면 취소') + '</div></div>'
+        + '<div class="chk">✓</div></div>';
+      return;
+    }
+    번 += 1;
+    var 말 = r.z === null ? '<span class="own">자리(단-순)를 몰라요 — 칸에서 번호를 찾아 주세요</span>'
+      : r.남.length ? '<span class="cov">⚠ 위 ' + r.남.length + '본 먼저 — ' + r.남.slice(0, 4).map(function (q) { return 덮글(q, g, 셈); }).join(' · ') + (r.남.length > 4 ? ' …' : '') + '</span>'
+        + (r.내.length ? ' <span class="own">· 이 차 ' + esc(r.내.map(function (q) { return q.slice(-4); }).join(' · ')) + ' 먼저</span>' : '')
+      : r.내.length ? '<span class="own">↑ 이 차 ' + esc(r.내.map(function (q) { return q.slice(-4); }).join(' · ')) + ' 먼저 들고</span>'
+      : '<span class="free">위에 없음 · 바로</span>';
+    h += '<div class="row' + (첫 ? ' first' : '') + '" data-p="' + esc(r.p) + '"><div class="rn">' + 번 + '</div><div class="rb"><div class="rp"><b class="num">' + esc(r.p) + '</b>'
+      + '<span class="pos">' + esc((r.칸 || '칸 모름') + (r.z ? ' ' + 자리글(r.z) : '')) + '</span></div><div class="rc">' + 말 + '</div></div><div class="chk">들었음</div></div>';
+    첫 = false;
+  });
+  $('listSec').innerHTML = h;
+}
+function 머리그리기() {
+  var 분 = 지난분(자료.t, Date.now());
+  $('when').textContent = _s(자료.t).slice(11, 16) + ' 기준' + (분 ? ' · ' + 분 + '분 전' : '');
+  var s = $('stale');
+  s.hidden = 분 < 30;
+  if (분 >= 30) s.innerHTML = '<span>⌛ ' + 분 + '분 지난 값이에요</span>' + (보낼수() ? '<button type="button" data-act="새로">🔄 다시 열기</button>' : "<span>봇에 '상차지시' 를 보내 주세요</span>");
+  $('viewOnly').hidden = !(텔레그램안 && !보낼수());
+  $('footNote').textContent = [자료.기준 === 'DB' ? 'ℹ 진행화면 값 없이 DB 로 지었어요' : '', (자료.못 || []).length ? 'ℹ ' + 자료.못.join(' · ') : ''].filter(Boolean).join(' · ');
+}
+function 머리높이() { try { document.documentElement.style.setProperty('--hh', $('head').offsetHeight + 'px'); } catch (e) {} }
+function 다시그리기() {
+  보낸 = 보낸표(보낸읽기(), 자료.받음, Date.now());
+  var 셈 = 지금셈();
+  머리그리기(); 차칩그리기(); 차카드그리기(셈); 칸그리기(셈); 목록그리기(셈); 머리높이();
+}
+window.addEventListener('resize', 머리높이);
+function 차고르기(i) {
+  고른 = Math.max(0, Math.min(차들.length - 1, i)); 고른칸 = null; 굴린칸 = null;
+  try { sessionStorage.setItem('load.car', (차들[고른] || {}).순번 || ''); } catch (e) {}
+  다시그리기();
+  window.scrollTo(0, 0);
+}
+function 들음바꾸기(p) {
+  var c = 차들[고른];
+  if (!c || c.실음[p] || c.관.indexOf(p) < 0) return;
+  if (들음[p]) delete 들음[p]; else 들음[p] = 때글(new Date());
+  들음쓰기();
+  떨림(들음[p] ? 'medium' : 'light');
+  다시그리기();
+}
+function 시작(d) {
+  자료 = d || {};
+  지도 = 지도다듬기(자료);
+  차들 = 차다듬기(자료);
+  들음 = 들음읽기();
+  var 앞차 = '';
+  try { 앞차 = sessionStorage.getItem('load.car') || ''; } catch (e) {}
+  var i = 차들.map(function (c) { return c.순번; }).indexOf(앞차);
+  고른 = i >= 0 ? i : 0;
+  다시그리기();
+  setInterval(머리그리기, 30000);
+}
+function 오류(말) { $('err').textContent = 말; $('err').hidden = false; $('main').hidden = true; }
+
+$('cars').addEventListener('click', function (ev) {
+  var b = ev.target.closest('[data-car]');
+  if (b) { 떨림(); 차고르기(+b.getAttribute('data-car')); return; }
+  var a = ev.target.closest('[data-act]');
+  if (!a) return;
+  if (a.getAttribute('data-act') === '더') 하기({ a: '더', s: _s(자료.뒤순) }, '다음 ' + 자료.뒤 + '대(' + 자료.뒤순 + '번부터)를 봇에서 받을까요?\n앱이 닫히고 봇이 새 [🚜 상차 지시 열기] 단추를 보내요.');
+  else 하기({ a: '새로' }, '처음 차부터 다시 받을까요?\n앱이 닫히고 봇이 새 [🚜 상차 지시 열기] 단추를 보내요.');
+});
+$('main').addEventListener('click', function (ev) {
+  var st = ev.target.closest('[data-stage]');
+  if (st) {
+    var c = 차들[고른], 이름 = st.getAttribute('data-stage'), 남 = 차남은(c);
+    떨림();
+    하기({ a: '단계', s: c.순번, n: c.넷, g: 이름 }, c.순번 + '번 ' + (c.넷 || '?') + ' — 📲 ' + 이름 + ' 단계로 적을까요?\n(텔레그램 📲 단계 단추와 같은 기록 · 🎬 진행 그림이 넘어가요)'
+      + (이름 === '상차완료' && 남 ? '\n⚠ 아직 안 든 관 ' + 남 + '본이 있어요.' : '') + (자료.켬 ? '' : '\n📴 지금 📲 텔레그램 단계가 꺼져 있어 봇이 적지 않아요.'));
+    return;
+  }
+  var p = ev.target.closest('[data-p]');
+  if (p) { 들음바꾸기(p.getAttribute('data-p')); return; }
+  var k = ev.target.closest('[data-kan]');
+  if (k) {
+    떨림(); 고른칸 = k.getAttribute('data-kan'); 다시그리기();
+    if (k.classList.contains('grp') && window.innerWidth < 900) { var el = $('pileSec'); if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  }
+});
+$('stale').addEventListener('click', function (ev) { if (ev.target.closest('[data-act="새로"]')) 하기({ a: '새로' }, '지금 값으로 다시 받을까요?'); });
+
+function 태블릿인가() { var s = window.screen || {}; return Math.min(s.width || 0, s.height || 0) >= 600; }   // 폰 짧은 변 360~430
+function 전체화면되나() { return 텔레그램안 && 판짓기('8.0') && typeof tg.requestFullscreen === 'function'; }
+function 전체단추() {
+  var b = $('fullBtn');
+  b.hidden = !전체화면되나();
+  b.textContent = tg && tg.isFullscreen ? '⛶ 창으로' : '⛶ 전체화면';
+}
+function 전체바꾸기() { try { if (tg.isFullscreen) tg.exitFullscreen(); else tg.requestFullscreen(); } catch (e) {} }
+$('fullBtn').addEventListener('click', 전체바꾸기);
+
+/** 🧪 시험 모드 예시 — 칸 · 차 · 번호 모두 지어낸 것(회사 자료 없음) */
+function 예시() {
+  var K = [], d = new Date(Date.now() - 4 * 60000);
+  ['A', 'C'].forEach(function (줄, r) { for (var i = 1; i <= 8; i++) K.push([줄 + 두(i), (8 - i) * 60, r * 160, 60, 100]); });
+  for (var j = 1; j <= 8; j++) { K.push(['B' + 두(j) + 'A', (8 - j) * 60, 110, 60, 22]); K.push(['B' + 두(j) + 'C', (8 - j) * 60, 132, 60, 22]); }
+  return { v: 1, t: d.getFullYear() + '-' + 두(d.getMonth() + 1) + '-' + 두(d.getDate()) + ' ' + 때글(d), 켬: 1, 받음: [], 기준: '화면', 앞: 0, 뒤: 2, 뒤순: '10', 못: [],
+    차: [['5', '0055', 'A1', 5, '30" × 12.7 × 12M', 6, 2, 0, '26J0303,26J0304,26J0305,26J0306,26J0307,26J0308', '26J0306', ['09:10', '09:40', '', '', '']],
+         ['6', '0066', 'B2', 4, '24" × 9.5 × 12M', 4, 0, 0, '26J0311,26J0312,26J0313,26J0314', '', ['09:52', '', '', '', '']],
+         ['8', '0088', 'C3', 3, '20" × 8.0 × 12M', 6, 0, 0, '26K0101,26K0102,26K0103,26K0104,26K0105,26K0106', '', ['', '', '', '', '']],
+         ['9', '0099', 'A1', 3, '30" × 12.7 × 12M', 3, 0, 0, '26K0201,26K0202,26K0203', '', ['', '', '', '', '']]],
+    K: K,
+    S: [['A03', [[1, 1, '26J0312,26J0313,26J0314,26J0340'], [2, 1, '26J0341']], [], 0],
+        ['A05', [[1, 2, '26K0201,26K0202,26K0203,26K0250'], [2, 3, '26K0251']], [], 1],
+        ['B02A', [[1, 1, '26J0330,26J0308']], [], 0],
+        ['C04', [[1, 1, '26J0331,26J0320,26J0303,26J0304,26J0305,26J0321,26J0332,26J0334'], [2, 2, '26J0322,26J0306,26J0307,26J0333,26J0311']], [], 2],
+        ['C06', [[1, 1, '26K0101,26K0102,26K0103,26K0150,26K0104'], [2, 1, '26K0151,26K0105']], [], 0],
+        ['', [], ['26K0106'], 0]] };
+}
+
+(function () {
+  if (텔레그램안) {
+    try { tg.ready(); tg.expand(); } catch (e) {}
+    if (판짓기('7.7')) { try { tg.disableVerticalSwipes(); } catch (e) {} }   // 목록을 내리다 앱이 접히지 않게
+    if (전체화면되나()) {                                // 태블릿은 좁은 가운데 창으로 뜬다 — 열 때 전체화면
+      try { tg.onEvent('fullscreenChanged', 전체단추); tg.onEvent('fullscreenFailed', 전체단추); } catch (e) {}
+      if (태블릿인가() && !tg.isFullscreen) { try { tg.requestFullscreen(); } catch (e) {} }
+    }
+    전체단추();
+    var 테마 = function () { document.documentElement.setAttribute('data-theme', tg.colorScheme === 'dark' ? 'dark' : 'light'); };
+    테마(); try { tg.onEvent('themeChanged', 테마); } catch (e) {}
+  }
+  var h = 해시읽기(location.hash);
+  if (h.c) {
+    if (typeof DecompressionStream === 'undefined') { 오류('이 폰의 텔레그램(웹뷰)이 오래돼 상차 지시를 못 풀어요 — 텔레그램 · Android System WebView 를 업데이트해 주세요.'); return; }
+    풀기(h.c).then(시작).catch(function (e) { 오류("상차 지시 자료를 못 읽었어요 — 봇에 '상차지시' 를 다시 보내 주세요. (" + e.message + ')'); });
+    return;
+  }
+  if (텔레그램안) { 오류("상차 지시 자료가 없어요 — 봇 대화에서 [🚜 상차 지시] 를 눌러 아래 자판 맨 위 [🚜 상차 지시 열기] 로 열어 주세요."); return; }
+  시험 = true;
+  $('testStrip').hidden = false;                        // 시험 모드 — 지어낸 차 · 가짜 번호(회사 자료 없음)
+  시작(예시());
+})();
+</script>
+</body>
+</html>
