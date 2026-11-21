@@ -32,11 +32,17 @@
   · 가로 넓은 화면(폭 1000px 이상 — 태블릿 가로 전체화면, 2026-11-20 '재고맵처럼 가로모드에서 왼쪽그림 오른쪽 파이프번호'):
     #colL(머리 · 찍기 · 🚛 실은 모양 — 화면에 붙어 있음) | #colR(예정 파이프 번호 · ⚠ 예정 아님 · 기타). 좁으면 두 묶음은 display: contents
     — 폰 · M3 · 태블릿 세로는 예전 한 줄 그대로.
+  · 🚜 어디서 들까(2026-11-21 — 싣기 전에 어느 칸의 어느 관을 들지): 링크 #c= 뒤 &m=base64url(zlib(JSON))
+      {v, K:[[칸, x, y, w, h]…](배치도 칸 — 전체 · 둘레 · 대상만), S:[[칸, [[단, 첫순, '번호,번호,,번호']…], [자리 모르는 예정…], 자리 모르는 다른 관 수]…]}
+    를 DecompressionStream('deflate') 로 풀어(지도받기) 접는 칸에 배치도(예정 관이 남은 칸 진하게 · 다 ✓ 면 흐리게)와 고른 칸의
+    단 × 순 더미(들 관 · 위에 얹힌 먼저 들어낼 관 · ✓ 실음 · ⚠ 실린 예정 아님 · 다른 관 회색)를 그린다. 찍거나 누를 때마다 다시 셈.
+    자리 셈은 봇과 같다 — 그림 x = 순 + (단 - 1) × 0.5, (단, 순) 위 = (단 + 1, 순 - 1) · (단 + 1, 순). m 이 없거나 못 풀면 이 칸은 숨은 채 그대로.
   · 텔레그램 밖에서 열면 시험 모드(예시 차 · 🧪 가짜 QR 창). #shot=open|scan 은 시안 그림용.
   · 저장소 web/inspect/index.html — 올리는 법 docs/설계_검수_미니앱_올리기.md(GitHub Pages). 봇 쪽은 inspect_miniapp.py(바닥) · telegram_inspect.미니앱받기.
   함수  셈: 해시읽기 · b64url풀기 · b64url짓기 · 계획다듬기 · 번호꼴 · 가르기 · 관찾기 · 새판 · 찍기셈 · 눈셈 · 눈밖셈 · 손셈 · 빼기셈 ·
-            다시돌리기 · 셈 · 보낼것 · 받은만큼 · 채움차례 · 자리채우기
-        화면: 그리기 · 목록그리기 · 더그리기 · 트럭그리기 · 받은글 · 찍기열기 · 고르기 · 보내기누름 · 시작
+            다시돌리기 · 셈 · 보낼것 · 받은만큼 · 채움차례 · 자리채우기 · 지도풀기 · 줄풀기 · 지도다듬기 · 그림x · 칸맞음 · 덮개셈 · 들기셈
+        화면: 그리기 · 목록그리기 · 더그리기 · 트럭그리기 · 들기그리기(들기배치도 · 더미그림 · 들기글) · 받은글 · 찍기열기 · 고르기 ·
+              보내기누름 · 지도받기 · 시작
 -->
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
@@ -260,6 +266,47 @@
   .sheet .btns .ghost { background: var(--bg); color: var(--danger); }
   .center-msg { margin: 40px 16px; padding: 18px; background: var(--card); border-radius: 14px; text-align: center; line-height: 1.6; }
 
+  /* 🚜 어디서 들까(2026-11-21) — 접는 칸 · 배치도 · 칸 고르기 · 더미 그림(가로로 밀어 봄) */
+  details.pick > summary { list-style: none; cursor: pointer; }
+  details.pick > summary::-webkit-details-marker { display: none; }
+  details.pick > summary::before { content: "▸"; margin-right: 2px; }
+  details.pick[open] > summary::before { content: "▾"; }
+  .pick-map { padding: 8px 8px 2px; }
+  .pick-map svg { display: block; width: 100%; height: auto; max-height: 300px; }
+  .pk-c { fill: var(--bg); stroke: var(--sep); stroke-width: 1; }
+  .pk-c.todo { fill: var(--warn-bg); stroke: var(--warn); stroke-width: 2.5; }
+  .pk-c.done { fill: var(--ok-bg); stroke: var(--ok); stroke-width: 1.5; opacity: .6; }
+  .pk-c.sel { stroke: var(--eye); stroke-width: 4; }
+  .pk-t { font-size: 9px; fill: var(--hint); }
+  .pk-n { font-size: 16px; font-weight: 800; fill: var(--warn); }
+  .pk-n.done { fill: var(--ok); font-size: 13px; }
+  .pick-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 10px 8px; }
+  .pick-chips button { padding: 5px 10px; border-radius: 999px; background: var(--bg); font-size: 13px; font-weight: 700; color: var(--hint); }
+  .pick-chips button.todo { background: var(--warn-bg); color: var(--warn); }
+  .pick-chips button.done { background: var(--ok-bg); color: var(--ok); }
+  .pick-chips button.on { box-shadow: inset 0 0 0 2px var(--eye); }
+  .pick-h { padding: 6px 12px 0; border-top: 1px solid var(--sep); font-size: 12px; font-weight: 700; color: var(--hint); }
+  .pile { overflow-x: auto; overscroll-behavior-x: contain; padding: 4px 8px 2px; }
+  .pile svg { display: block; margin: 0 auto; }
+  .pick-none { padding: 10px 12px; color: var(--hint); font-size: 12.5px; }
+  .pl-todo { fill: var(--warn-bg); stroke: var(--warn); stroke-width: 3.5; }
+  .pl-cover { fill: rgba(214, 64, 58, .12); stroke: var(--danger); stroke-width: 2.5; stroke-dasharray: 5 3; }
+  .pl-done { fill: var(--ok-bg); stroke: var(--ok); stroke-width: 1.5; opacity: .5; }
+  .pl-out { fill: var(--unk-bg); stroke: var(--unk); stroke-width: 3; }
+  .pl-other { fill: var(--bg); stroke: var(--empty); stroke-width: 1.2; }
+  .pl-t { font-size: 10.5px; fill: var(--hint); }
+  .pl-t.todo { fill: var(--warn); font-weight: 800; font-size: 11.5px; } .pl-t.cover { fill: var(--danger); font-weight: 700; }
+  .pl-t.done { fill: var(--ok); } .pl-t.out { fill: var(--unk); font-weight: 700; }
+  .pl-s { font-size: 9px; fill: var(--hint); }
+  .pick-leg { padding: 0 12px 4px; font-size: 12px; color: var(--hint); line-height: 1.6; }
+  .pick-leg i { display: inline-block; width: 10px; height: 10px; border-radius: 5px; margin: 0 3px 0 8px; vertical-align: -1px; }
+  .pick-leg i.todo { background: var(--warn); } .pick-leg i.cover { background: var(--danger); } .pick-leg i.done { background: var(--ok); }
+  .pick-leg i.out { background: var(--unk); } .pick-leg i.other { background: var(--empty); }
+  .pk-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; padding: 7px 12px; border-top: 1px solid var(--sep); font-size: 13px; }
+  .pk-row .p { font-size: 15.5px; font-weight: 700; color: var(--warn); }
+  .pk-cov { color: var(--danger); font-weight: 600; } .pk-free { color: var(--hint); }
+  .pk-row.out { color: var(--unk); font-weight: 600; } .pk-row.done { color: var(--ok); } .pk-row.dim { color: var(--hint); font-size: 12px; }
+
   /* 가로 넓은 화면(폭 1000px 이상 — 태블릿 가로 전체화면) — 왼쪽 머리 · 찍기 · 실은 모양, 오른쪽 파이프 번호(2026-11-20).
      좁은 화면은 묶음이 없는 것처럼(display: contents) — 머리 카드가 쪽 끝까지 위에 붙는 것 그대로 */
   .col-l, .col-r { display: contents; }
@@ -297,6 +344,11 @@
       <button class="btn-scan" id="btnScan" type="button"><span>📷</span><span id="btnScanText">관 QR 찍기</span></button>
       <div class="hint" id="scanHint">연달아 찍어요 · ✓ 면 떨림 한 번 · ⚠ 예정 밖도 적고 계속 · M3 는 스캔 단추로 바로</div>
     </div>
+
+    <details class="sec pick" id="pickSec" hidden>
+      <summary class="sec-h"><span>🚜 어디서 들까</span><span class="r" id="pickR"></span></summary>
+      <div class="card" id="pickCard"></div>
+    </details>
 
     <div class="sec" id="truckSec" hidden>
       <div class="sec-h"><span>🚛 실은 모양</span><span class="r" id="truckR"></span></div>
@@ -718,6 +770,92 @@ function 받은만큼(기록, 보냄들, 받음) {
            받은때: 받은.때 };
 }
 
+/* 🚜 어디서 들까(2026-11-21) — 링크 #c= 뒤 &m=base64url(zlib(JSON)) {v, K:[[칸, x, y, w, h]…], S:[[칸, [[단, 첫순, '번호,번호,,번호']…],
+ *  [자리 모르는 예정 번호…], 자리 모르는 다른 관 수]…]} — 번호 · 칸 · 단 · 순만. 예정인지 · ✓ 인지는 #c= 의 예정 · 이미 와 찍은 것으로 셈.
+ *  자리 셈은 봇(inspect_pick_map · inspect_near)과 같다 — 그림 x = 순 + (단 - 1) × 0.5, (단, 순) 위에 얹힌 관 = (단 + 1, 순 - 1) · (단 + 1, 순) */
+function 지도풀기(조) {                                // → Promise<자료> — DecompressionStream('deflate')(웹뷰 80+). 못 풀면 거절(앱은 지도 없이)
+  var s = String(조 || '').replace(/-/g, '+').replace(/_/g, '/');
+  while (s.length % 4) s += '=';
+  var bin = atob(s), b = new Uint8Array(bin.length);
+  for (var i = 0; i < bin.length; i++) b[i] = bin.charCodeAt(i);
+  var 흐름 = new Blob([b]).stream().pipeThrough(new DecompressionStream('deflate'));
+  return new Response(흐름).text().then(function (t) { return JSON.parse(t); });
+}
+/** [[단, 첫순, '번호,…']] → {번호: [단, 순]} — 단마다 첫순부터 순 차례(빈 자리 '') */
+function 줄풀기(줄들) {
+  var out = {};
+  (Array.isArray(줄들) ? 줄들 : []).forEach(function (r) {
+    if (!Array.isArray(r)) return;
+    var 단 = parseInt(r[0], 10), 첫 = parseInt(r[1], 10);
+    if (!(단 >= 1) || !(첫 >= 1)) return;
+    _s(r[2]).split(',').forEach(function (p, i) {
+      p = _s(p).toUpperCase();
+      if (p && !(p in out)) out[p] = [단, 첫 + i];
+    });
+  });
+  return out;
+}
+/** 풀린 m → {K: [[칸, x, y, w, h]…], S: [{칸, 관: {번호: [단, 순]}, 모름: [번호], 다른모름: n}]} | null(꼴이 아니거나 비었음) */
+function 지도다듬기(x) {
+  if (!x || typeof x !== 'object' || !Array.isArray(x.S)) return null;
+  var K = (Array.isArray(x.K) ? x.K : []).filter(function (k) {
+    return Array.isArray(k) && k.length >= 5 && _s(k[0]) && k.slice(1, 5).every(function (v) { return typeof v === 'number' && isFinite(v); });
+  }).map(function (k) { return [_s(k[0]).toUpperCase().slice(0, 8), k[1], k[2], k[3], k[4]]; });
+  var S = [];
+  x.S.forEach(function (g) {
+    if (!Array.isArray(g)) return;
+    var 관 = 줄풀기(g[1]);
+    var 모름 = (Array.isArray(g[2]) ? g[2] : []).map(function (p) { return _s(p).toUpperCase(); }).filter(Boolean);
+    if (!Object.keys(관).length && !모름.length) return;
+    S.push({ 칸: _s(g[0]).toUpperCase().slice(0, 8), 관: 관, 모름: 모름, 다른모름: Math.max(0, parseInt(g[3], 10) || 0) });
+  });
+  return S.length ? { K: K, S: S } : null;
+}
+function 그림x(단, 순) { return 순 + (단 - 1) * 0.5; }
+/** 배치도 칸(k칸)이 더미 칸인가 — 'B03'(반쪽 글자 없음)은 B03A · B03C 둘 다(🗺 지도 앱 칸야드 와 같다) */
+function 칸맞음(k칸, 칸) { return k칸 === 칸 || (/^B\d{2}$/.test(칸) && (k칸 === 칸 + 'A' || k칸 === 칸 + 'C')); }
+/** 관(지금 야드에 있는 {번호: [단, 순]}) · 남은(아직 안 든 예정) → {예정: [위에 (거슬러) 얹힌 번호…]}(단 · 순 차례) — 봇 덮개셈 과 같은 셈 */
+function 덮개셈(관, 남은) {
+  var 자리표 = {}, out = {};
+  Object.keys(관).forEach(function (p) { 자리표[관[p][0] + '-' + 관[p][1]] = p; });
+  남은.forEach(function (p) {
+    if (!관[p]) return;
+    var 본 = {}, 목록 = [], 볼 = [관[p]];
+    while (볼.length) {
+      var z = 볼.pop();
+      [[z[0] + 1, z[1] - 1], [z[0] + 1, z[1]]].forEach(function (w) {
+        var q = 자리표[w[0] + '-' + w[1]];
+        if (q && !본[q]) { 본[q] = 1; 목록.push(q); 볼.push(w); }
+      });
+    }
+    목록.sort(function (a, b) { return 관[a][0] - 관[b][0] || 관[a][1] - 관[b][1]; });
+    out[p] = 목록;
+  });
+  return out;
+}
+/** 칸마다 들 것 — 지도 · 판 → [{칸, 관, 남은, 끝, 밖, 덮개, 덮개표, 모름, 모름남은, 다른모름}]
+ *  남은 = 아직 ✓ 아닌 예정(자리 있음) · 끝 = ✓ 된 예정(실림 — 야드에 없음) · 밖 = 이 앱이 ⚠ 예정 아님으로 적은 번호(실림) ·
+ *  덮개 = 남은 예정 관마다 위에 얹힌 관(✓ · 실린 관은 뺀 지금 야드 기준) · 덮개표 = 그 가운데 예정 아닌 관(먼저 들어낼 것) */
+function 들기셈(지도, 판) {
+  if (!지도) return [];
+  var 예정표 = {}, 밖표 = {};
+  판.계획.예정.forEach(function (e) { 예정표[e.p] = 1; });
+  판.밖.forEach(function (o) { if (!o.뺌 && o.p) 밖표[o.p] = 1; });
+  return 지도.S.map(function (g) {
+    var 있는 = {}, 남은 = [], 끝 = [], 밖 = [];
+    Object.keys(g.관).forEach(function (p) {
+      if (예정표[p]) { if (판.끝냄[p]) 끝.push(p); else { 남은.push(p); 있는[p] = g.관[p]; } }
+      else if (밖표[p]) 밖.push(p);
+      else 있는[p] = g.관[p];
+    });
+    var 덮개 = 덮개셈(있는, 남은), 덮개표 = {};
+    남은.forEach(function (p) { 덮개[p].forEach(function (q) { if (!예정표[q]) 덮개표[q] = 1; }); });
+    var 모름 = g.모름.filter(function (p) { return 예정표[p]; });
+    return { 칸: g.칸, 관: g.관, 남은: 남은, 끝: 끝, 밖: 밖, 덮개: 덮개, 덮개표: 덮개표, 모름: 모름,
+             모름남은: 모름.filter(function (p) { return !판.끝냄[p]; }), 다른모름: g.다른모름 };
+  });
+}
+
 /* ── 화면 ─────────────────────────────────────────────────────────────── */
 var tg = (window.Telegram && window.Telegram.WebApp) || null;
 var 해시 = 해시읽기();
@@ -873,6 +1011,7 @@ function 그리기() {
   $('btnScan').firstElementChild.textContent = 시험 ? '🧪' : '📷';
   $('btnScanText').textContent = 시험 ? '시험 스캔(가짜 QR 창)' : (판.사건.length ? '관 QR 이어 찍기' : '관 QR 찍기');
   트럭그리기();
+  들기그리기();
   목록그리기(c);
   메인단추();
   if (시험) 개발그리기();
@@ -954,6 +1093,97 @@ function 트럭그리기() {
       그리기();
     };
   });
+}
+
+/* 🚜 어디서 들까(2026-11-21) — 배치도에 예정 관이 있는 칸(남은 것 진하게 · 다 ✓ 면 흐리게), 칸을 누르면 그 칸 단 × 순 더미.
+   지도(계획.지도)는 링크 &m= 를 풀어야 생긴다 — 없거나 못 풀면 이 칸은 숨은 채 지금 그대로 */
+var 고른칸 = null, 들기열기 = false, 굴린칸 = null;
+function 네모(ks) {
+  return { x1: Math.min.apply(null, ks.map(function (k) { return k[1]; })), y1: Math.min.apply(null, ks.map(function (k) { return k[2]; })),
+           x2: Math.max.apply(null, ks.map(function (k) { return k[1] + k[3]; })), y2: Math.max.apply(null, ks.map(function (k) { return k[2] + k[4]; })) };
+}
+function 남은수(g) { return g.남은.length + g.모름남은.length; }
+function 들기배치도(지도, 칸들) {
+  var K = 지도.K, 칸표 = {};
+  칸들.forEach(function (g) { K.forEach(function (k) { if (칸맞음(k[0], g.칸)) 칸표[k[0]] = g; }); });
+  var 대상 = K.filter(function (k) { return 칸표[k[0]]; });
+  if (!대상.length) return '';
+  var 범 = 네모(K), 눈 = 네모(대상), 여 = 90;                 // 대상 칸 둘레만 크게(봇이 둘레만 실어도 같은 그림)
+  var x1 = Math.max(범.x1, 눈.x1 - 여), y1 = Math.max(범.y1, 눈.y1 - 여), x2 = Math.min(범.x2, 눈.x2 + 여), y2 = Math.min(범.y2, 눈.y2 + 여);
+  var h = '<svg viewBox="' + (x1 - 2) + ' ' + (y1 - 2) + ' ' + (x2 - x1 + 4) + ' ' + (y2 - y1 + 4) + '" role="img" aria-label="야드 배치도">';
+  K.forEach(function (k) {
+    if (k[1] > x2 || k[1] + k[3] < x1 || k[2] > y2 || k[2] + k[4] < y1) return;
+    var g = 칸표[k[0]], n = g ? 남은수(g) : 0, 반 = /^B\d{2}[AC]$/.test(k[0]);
+    var cls = 'pk-c' + (g ? (n ? ' todo' : ' done') : '') + (g && g.칸 === 고른칸 ? ' sel' : '');
+    h += '<g' + (g ? ' data-pk="' + esc(g.칸) + '" style="cursor:pointer"' : '') + '><rect class="' + cls + '" x="' + k[1] + '" y="' + k[2] +
+      '" width="' + k[3] + '" height="' + k[4] + '" rx="2"/><text class="pk-t" x="' + (k[1] + 2) + '" y="' + (k[2] + 9) + '">' +
+      esc(반 ? k[0].slice(1) : k[0]) + '</text>' +
+      (g ? '<text class="pk-n' + (n ? '' : ' done') + '" x="' + (k[1] + k[3] / 2) + '" y="' + (k[2] + k[4] / 2 + 6) + '" text-anchor="middle">' +
+        (n ? n : '✓') + '</text>' : '') + '</g>';
+  });
+  return '<div class="pick-map">' + h + '</svg></div>';
+}
+function 더미그림(g) {
+  var ps = Object.keys(g.관);
+  if (!ps.length) return '<div class="pick-none">이 칸은 적재 자리(단-순)가 적힌 관이 없어요 — 칸만 보세요</div>';
+  var R = 17, 높 = R * 1.72, 패 = 6, 아래 = 14;
+  var xs = ps.map(function (p) { return 그림x(g.관[p][0], g.관[p][1]); });
+  var x0 = Math.min.apply(null, xs), xn = Math.max.apply(null, xs), 위단 = Math.max.apply(null, ps.map(function (p) { return g.관[p][0]; }));
+  var W = Math.round((xn - x0) * 2 * R + 2 * R + 2 * 패), H = Math.round(2 * R + (위단 - 1) * 높 + 2 * 패 + 아래), 바닥 = H - 아래 - 패;
+  var cx = function (x) { return 패 + R + (x - x0) * 2 * R; }, cy = function (단) { return 바닥 - R - (단 - 1) * 높; };
+  var 남표 = {}, 끝표 = {}, 밖표 = {}, 초점 = null;
+  g.남은.forEach(function (p) { 남표[p] = 1; }); g.끝.forEach(function (p) { 끝표[p] = 1; }); g.밖.forEach(function (p) { 밖표[p] = 1; });
+  var h = '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(g.칸) + ' 더미">';
+  for (var x = Math.ceil(x0); x <= xn; x++) h += '<text class="pl-s" x="' + cx(x) + '" y="' + (H - 3) + '" text-anchor="middle">' + x + '</text>';
+  ps.forEach(function (p) {
+    var z = g.관[p], x = cx(그림x(z[0], z[1])), y = cy(z[0]);
+    var k = 남표[p] ? 'todo' : 끝표[p] ? 'done' : 밖표[p] ? 'out' : g.덮개표[p] ? 'cover' : 'other';
+    if (k === 'todo' && (초점 === null || x < 초점)) 초점 = x;
+    var 글 = (k === 'done' ? '✓' : k === 'out' ? '⚠' : '') + p.slice(-4);
+    h += '<g><title>' + esc(p + ' · ' + z[0] + '-' + ('0' + z[1]).slice(-2)) + '</title><circle class="pl-' + k + '" cx="' + x + '" cy="' + y +
+      '" r="' + (R - 1.5) + '"/><text class="pl-t ' + k + '" x="' + x + '" y="' + (y + 3.5) + '" text-anchor="middle">' + esc(글) + '</text></g>';
+  });
+  return '<div class="pile" data-focus="' + (초점 === null ? '' : Math.round(초점)) + '">' + h + '</svg></div>';
+}
+function 자리글(z) { return z[0] + '-' + ('0' + z[1]).slice(-2); }
+function 들기글(g) {
+  var h = '', 위먼저 = function (a, b) { return g.관[b][0] - g.관[a][0] || g.관[a][1] - g.관[b][1]; };
+  g.남은.slice().sort(위먼저).forEach(function (p) {
+    var 덮 = (g.덮개[p] || []).filter(function (q) { return g.덮개표[q]; });
+    h += '<div class="pk-row"><span class="p num">' + esc(p) + '</span><span class="tag pos">' + esc(자리글(g.관[p])) + '</span>' +
+      (덮.length ? '<span class="pk-cov">위 ' + 덮.length + '본 먼저 — ' + esc(덮.slice(0, 4).map(function (q) { return q.slice(-4) + '(' + 자리글(g.관[q]) + ')'; }).join(' · ')) +
+        (덮.length > 4 ? ' …' : '') + '</span>' : '<span class="pk-free">위에 없음 · 바로</span>') + '</div>';
+  });
+  if (g.모름남은.length) h += '<div class="pk-row"><span class="pk-free">자리 모르는 예정 ' + g.모름남은.length + '본 — ' + esc(g.모름남은.join(' · ')) + '</span></div>';
+  if (g.밖.length) h += '<div class="pk-row out">⚠ 이 칸에서 실린 예정 아님 ' + esc(g.밖.map(function (p) { return p + '(' + 자리글(g.관[p]) + ')'; }).join(' · ')) + '</div>';
+  var 끝 = g.끝.concat(g.모름.filter(function (p) { return g.모름남은.indexOf(p) < 0; }));
+  if (끝.length) h += '<div class="pk-row done">✓ 실음 ' + 끝.length + '본 — ' + esc(끝.map(function (p) { return p.slice(-4); }).join(' · ')) + '</div>';
+  if (g.다른모름) h += '<div class="pk-row dim">자리 모르는 다른 관 ' + g.다른모름 + '본은 그림에 없어요</div>';
+  return h;
+}
+function 들기그리기() {
+  var 지도 = 판.계획.지도, sec = $('pickSec'), 칸들 = 들기셈(지도, 판);
+  sec.hidden = !칸들.length;
+  if (!칸들.length) return;
+  var 전체 = 칸들.reduce(function (n, g) { return n + 남은수(g); }, 0);
+  if (!들기열기) { 들기열기 = true; sec.open = 전체 > 0; }      // 처음 한 번만 — 그 뒤는 사람이 접고 편 대로
+  if (!고른칸 || !칸들.some(function (g) { return g.칸 === 고른칸; })) 고른칸 = (칸들.filter(남은수)[0] || 칸들[0]).칸;
+  var g = 칸들.filter(function (x) { return x.칸 === 고른칸; })[0];
+  $('pickR').textContent = 전체 ? '칸 ' + 칸들.length + ' · 남음 ' + 전체 : '다 실었어요';
+  var h = 들기배치도(지도, 칸들) + '<div class="pick-chips">' + 칸들.map(function (x) {
+    var n = 남은수(x), 다 = x.남은.length + x.끝.length + x.모름.length;
+    return '<button type="button" data-pk="' + esc(x.칸) + '" class="' + (n ? 'todo' : 'done') + (x.칸 === 고른칸 ? ' on' : '') + '">' +
+      esc(x.칸 || '칸 모름') + ' ' + (n ? '남음 ' + n + ' / ' + 다 : '✓ ' + 다) + '</button>';
+  }).join('') + '</div>';
+  h += '<div class="pick-h">' + esc(g.칸 || '칸 모름') + ' 더미 — 왼쪽 = 1번(앞) · 아래 = 1단</div>' + 더미그림(g) +
+    '<div class="leg pick-leg"><i class="todo"></i>들 관<i class="cover"></i>먼저 들어낼 관<i class="done"></i>✓ 실음<i class="out"></i>⚠ 실린 예정 아님<i class="other"></i>다른 관</div>' +
+    들기글(g);
+  $('pickCard').innerHTML = h;
+  if (sec.open && 굴린칸 !== 고른칸) {                       // 칸을 바꿨을 때만 들 관이 가운데 오게(찍을 때마다 밀지 않게)
+    var pile = $('pickCard').querySelector('.pile'), f = pile ? parseFloat(pile.getAttribute('data-focus')) : NaN;
+    if (pile && isFinite(f)) pile.scrollLeft = Math.max(0, f - pile.clientWidth / 2);
+    굴린칸 = 고른칸;
+  }
 }
 
 function 보냄그리기() {
@@ -1190,7 +1420,8 @@ async function 보내기누름() {
 function 시작() {
   var 계획 = null, 오류 = '';
   if (해시.c) { try { 계획 = 계획다듬기(JSON.parse(b64url풀기(해시.c))); } catch (e) { 오류 = e.message; } }
-  else if (!텔레그램안) 계획 = 계획다듬기(JSON.parse(JSON.stringify(예시계획)));
+  else if (!텔레그램안) { 계획 = 계획다듬기(JSON.parse(JSON.stringify(예시계획))); 계획.지도 = 지도다듬기(예시지도()); }
+  if (계획 && 해시.m) 지도받기(계획, 해시.m);              // 🚜 어디서 들까 — 풀리면 그때 그린다(못 풀면 지금 그대로)
   if (텔레그램안) {
     try { tg.ready(); tg.expand(); } catch (e) {}
     if (판짓기('7.7')) { try { tg.disableVerticalSwipes(); } catch (e) {} }
@@ -1241,6 +1472,29 @@ function 시작() {
     저장();
   }
   if (시안) 시안차림(시안);
+}
+
+/* 🚜 링크 &m= 를 풀어 계획.지도 에 — 옛 웹뷰(DecompressionStream 없음) · 꼴 틀림 · 못 풂은 소리 없이 지도 없이(앱은 지금 그대로) */
+function 지도받기(계획, 조) {
+  if (typeof DecompressionStream === 'undefined' || typeof Blob === 'undefined' || typeof Response === 'undefined') return;
+  try {
+    지도풀기(조).then(function (d) {
+      var g = 지도다듬기(d);
+      if (!g) return;
+      계획.지도 = g;
+      if (판 && 판.계획 === 계획) 그리기();
+    }).catch(function () {});
+  } catch (e) {}
+}
+/** 시험 모드 예시 — 칸 자리 · 번호 모두 지어낸 것(회사 자료 없음). 예시계획 예정 26J0303~0308 · 더 의 C04 와 맞춤 */
+function 예시지도() {
+  var K = [];
+  ['A', 'C'].forEach(function (줄, r) { for (var i = 1; i <= 8; i++) K.push([줄 + ('0' + i).slice(-2), (8 - i) * 60, r * 160, 60, 100]); });
+  for (var j = 1; j <= 8; j++) { K.push(['B0' + j + 'A', (8 - j) * 60, 110, 60, 22]); K.push(['B0' + j + 'C', (8 - j) * 60, 132, 60, 22]); }
+  return { v: 1, K: K, S: [
+    ['B02A', [[1, 1, '26J0330,26J0308']], [], 0],
+    ['C04', [[1, 2, '26J0331,26J0320,26J0303,26J0304,26J0305,26J0321,26J0332'], [2, 3, '26J0322,26J0306,26J0307,26J0333']], [], 3]
+  ] };
 }
 
 /* 시안 그림용 — 텔레그램처럼 보이게(시험 띠 없음) */
@@ -1322,6 +1576,14 @@ $('outCard').addEventListener('click', function (ev) {
   var key = b.getAttribute('data-out');
   if (빼기셈(판, key)) { 남기기({ t: '빼기', key: key }); 알림('뺐어요 — 봇에 안 가요(다시 찍으면 들어와요)', '차'); 저장(); 그리기(); }
 });
+$('pickCard').addEventListener('click', function (ev) {      // 🚜 배치도 칸 · 칸 단추 → 그 칸 더미
+  var b = ev.target.closest('[data-pk]');
+  if (!b || !판) return;
+  고른칸 = b.getAttribute('data-pk');
+  들기그리기();
+  try { if (tg && tg.HapticFeedback && 판짓기('6.1')) tg.HapticFeedback.selectionChanged(); } catch (e) {}
+});
+$('pickSec').addEventListener('toggle', function () { if ($('pickSec').open && 판) { 굴린칸 = null; 들기그리기(); } });
 $('qrClose').addEventListener('click', 흉내닫기);
 $('qrNext').addEventListener('click', function () { 흉내다음(null); });
 $('qrType').addEventListener('click', function () { var v = $('qrInput').value; if (_s(v)) { 흉내다음(v); $('qrInput').value = ''; } });
