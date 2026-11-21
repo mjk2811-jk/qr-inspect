@@ -1,0 +1,722 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>현장 계산기</title>
+<!--
+  현장 계산기 — 텔레그램 미니 앱 한 파일(서버 · 외부 자료 없음 — telegram-web-app.js 만, 없어도 그대로 돈다). 2026-11-21.
+  · 전화 · 현장에서 '이 규격 몇 본이면 몇 톤 · 이 차에 몇 본' 을 PC 없이 폰으로. 봇이 인라인 web_app 단추 [📐 계산기 열기] 로 열고,
+    상황판 앱의 '../calc/' 링크로도 열린다. 크롬에서 주소를 열어도 똑같다. 받는 자료도 봇에 보내는 자료도 없다(셈만 한다).
+  · 셈은 PC 와 같은 식(아래 '셈' 칸 — 파이썬 셈을 옮겨 적었다. tests/test_calc_miniapp 이 node 로 같은 입력에 같은 값인지 본다)
+      🔩 강관  규격 읽기 = vehicle_calc_core.외경값 · 두께값 · 길이값 · 규격풀기(750A → 30″ · 762 → 30″ · 0.375″ → 9.525 · 40′ → 12.192 ·
+              12192mm → 12.192 · 단위 없는 15 이상 길이는 피트) · 단중 = (외경 × 25.4 − 두께) × 두께 × 0.02466 × 길이(unit_weight) ·
+              한 차 본수 = 한도 ÷ 단중 내림(무게본수 — PC 는 25t 고정, 여기는 칸에서 바꿈 · 기본 25) · '한 차 본수' 칸에 아는 값(게시판 ·
+              기준표)을 적으면 그 값, 한도를 넘으면 줄임(한차본수 '깎음') · 대수 = 정규(본수 ÷ 한 차 본수) + 잔량 1대(_셈 한 줄)
+      ⬛ 철판  1매 = 두께 × 폭 × 길이 × 7.85 × 0.000001 · 총 = 1매 × 매수(plate_weight_widget.철판셈)
+      ▭ 각관  단중 = 0.0157 × (넓이 + 폭 − 3.287 × 두께) × 두께 · 1본 = 단중 × 길이 · 총(t) = 1본 × 1밴들 수량 × 밴들 수 ÷ 1000(각관셈)
+    보이는 자리수도 PC 와 같다(파이썬 반올림 — 반은 짝수로: 고정글). 기준표 · 현장 상차 그림 · 운송비 같은 회사 자료는 싣지 않는다.
+  · 폰 세로 · 큰 글씨 · 큰 칸(장갑) · 텔레그램 테마 색(--tg-theme-*, 밖에서는 기기 밝음/어둠). 넣은 값은 이 폰에만 남는다(localStorage).
+  · 주소 뒤 #od=30&thk=9.53&len=12&qty=40(&k=관|판|각) 로 칸을 채워 열 수 있다(상황판 링크용).
+-->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root {
+    --fb-bg: #EEF2F6; --fb-card: #FFFFFF; --fb-text: #0F172A; --fb-sub: #5B6B7F; --fb-btn: #2481CC; --fb-btntext: #FFFFFF;
+    --fb-accent: #1D6FB8; --fb-bad: #D92D20; --fb-field: #F3F5F8;
+    --bg: var(--tg-theme-secondary-bg-color, var(--tg-theme-bg-color, var(--fb-bg)));
+    --card: var(--tg-theme-section-bg-color, var(--tg-theme-bg-color, var(--fb-card)));
+    --text: var(--tg-theme-text-color, var(--fb-text));
+    --sub: var(--tg-theme-hint-color, var(--fb-sub));
+    --btn: var(--tg-theme-button-color, var(--fb-btn));
+    --btntext: var(--tg-theme-button-text-color, var(--fb-btntext));
+    --accent: var(--tg-theme-accent-text-color, var(--tg-theme-link-color, var(--fb-accent)));
+    --bad: var(--tg-theme-destructive-text-color, var(--fb-bad));
+    --field: var(--tg-theme-secondary-bg-color, var(--fb-field));
+    --line: rgba(128, 128, 128, .35);
+    --top: calc(var(--tg-safe-area-inset-top, 0px) + var(--tg-content-safe-area-inset-top, 0px));
+    --bot: var(--tg-safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --fb-bg: #0F172A; --fb-card: #1E293B; --fb-text: #E2E8F0; --fb-sub: #94A3B8; --fb-btn: #3B82F6;
+            --fb-accent: #93C5FD; --fb-bad: #F87171; --fb-field: #0B1220; }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font-size: 18px;
+               font-family: "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; -webkit-tap-highlight-color: transparent; }
+  main { padding: calc(10px + var(--top)) 12px calc(112px + var(--bot)); max-width: 640px; margin: 0 auto; }
+  header { display: flex; align-items: center; gap: 8px; margin: 2px 2px 10px; }
+  h1 { font-size: 22px; margin: 0; flex: 1; }
+  #backBtn { min-height: 44px; padding: 0 14px; border-radius: 12px; border: 2px solid var(--line); background: var(--card);
+             color: var(--text); font-size: 16px; font-weight: 800; }
+  .tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; position: sticky; top: var(--top); z-index: 5;
+          background: var(--bg); padding: 4px 0 8px; }
+  .tabs button { min-height: 56px; border-radius: 14px; border: 2px solid var(--line); background: var(--card); color: var(--text);
+                 font-size: 18px; font-weight: 800; }
+  .tabs button[aria-selected="true"] { background: var(--btn); color: var(--btntext); border-color: var(--btn); }
+  .card { background: var(--card); border-radius: 16px; padding: 12px 14px 14px; box-shadow: 0 1px 3px rgba(0, 0, 0, .08); margin-bottom: 12px; }
+  .f { display: block; margin-top: 12px; min-width: 0; }
+  .f:first-child { margin-top: 0; }
+  .f .k { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 16px; font-weight: 800;
+          color: var(--sub); margin-bottom: 5px; }
+  .f .h { font-weight: 700; color: var(--accent); font-size: 15px; text-align: right; }
+  .f input { width: 100%; height: 58px; font-size: 24px; font-weight: 800; padding: 0 14px; border-radius: 12px; min-width: 0;
+             border: 2px solid var(--line); background: var(--field); color: var(--text); font-family: inherit; }
+  .f input.line { font-size: 19px; }
+  .f input::placeholder { color: var(--sub); opacity: .7; font-weight: 600; font-size: 17px; }
+  .f input:focus { outline: none; border-color: var(--btn); }
+  .f.bad input { border-color: var(--bad); }
+  .f.bad .h { color: var(--bad); }
+  .row2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+  .row2 .f { margin-top: 12px; }
+  .card > .row2:first-child > .f:nth-child(-n+2) { margin-top: 0; }
+  .chips { display: flex; gap: 8px; overflow-x: auto; padding: 8px 0 2px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip { flex: 0 0 auto; min-width: 60px; min-height: 50px; border-radius: 12px; border: 0; background: var(--field); color: var(--text);
+          font-size: 18px; font-weight: 800; padding: 4px 10px; line-height: 1.1; font-family: inherit; }
+  .chip small { display: block; font-size: 12px; font-weight: 700; color: var(--sub); }
+  .chip.on { background: var(--btn); color: var(--btntext); }
+  .chip.on small { color: var(--btntext); opacity: .85; }
+  .r { padding: 11px 0; border-top: 1px solid var(--line); }
+  .r:first-child { border-top: 0; padding-top: 2px; }
+  .rk { font-size: 15px; color: var(--sub); font-weight: 800; }
+  .rv { font-size: 30px; font-weight: 900; letter-spacing: -.5px; line-height: 1.2; }
+  .rs { font-size: 15px; color: var(--sub); margin-top: 2px; line-height: 1.35; }
+  .empty { color: var(--sub); font-size: 16px; padding: 4px 0; }
+  .warn { background: rgba(217, 45, 32, .12); color: var(--bad); border-radius: 12px; padding: 10px 12px; font-weight: 800;
+          font-size: 16px; margin-top: 10px; line-height: 1.4; }
+  .note { color: var(--sub); font-size: 14px; line-height: 1.5; margin: 4px 4px 0; }
+  .clear { width: 100%; min-height: 52px; border-radius: 12px; border: 2px solid var(--line); background: transparent; color: var(--text);
+           font-size: 17px; font-weight: 800; margin-top: 14px; font-family: inherit; }
+  #sum { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; background: var(--btn); color: var(--btntext);
+         padding: 10px 14px calc(10px + var(--bot)); font-size: 19px; font-weight: 900; line-height: 1.35; text-align: center;
+         box-shadow: 0 -2px 8px rgba(0, 0, 0, .18); }
+  #sum:empty { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>📐 현장 계산기</h1>
+    <button id="backBtn" type="button" hidden>← 뒤로</button>
+  </header>
+  <nav class="tabs" role="tablist">
+    <button type="button" role="tab" data-tab="관" aria-selected="true">🔩 강관</button>
+    <button type="button" role="tab" data-tab="판" aria-selected="false">⬛ 철판</button>
+    <button type="button" role="tab" data-tab="각" aria-selected="false">▭ 각관</button>
+  </nav>
+
+  <section id="tab-관" data-pane="관">
+    <div class="card">
+      <label class="f"><span class="k">규격 한 줄 (붙여넣기 · 선택) <span class="h"></span></span>
+        <input id="line" class="line" type="text" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false"
+               enterkeyhint="next" placeholder="예: 750A 9.53t 12M 18본"></label>
+      <label class="f"><span class="k">외경 (″ · A · mm) <span class="h"></span></span>
+        <input id="od" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="next" placeholder="예: 30"></label>
+      <div class="chips" data-to="od" id="odChips"></div>
+      <label class="f"><span class="k">두께 (mm · 0.375″) <span class="h"></span></span>
+        <input id="thk" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="next" placeholder="예: 9.53"></label>
+      <div class="chips" data-to="thk" id="thkChips"></div>
+      <label class="f"><span class="k">길이 (M · 40′) <span class="h"></span></span>
+        <input id="len" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="next" placeholder="예: 12"></label>
+      <div class="chips" data-to="len" id="lenChips"></div>
+      <label class="f"><span class="k">본수 <span class="h"></span></span>
+        <input id="qty" type="text" inputmode="numeric" autocomplete="off" enterkeyhint="next" placeholder="비우면 1본 · 한 차만"></label>
+      <div class="row2">
+        <label class="f"><span class="k">한 차 한도 (t) <span class="h"></span></span>
+          <input id="ton" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="next" placeholder="25"></label>
+        <label class="f"><span class="k">한 차 본수 <span class="h"></span></span>
+          <input id="per" type="text" inputmode="numeric" autocomplete="off" enterkeyhint="done" placeholder="아는 값"></label>
+      </div>
+      <button class="clear" type="button" data-clear="관">↺ 강관 칸 지우기</button>
+    </div>
+    <div class="card" id="resPipe"></div>
+    <p class="note">1본 무게 = (외경 × 25.4 − 두께) × 두께 × 0.02466 × 길이 · 한 차 본수 = 한도 ÷ 1본 무게(내림) — 무게로만 센 값이라
+      적재함 자리(게시판 · 기준표 본수)는 '한 차 본수' 칸에 적어 주세요(한도를 넘으면 줄여요). PC 🚛 차량계산과 같은 식이에요.</p>
+  </section>
+
+  <section id="tab-판" data-pane="판" hidden>
+    <div class="card">
+      <div class="row2">
+        <label class="f"><span class="k">폭 (mm) <span class="h"></span></span>
+          <input id="pw" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="next" placeholder="예: 1524"></label>
+        <label class="f"><span class="k">두께 (mm) <span class="h"></span></span>
+          <input id="pt" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="next" placeholder="예: 12"></label>
+        <label class="f"><span class="k">길이 (mm) <span class="h"></span></span>
+          <input id="pl" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="next" placeholder="예: 6096"></label>
+        <label class="f"><span class="k">매수 <span class="h"></span></span>
+          <input id="pn" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="예: 10"></label>
+      </div>
+      <button class="clear" type="button" data-clear="판">↺ 철판 칸 지우기</button>
+    </div>
+    <div class="card" id="resPlate"></div>
+    <p class="note">1매 무게 = 두께 × 폭 × 길이 × 7.85 ÷ 1,000,000 · 총 무게 = 1매 × 매수 — PC ⚖️ 철판중량과 같은 식이에요.</p>
+  </section>
+
+  <section id="tab-각" data-pane="각" hidden>
+    <div class="card">
+      <div class="row2">
+        <label class="f"><span class="k">넓이 (mm) <span class="h"></span></span>
+          <input id="sa" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="next" placeholder="예: 100"></label>
+        <label class="f"><span class="k">폭 (mm) <span class="h"></span></span>
+          <input id="sb" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="next" placeholder="예: 100"></label>
+        <label class="f"><span class="k">두께 (mm) <span class="h"></span></span>
+          <input id="st" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="next" placeholder="예: 3.2"></label>
+        <label class="f"><span class="k">길이 (m) <span class="h"></span></span>
+          <input id="sl" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="next" placeholder="예: 6"></label>
+        <label class="f"><span class="k">1밴들 수량 <span class="h"></span></span>
+          <input id="sq" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="next" placeholder="예: 25"></label>
+        <label class="f"><span class="k">밴들 수 <span class="h"></span></span>
+          <input id="sn" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="예: 4"></label>
+      </div>
+      <button class="clear" type="button" data-clear="각">↺ 각관 칸 지우기</button>
+    </div>
+    <div class="card" id="resSquare"></div>
+    <p class="note">단중 = 0.0157 × (넓이 + 폭 − 3.287 × 두께) × 두께 · 1본 = 단중 × 길이(m) · 총 무게(t) = 1본 × 1밴들 수량 × 밴들 수 ÷ 1000
+      — PC ⚖️ 철판중량(각관)과 같은 식이에요.</p>
+  </section>
+  <p class="note">넣은 값은 이 폰에만 남아요(다시 열어도 그대로).</p>
+</main>
+<div id="sum"></div>
+<script>
+'use strict';
+/* ── 셈 — DOM 없음. 파이썬 셈을 그대로 옮겨 적었다: 강관 vehicle_calc_core(외경값 · 두께값 · 길이값 · 규격풀기 · unit_weight ·
+   무게본수 · 한차본수 · _셈 한 줄의 대수), 철판 · 각관 plate_weight_widget(철판셈 · 각관셈), 본수 칸 · 수글 chrome_calc.
+   반올림 · 보이는 글은 파이썬과 같게(반은 짝수로 — 고정글 · 반올림 · 파이반올림), 내림 나눗셈은 파이썬 float // 와 같게.
+   tests/test_calc_miniapp 이 node 로 이 칸만 떼어 같은 입력에 파이썬과 같은 값인지 본다 ───────────────────────────────── */
+var 최대중량 = 25000;                 // kg — vehicle_calc_core.WEIGHT_LIMIT(PC 는 고정 · 여기는 '한 차 한도' 칸 기본)
+var 강관비 = 0.02466;                 // unit_weight 의 0.02466
+var 본수상한 = 100000;                // chrome_calc.본수상한 — 한 줄 본수
+var 인치들 = [14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 48, 50, 52, 54, 56, 60];   // chrome_calc.인치들(23개)
+var 두께들 = [[6.35, '1/4″'], [7.92, '5/16″'], [9.53, '3/8″'], [11.91, '15/32″'], [12.7, '1/2″'], [14.27, '9/16″'],
+              [15.88, '5/8″'], [19.05, '3/4″'], [25.4, '1″']];   // 흔한 인치 두께(공개 값)
+var 길이들 = [['6', '6M', ''], ['12', '12M', ''], ["20'", '20′', '6.096'], ["40'", '40′', '12.192']];
+
+function _s(v) { return v == null ? '' : String(v).trim(); }
+function 들어감(표, x) { return 표.indexOf(x) >= 0; }
+function 수자(c) { return c !== '' && c >= '0' && c <= '9'; }
+function 빈칸(c) { return c !== '' && /\s/.test(c); }
+
+/* 전각 글자(７５０Ａ · 전각 빈칸)를 반각으로 — vehicle_calc_core._전각풀기 */
+function 전각풀기(글) {
+  var s = 글 == null ? '' : String(글), out = '';
+  for (var i = 0; i < s.length; i++) {
+    var c = s.charCodeAt(i);
+    out += c >= 0xFF01 && c < 0xFF5F ? String.fromCharCode(c - 0xFEE0) : (c === 0x3000 ? ' ' : s.charAt(i));
+  }
+  return out;
+}
+/* 1,849 → 1849(천 단위 쉼표만) — _쉼표걷기 */
+function 쉼표걷기(글) { return String(글 == null ? '' : 글).replace(/(\d),(?=\d{3}(?!\d))/g, '$1'); }
+
+/* 파이썬 f"{v:,.{자리}f}" — 실제 2진 값을 자리에서 반올림(꼭 반이면 짝수로). 쉼표 = 천 단위 쉼표 */
+function 고정글(v, 자리, 쉼표) {
+  if (v !== v) return 'nan';
+  if (v === Infinity) return 'inf';
+  if (v === -Infinity) return '-inf';
+  var 음 = v < 0 || (v === 0 && 1 / v < 0), a = Math.abs(v), 긴;
+  try { 긴 = a.toFixed(100); } catch (e) { 긴 = a.toFixed(20); }
+  if (긴.indexOf('e') >= 0) return String(v);
+  var 점 = 긴.indexOf('.'), 소 = 긴.slice(점 + 1), 숫 = 긴.slice(0, 점) + 소.slice(0, 자리), 뒤 = 소.slice(자리), 올림 = false;
+  if (뒤.charAt(0) > '5') 올림 = true;
+  else if (뒤.charAt(0) === '5') 올림 = /[1-9]/.test(뒤.slice(1)) || (숫.charCodeAt(숫.length - 1) - 48) % 2 === 1;
+  if (올림) {
+    var 글자 = 숫.split(''), i = 글자.length - 1;
+    while (i >= 0 && 글자[i] === '9') { 글자[i] = '0'; i--; }
+    if (i < 0) 글자.unshift('1'); else 글자[i] = String.fromCharCode(글자[i].charCodeAt(0) + 1);
+    숫 = 글자.join('');
+  }
+  var 정 = 숫.slice(0, 숫.length - 자리), 꼬리 = 숫.slice(숫.length - 자리);
+  if (쉼표) 정 = 정.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return (음 ? '-' : '') + 정 + (자리 ? '.' + 꼬리 : '');
+}
+/* 파이썬 round(x, n) */
+function 반올림(x, n) { return isFinite(x) ? Number(고정글(x, n, false)) : x; }
+/* 파이썬 round(x) — 꼭 반이면 짝수로 */
+function 파이반올림(x) {
+  if (Math.abs(x % 1) === 0.5) return 2 * Math.round(x / 2);
+  return Math.round(x);
+}
+/* 파이썬 float a // b(CPython float_floor_div 그대로 — Math.floor(a / b) 와 다를 때가 있다: 1 // 0.1 = 9) */
+function 내림나눗셈(a, b) {
+  var mod = a % b, div = (a - mod) / b;
+  if (mod) { if ((b < 0) !== (mod < 0)) { mod += b; div -= 1; } }
+  if (div) { var f = Math.floor(div); if (div - f > 0.5) f += 1; return f; }
+  return 0;
+}
+/* 표에 보일 수 — chrome_calc.수글: 30.0 → '30', 12.192 → '12.192' */
+function 수글(v) {
+  if (v == null || v === '') return '';
+  var f = Number(v);
+  if (!isFinite(f)) return String(v);
+  if (f === Math.trunc(f)) return String(f === 0 ? 0 : f);
+  return 고정글(f, 4, false).replace(/0+$/, '').replace(/\.$/, '');
+}
+
+/* 전각 숫자(１２)를 반각으로 — 파이썬 float() · 정규식 \d 는 유니코드 숫자도 받는다 */
+function 전각숫자(s) { return s.replace(/[\uFF10-\uFF19]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 0xFEE0); }); }
+/* 칸 글을 수로 — vehicle_calc_core.숫자(= plate_weight_widget.숫자 + inf · nan 거름): 쉼표는 천 단위 꼴일 때만 걷는다 */
+var _천단위 = /^[+-]?\d{1,3}(,\d{3})+(\.\d+)?$/;
+var _실수꼴 = /^[+-]?(?:\d(?:_?\d)*(?:\.(?:\d(?:_?\d)*)?)?|\.\d(?:_?\d)*)(?:[eE][+-]?\d(?:_?\d)*)?$/;   // 파이썬 float() 이 받는 꼴
+function 숫자(글) {
+  if (글 == null || typeof 글 === 'boolean') return null;
+  if (typeof 글 === 'number') return isFinite(글) ? 글 : null;
+  var s = 전각숫자(String(글)).trim();
+  if (!s) return null;
+  if (s.indexOf(',') >= 0) {
+    if (!_천단위.test(s)) return null;
+    s = s.replace(/,/g, '');
+  }
+  if (!_실수꼴.test(s)) return null;
+  var f = Number(s.replace(/_/g, ''));
+  return isFinite(f) ? f : null;
+}
+
+/* 단위 — 외경: A(호칭) · 인치 · mm / 두께: t · mm · 인치 / 길이: M · 피트 / 셈: 본 · pcs · EA · 개 · 대 */
+var _인치표 = ["''", '"', '”', '″', '인치', 'inch', 'INCH', 'Inch'];
+var _mm표 = ['mm', 'MM', '㎜'];
+var _피트표 = ["'", '’', '′', 'ft', 'FT', 'Ft', '피트'];
+var _미터표 = ['M', 'm', '미터'];
+var _두께표 = ['t', 'T'];
+var _호칭표 = ['A', 'a'];
+var _셈표 = ['본', 'PCS', 'Pcs', 'pcs', 'EA', 'ea', 'Ea', '개', '대'];
+var _본수단위 = ['', '본', 'PCS', 'Pcs', 'pcs', 'EA', 'ea', 'Ea', '개'];   // 대(차 수)는 뺀다
+var _단위꼴 = (function () {
+  var 본 = {}, 들 = [];
+  [].concat(_인치표, _mm표, _피트표, _미터표, _두께표, _호칭표, _셈표).forEach(function (u) { if (!본[u]) { 본[u] = 1; 들.push(u); } });
+  들.sort(function (a, b) { return b.length - a.length; });
+  return new RegExp('\\s*(' + 들.map(function (u) { return u.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }).join('|') + ')(?![A-WYZa-wyz])', 'y');
+})();
+
+/* i 자리에서 수 하나 + 단위 — vehicle_calc_core._토큰 한 번 맞춤(날짜 9/3 · 시각 10:30 · 전화 061-463 · SPW400 · 2차 · 10월 의 수는 안 잡음)
+   → [수, 단위, 시작, 끝] | null */
+function _토큰at(s, i) {
+  if (!수자(s.charAt(i))) return null;
+  if (i > 0 && '0123456789.,/:-'.indexOf(s.charAt(i - 1)) >= 0) return null;
+  if (i > 1 && /[A-Za-z]/.test(s.charAt(i - 2)) && /[A-WYZa-wyz]/.test(s.charAt(i - 1))) return null;
+  var L = s.length, j = i;
+  while (j < L && 수자(s.charAt(j))) j++;
+  if (s.charAt(j) === '.' && 수자(s.charAt(j + 1))) { j++; while (j < L && 수자(s.charAt(j))) j++; }
+  var k = j;
+  while (k < L && 빈칸(s.charAt(k))) k++;
+  if (s.charAt(k) === '/' || s.charAt(k) === ':') {
+    var k2 = k + 1;
+    while (k2 < L && 빈칸(s.charAt(k2))) k2++;
+    if (수자(s.charAt(k2))) return null;
+  }
+  if (s.charAt(j) === '-' && 수자(s.charAt(j + 1))) return null;
+  var c = s.charAt(k);
+  if (c !== '' && '차월일번호분년회'.indexOf(c) >= 0) return null;
+  if (c === '시' && s.charAt(k + 1) !== '편') return null;
+  var n = parseFloat(s.slice(i, j));
+  _단위꼴.lastIndex = j;
+  var m = _단위꼴.exec(s);
+  return m ? [n, m[1], i, _단위꼴.lastIndex] : [n, '', i, j];
+}
+function _토큰들(s) {
+  var out = [], i = 0;
+  while (i < s.length) {
+    var t = _토큰at(s, i);
+    if (t) { out.push(t); i = t[3]; } else i++;
+  }
+  return out;
+}
+/* 글 속 2차 · 10월5일 · 3번 같은 말은 빈칸으로 — _날가리기 */
+function _날가리기(s) {
+  var out = '', i = 0, L = s.length;
+  while (i < L) {
+    var e = -1;
+    if (수자(s.charAt(i)) && !(i > 0 && '0123456789.,/:-'.indexOf(s.charAt(i - 1)) >= 0)
+        && !(i > 1 && /[A-Za-z]/.test(s.charAt(i - 2)) && /[A-WYZa-wyz]/.test(s.charAt(i - 1)))) {
+      var j = i;
+      while (j < L && 수자(s.charAt(j))) j++;
+      if (s.charAt(j) === '.' && 수자(s.charAt(j + 1))) { j++; while (j < L && 수자(s.charAt(j))) j++; }
+      var k = j;
+      while (k < L && 빈칸(s.charAt(k))) k++;
+      var c = s.charAt(k);
+      if ((c !== '' && '차월일번호분년회'.indexOf(c) >= 0) || (c === '시' && s.charAt(k + 1) !== '편')) e = k + 1;
+    }
+    if (e > i) { out += new Array(e - i + 1).join(' '); i = e; } else { out += s.charAt(i); i++; }
+  }
+  return out;
+}
+/* API 강종 X52 · X65MS 는 외경으로 읽지 않게 가린다 — _강종가리기 */
+var _강종꼴 = /(^|[^0-9A-Za-z"”″'’′.])([Xx](?:42|46|52|56|60|65|70|80)(?:[NQM][SO]?)?)(?![0-9A-Za-z.])(?!\s*(?:mm|MM|'|’|′|ft|FT|t|T|"|”|″))/g;
+function _강종가리기(s) { return s.replace(_강종꼴, function (_m, 앞, 몸) { return 앞 + new Array(몸.length + 1).join(' '); }); }
+
+/* 수 + 단위 → 인치(750A → 30 · 762 → 30 · 750 → 30 · 30″) — _외경. 글속이면 단위 없는 100 아래 소수는 외경 아님 */
+function _외경(n, u, 글속) {
+  var v;
+  if (들어감(_호칭표, u)) v = (n === Math.trunc(n) && Math.trunc(n) % 25 === 0) ? n / 25 : 파이반올림(n / 25.4);
+  else if (들어감(_인치표, u)) v = n;
+  else if (들어감(_mm표, u)) v = 파이반올림(n / 25.4);
+  else if (u === '') {
+    if (n < 100) {
+      if (글속 && n !== Math.trunc(n)) return null;
+      v = n;
+    } else if (n === Math.trunc(n) && Math.trunc(n) % 50 === 0) v = n / 25;
+    else v = 파이반올림(n / 25.4);
+  } else return null;
+  return 10 <= v && v <= 80 ? v : null;
+}
+/* 수 + 단위 → mm(0.375″ → 9.525 · 단위 없이 1.5 아래는 인치) — _두께 */
+function _두께(n, u) {
+  var v;
+  if (들어감(_인치표, u) || (u === '' && n < 1.5)) v = 반올림(n * 25.4, 3);
+  else if (들어감(_두께표, u) || 들어감(_mm표, u) || u === '') v = n;
+  else return null;
+  return 1.5 <= v && v <= 80 ? v : null;
+}
+/* 수 + 단위 → m(40′ → 12.192 · 단위 없이 15 이상은 피트 · 1000 이상은 mm) — _길이 */
+function _길이(n, u) {
+  var v;
+  if (들어감(_피트표, u)) v = 반올림(n * 0.3048, 4);
+  else if (들어감(_미터표, u)) v = n;
+  else if (들어감(_mm표, u)) v = 반올림(n / 1000, 4);
+  else if (u === '') v = n >= 1000 ? 반올림(n / 1000, 4) : (n >= 15 ? 반올림(n * 0.3048, 4) : n);
+  else return null;
+  return 1 <= v && v <= 20 ? v : null;
+}
+function _붙음(글, 앞, 뒤) {
+  var 사이 = 글.slice(앞[3], 뒤[2]);
+  if (사이 === '') return 앞[1] ? '붙음' : null;
+  if (/^\s*[×xX*]\s*$/.test(사이)) return 'x';
+  if (!사이.trim()) return 사이.indexOf('\t') >= 0 ? 'tab' : 'space';
+  return null;
+}
+/* 수 2~3 개 → [외경, 두께, 길이] | null — _역할 */
+function _역할(묶음, 사이들, 뒤수) {
+  for (var a = 0; a < 묶음.length; a++) if (들어감(_셈표, 묶음[a][1])) return null;
+  var od = _외경(묶음[0][0], 묶음[0][1], true);
+  if (od == null) return null;
+  var n1 = 묶음[1][0], u1 = 묶음[1][1];
+  if (묶음.length === 3) {
+    var n2 = 묶음[2][0], u2 = 묶음[2][1];
+    if (들어감(_미터표, u1) || 들어감(_피트표, u1) || 들어감(_두께표, u2)) return null;
+    if (사이들[1] === 'space' && !u2 && (묶음[0][1] || u1)) {
+      if (!(뒤수 && ((1 <= n2 && n2 < 15) || n2 === 20 || n2 === 40 || n2 >= 1000))) return null;
+    }
+    if (들어감(사이들, 'space') && 사이들[0] !== 사이들[1]) {
+      for (var k = 0; k < 사이들.length; k++) {
+        if (사이들[k] === 'space' && !묶음[k][1] && !묶음[k + 1][1]) return null;
+      }
+    }
+    var thk = _두께(n1, u1), ln = _길이(n2, u2);
+    return thk != null && ln != null ? [od, thk, ln] : null;
+  }
+  if (사이들[0] === 'space' && !묶음[0][1] && !u1) return null;
+  if (들어감(_미터표, u1) || 들어감(_피트표, u1) || ((들어감(_mm표, u1) || !u1) && n1 >= 1000)) {
+    var 길 = _길이(n1, u1);
+    return 길 != null ? [od, null, 길] : null;
+  }
+  var 두 = _두께(n1, u1);
+  return 두 != null ? [od, 두, null] : null;
+}
+/* 글 속 규격 모두 [{외경, 두께, 길이, 시작, 끝}] — 규격찾기 */
+function 규격찾기(글) {
+  글 = _날가리기(_강종가리기(전각풀기(글)));
+  var 토 = _토큰들(글), out = [], i = 0;
+  while (i < 토.length) {
+    var 잡음 = null;
+    for (var n = 3; n >= 2; n--) {
+      if (i + n > 토.length) continue;
+      var 묶음 = 토.slice(i, i + n), 사이들 = [];
+      for (var k = 0; k < n - 1; k++) 사이들.push(_붙음(글, 묶음[k], 묶음[k + 1]));
+      if (들어감(사이들, null)) continue;
+      var 뒤붙음 = i + n < 토.length ? _붙음(글, 토[i + n - 1], 토[i + n]) : null;
+      var 뒤수 = (뒤붙음 === 'space' || 뒤붙음 === 'tab') && 들어감(_본수단위, 토[i + n][1]);
+      var 풀림 = _역할(묶음, 사이들, 뒤수);
+      if (풀림) { 잡음 = [n, 풀림]; break; }
+    }
+    if (잡음) {
+      out.push({ 외경: 잡음[1][0], 두께: 잡음[1][1], 길이: 잡음[1][2], 시작: 토[i][2], 끝: 토[i + 잡음[0] - 1][3] });
+      i += 잡음[0];
+    } else i++;
+  }
+  return out;
+}
+/* 규격 글 → [외경 인치, 두께 mm, 길이 m] | null(외경을 못 찾음) — 규격풀기 */
+function 규격풀기(글) {
+  var 찾음 = 규격찾기(쉼표걷기(전각풀기(글)));
+  return 찾음.length ? [찾음[0].외경, 찾음[0].두께, 찾음[0].길이] : null;
+}
+/* 칸 하나 → [수, 단위] | null(칸 전체가 수 하나 + 단위여야) — _한수 */
+function _한수(글) {
+  var s = 쉼표걷기(전각풀기(글).trim()), t = _토큰at(s, 0);
+  return t && t[3] === s.length ? [t[0], t[1]] : null;
+}
+function 외경값(글) { var t = _한수(글); return t ? _외경(t[0], t[1], false) : null; }
+function 두께값(글) { var t = _한수(글); return t ? _두께(t[0], t[1]) : null; }
+function 길이값(글) { var t = _한수(글); return t ? _길이(t[0], t[1]) : null; }
+/* 본수 칸 — chrome_calc.칸값('출하량'): 18 · 18본 · 31PCS → 0 ~ 본수상한 정수 | null */
+var _본수글 = /^(\d+)\s*(?:본|PCS|Pcs|pcs|EA|ea|Ea|개)$/;
+function 본수값(글) {
+  var t = _s(글);
+  if (t === '0' || t === '0.0') return 0;
+  var n = 숫자(t);
+  if (n == null) {
+    var m = _본수글.exec(쉼표걷기(전각숫자(t)));
+    n = m ? parseFloat(m[1]) : null;
+  }
+  return n != null && isFinite(n) && n === Math.trunc(n) && n >= 0 && n <= 본수상한 ? n : null;
+}
+/* 규격 한 줄 뒤의 본수(18본 · 31PCS) — 붙여넣기에서 본수도 같이 채우려고(단위가 붙은 수만) */
+function 줄본수(글, 끝) {
+  var s = 쉼표걷기(전각풀기(글)).slice(끝 || 0), re = /(\d{1,6})\s*(?:본|PCS|Pcs|pcs|EA|ea|Ea|개)(?![A-Za-z])/g, m;
+  while ((m = re.exec(s))) {
+    var 앞 = s.charAt(m.index - 1);
+    if (m.index === 0 || !(수자(앞) || 앞 === '.')) return parseInt(m[1], 10);
+  }
+  return null;
+}
+
+/* 강관 — unit_weight · 무게본수 · 한차본수(표 = 아는 한 차 본수 | null) · _셈 한 줄의 정규 · 잔량 · 합계 */
+function 단중(od, thk, ln) { return ((od * 25.4) - thk) * thk * 강관비 * ln; }
+function 무게본수(od, thk, ln, 한도kg) {
+  var uw = 단중(od, thk, ln);
+  return uw > 0 ? 내림나눗셈(한도kg == null ? 최대중량 : 한도kg, uw) : null;
+}
+function 한차본수(표, od, thk, ln, 한도kg) {
+  var 무게 = 무게본수(od, thk, ln, 한도kg);
+  if (표 != null) return 무게 != null && 무게 < 표 ? [무게, '깎음'] : [표, '기준표'];
+  return [무게, '무게만'];
+}
+function 강관셈(od, thk, ln, qty, 한도kg, 표) {
+  var 한도 = 한도kg == null ? 최대중량 : 한도kg, uw = 단중(od, thk, ln), 한 = 한차본수(표, od, thk, ln, 한도), bq = 한[0] || 0;
+  var r = { 단중: uw, m당: 단중(od, thk, 1), 무게본수: 무게본수(od, thk, ln, 한도), 한차: bq, 근거: 한[1], 무거움: uw > 한도 };
+  if (qty != null) {
+    r.총kg = qty * uw;
+    r.정규 = bq ? Math.floor(qty / bq) : 0;
+    r.잔량 = bq ? qty - r.정규 * bq : qty;
+    r.잔량차 = r.잔량 > 0 && bq ? 1 : 0;
+    r.합계 = r.정규 + r.잔량차;
+  }
+  return r;
+}
+/* 철판 · 각관 — plate_weight_widget 그대로 */
+function 철판1매(폭, 두께, 길이) { return 폭 == null || 두께 == null || 길이 == null ? null : 두께 * 폭 * 길이 * 7.85 * 0.000001; }
+function 각관단중(넓이, 폭, 두께) { return 넓이 == null || 폭 == null || 두께 == null ? null : 0.0157 * (넓이 + 폭 - 3.287 * 두께) * 두께; }
+function 철판셈(입) {
+  var 한매 = 철판1매(입[0], 입[1], 입[2]);
+  return [한매, 한매 != null && 입[3] != null ? 한매 * 입[3] : null];
+}
+function 각관셈(입) {
+  var 단 = 각관단중(입[0], 입[1], 입[2]), 한본 = 단 != null && 입[3] != null ? 단 * 입[3] : null;
+  var 총 = 한본 != null && 입[4] != null && 입[5] != null ? 한본 * 입[4] * 입[5] / 1000 : null;
+  return [단, 한본, 총];
+}
+
+/* ── 화면 ─────────────────────────────────────────────────────────── */
+var tg = window.Telegram && window.Telegram.WebApp;
+var 텔레그램안 = !!(tg && tg.platform && tg.platform !== 'unknown');
+var $ = function (id) { return document.getElementById(id); };
+var 저장열쇠 = 'field-calc.v1';
+var 탭칸 = { 관: ['line', 'od', 'thk', 'len', 'qty', 'ton', 'per'], 판: ['pw', 'pt', 'pl', 'pn'], 각: ['sa', 'sb', 'st', 'sl', 'sq', 'sn'] };
+var 모든칸 = [].concat(탭칸.관, 탭칸.판, 탭칸.각);
+var 지금탭 = '관';
+
+function 판비우기(el) { while (el.firstChild) el.removeChild(el.firstChild); }
+function 결과줄(판, 이름, 큰, 작은) {
+  var d = document.createElement('div'), k = document.createElement('div'), v = document.createElement('div');
+  d.className = 'r'; k.className = 'rk'; v.className = 'rv';
+  k.textContent = 이름; v.textContent = 큰;
+  d.appendChild(k); d.appendChild(v);
+  if (작은) { var s = document.createElement('div'); s.className = 'rs'; s.textContent = 작은; d.appendChild(s); }
+  판.appendChild(d);
+}
+function 경고(판, 글) { var d = document.createElement('div'); d.className = 'warn'; d.textContent = 글; 판.appendChild(d); }
+function 빈판(판, 글) { var d = document.createElement('div'); d.className = 'empty'; d.textContent = 글; 판.appendChild(d); }
+/* 칸 옆 작은 글(읽은 값) · 적었는데 못 읽으면 빨간 칸 */
+function 힌트(id, 값, 보일) {
+  var f = $(id).closest('.f'), h = f.querySelector('.h'), 나쁨 = _s($(id).value) !== '' && 값 == null;
+  f.classList.toggle('bad', 나쁨);
+  h.textContent = 나쁨 ? '못 읽음' : (값 != null && 보일 ? 보일(값) : '');
+}
+function 바뀐글(id, v, 단위) { return 수글(v) !== _s($(id).value) ? '→ ' + 수글(v) + 단위 : ''; }
+function t1(kg) { return 고정글(kg / 1000, 1, true) + ' t'; }
+
+function 강관그리기() {
+  var od = 외경값($('od').value), thk = 두께값($('thk').value), ln = 길이값($('len').value);
+  var qty = _s($('qty').value) ? 본수값($('qty').value) : null;
+  var 톤 = _s($('ton').value) ? 숫자($('ton').value) : 25;
+  if (톤 != null && !(톤 > 0)) 톤 = null;
+  var 표 = _s($('per').value) ? 본수값($('per').value) : null;
+  if (표 === 0) 표 = null;
+  힌트('od', od, function (v) { return '→ ' + 수글(v) + '″ · ' + 수글(v * 25.4) + 'mm'; });
+  힌트('thk', thk, function (v) { return 바뀐글('thk', v, ' mm'); });
+  힌트('len', ln, function (v) { return 바뀐글('len', v, ' m'); });
+  힌트('qty', qty, null);
+  힌트('ton', _s($('ton').value) ? 톤 : 25, null);
+  힌트('per', _s($('per').value) ? 표 : 0, null);
+  var 줄 = _s($('line').value), 풀 = 줄 ? 규격풀기(줄) : null;
+  $('line').closest('.f').classList.toggle('bad', !!줄 && !풀);
+  $('line').closest('.f').querySelector('.h').textContent = 줄 ? (풀 ? '↓ 채움' : '못 읽음') : '';
+  document.querySelectorAll('#odChips .chip').forEach(function (b) { b.classList.toggle('on', od != null && Number(b.getAttribute('data-n')) === od); });
+  document.querySelectorAll('#thkChips .chip').forEach(function (b) { b.classList.toggle('on', thk != null && Number(b.getAttribute('data-n')) === thk); });
+  document.querySelectorAll('#lenChips .chip').forEach(function (b) { b.classList.toggle('on', ln != null && 길이값(b.getAttribute('data-v')) === ln); });
+
+  var 판 = $('resPipe');
+  판비우기(판);
+  if (od == null || thk == null || ln == null) {
+    빈판(판, '외경 · 두께 · 길이를 넣으면 1본 무게 · 본수 무게 · 한 차 본수 · 대수를 셈해요.');
+    return '';
+  }
+  var 한도 = 톤 == null ? 최대중량 : 톤 * 1000, 한도글 = 수글(톤 == null ? 25 : 톤) + 't';
+  var r = 강관셈(od, thk, ln, qty, 한도, 표), 규 = 수글(od) + '″ × ' + 수글(thk) + ' × ' + 수글(ln) + 'M';
+  결과줄(판, '1본 무게 · ' + 규, 고정글(r.단중, 2, true) + ' kg', 'm당 ' + 고정글(r.m당, 2, true) + ' kg');
+  if (qty != null) 결과줄(판, 고정글(qty, 0, true) + '본 무게', t1(r.총kg), 고정글(r.총kg, 0, true) + ' kg');
+  if (r.한차) {
+    var 근거 = r.근거 === '깎음' ? '적은 ' + 표 + '본 → ' + 한도글 + ' 넘어 ' + r.한차 + '본으로 줄임'
+      : r.근거 === '기준표' ? '적은 한 차 본수 그대로 · 무게로는 ' + r.무게본수 + '본까지'
+      : 한도글 + ' ÷ 1본 무게(내림) — 무게로만 센 값이에요. 적재함 자리는 게시판 본수를 \'한 차 본수\' 칸에';
+    결과줄(판, '한 차 최대 (한도 ' + 한도글 + ')', r.한차 + '본', 근거 + ' · 한 차 ' + t1(r.한차 * r.단중));
+  } else {
+    경고(판, '⚠ 한 본이 ' + t1(r.단중) + ' — 한 차 한도 ' + 한도글 + ' 를 넘어 한 차에 못 실어요. 길이를 피트로 적지 않았는지 보세요.');
+  }
+  if (qty != null && r.한차) {
+    var 잔 = r.잔량 ? ' + 잔량 ' + r.잔량차 + '대 (' + r.잔량 + '본 · ' + t1(r.잔량 * r.단중) + ')' : '';
+    결과줄(판, '대수', '합계 ' + r.합계 + '대', '정규 ' + r.정규 + '대 (대마다 ' + r.한차 + '본)' + 잔);
+  }
+  if (톤 == null) 경고(판, '⚠ 한 차 한도(t)를 못 읽어 25t 로 셈했어요.');
+  return '1본 ' + 고정글(r.단중, 2, true) + 'kg' + (qty != null ? ' · ' + 고정글(qty, 0, true) + '본 ' + t1(r.총kg) : '')
+    + (r.한차 ? ' · 한 차 ' + r.한차 + '본' : '') + (qty != null && r.한차 ? ' · ' + r.합계 + '대' : '');
+}
+
+function 판그리기() {
+  var 입 = 탭칸.판.map(function (id) { var v = 숫자($(id).value); 힌트(id, v, null); return v; });
+  var s = 철판셈(입), 판 = $('resPlate');
+  판비우기(판);
+  if (s[0] == null) { 빈판(판, '폭 · 두께 · 길이(mm)를 넣으면 1매 무게, 매수까지 넣으면 총 무게를 셈해요.'); return ''; }
+  결과줄(판, '1매 무게', 고정글(s[0], 2, true) + ' kg');
+  if (s[1] != null) 결과줄(판, 고정글(입[3], 0, true) + '매 무게', 고정글(s[1], 2, true) + ' kg', 고정글(s[1] / 1000, 3, true) + ' t');
+  return '1매 ' + 고정글(s[0], 2, true) + 'kg' + (s[1] != null ? ' · 총 ' + 고정글(s[1], 2, true) + 'kg' : '');
+}
+
+function 각그리기() {
+  var 입 = 탭칸.각.map(function (id) { var v = 숫자($(id).value); 힌트(id, v, null); return v; });
+  var s = 각관셈(입), 판 = $('resSquare');
+  판비우기(판);
+  if (s[0] == null) { 빈판(판, '넓이 · 폭 · 두께(mm)를 넣으면 단중, 길이 · 밴들까지 넣으면 1본 · 총 무게를 셈해요.'); return ''; }
+  결과줄(판, '단중', 고정글(s[0], 3, true) + ' kg/m');
+  if (s[1] != null) 결과줄(판, '1본 무게', 고정글(s[1], 2, true) + ' kg');
+  if (s[2] != null) 결과줄(판, 고정글(입[4] * 입[5], 0, true) + '본 무게', 고정글(s[2], 3, true) + ' t', 고정글(s[2] * 1000, 1, true) + ' kg');
+  return '단중 ' + 고정글(s[0], 3, true) + 'kg/m' + (s[1] != null ? ' · 1본 ' + 고정글(s[1], 2, true) + 'kg' : '')
+    + (s[2] != null ? ' · 총 ' + 고정글(s[2], 3, true) + 't' : '');
+}
+
+function 그리기() {
+  var 요약 = { 관: 강관그리기(), 판: 판그리기(), 각: 각그리기() };
+  $('sum').textContent = 요약[지금탭] || '';
+}
+function 적어두기() {
+  try {
+    var d = { k: 지금탭 };
+    모든칸.forEach(function (id) { d[id] = $(id).value; });
+    localStorage.setItem(저장열쇠, JSON.stringify(d));
+  } catch (e) {}
+}
+function 읽어오기() {
+  var d = {};
+  try { d = JSON.parse(localStorage.getItem(저장열쇠) || '{}') || {}; } catch (e) { d = {}; }
+  try {                                                  // #od=30&thk=9.53&len=12&qty=40&k=관 — 상황판 링크가 칸을 채워 열 때
+    (location.hash || '').replace(/^#/, '').split('&').forEach(function (조) {
+      var i = 조.indexOf('=');
+      if (i > 0) d[decodeURIComponent(조.slice(0, i))] = decodeURIComponent(조.slice(i + 1));
+    });
+  } catch (e) {}
+  모든칸.forEach(function (id) { if (typeof d[id] === 'string') $(id).value = d[id].slice(0, 80); });
+  if (탭칸[d.k]) 지금탭 = d.k;
+}
+function 탭(k) {
+  지금탭 = k;
+  document.querySelectorAll('.tabs button').forEach(function (b) { b.setAttribute('aria-selected', b.getAttribute('data-tab') === k ? 'true' : 'false'); });
+  document.querySelectorAll('[data-pane]').forEach(function (p) { p.hidden = p.getAttribute('data-pane') !== k; });
+  그리기();
+  적어두기();
+}
+function 떨림() { try { if (텔레그램안 && tg.HapticFeedback) tg.HapticFeedback.selectionChanged(); } catch (e) {} }
+function 칩짓기() {
+  var 넣기 = function (id, 값, 큰, 작은, n) {
+    var b = document.createElement('button'), s = document.createElement('small');
+    b.type = 'button'; b.className = 'chip'; b.setAttribute('data-v', 값);
+    if (n != null) b.setAttribute('data-n', n);
+    b.appendChild(document.createTextNode(큰));
+    if (작은) { s.textContent = 작은; b.appendChild(s); }
+    $(id).appendChild(b);
+  };
+  인치들.forEach(function (n) { 넣기('odChips', String(n), n + '″', (n * 25) + 'A', n); });
+  두께들.forEach(function (x) { 넣기('thkChips', String(x[0]), String(x[0]), x[1], x[0]); });
+  길이들.forEach(function (x) { 넣기('lenChips', x[0], x[1], x[2], null); });
+}
+/* 규격 한 줄 → 외경 · 두께 · 길이(· 본수) 칸을 채움 */
+function 줄채우기() {
+  var 줄 = $('line').value, 찾음 = 규격찾기(쉼표걷기(전각풀기(줄)));
+  if (!찾음.length) return;
+  var g = 찾음[0];
+  $('od').value = 수글(g.외경);
+  if (g.두께 != null) $('thk').value = 수글(g.두께);
+  if (g.길이 != null) $('len').value = 수글(g.길이);
+  var n = 줄본수(줄, g.끝);
+  if (n != null) $('qty').value = String(n);
+}
+
+document.addEventListener('input', function (ev) {
+  var id = ev.target && ev.target.id;
+  if (!id || 모든칸.indexOf(id) < 0) return;
+  if (id === 'line') 줄채우기();
+  else if (id === 'od' || id === 'thk' || id === 'len') $('line').value = '';
+  그리기();
+  적어두기();
+});
+document.addEventListener('keydown', function (ev) {
+  if (ev.key !== 'Enter' || !ev.target || 모든칸.indexOf(ev.target.id) < 0) return;
+  ev.preventDefault();
+  var 칸 = 탭칸[지금탭], i = 칸.indexOf(ev.target.id);
+  if (i >= 0 && i + 1 < 칸.length) $(칸[i + 1]).focus(); else ev.target.blur();
+});
+document.querySelector('.tabs').addEventListener('click', function (ev) {
+  var b = ev.target.closest('[data-tab]');
+  if (b) { 탭(b.getAttribute('data-tab')); 떨림(); }
+});
+document.addEventListener('click', function (ev) {
+  var c = ev.target.closest && ev.target.closest('.chip');
+  if (c) {
+    var to = c.parentNode.getAttribute('data-to');
+    $(to).value = c.getAttribute('data-v');
+    $('line').value = '';
+    떨림();
+    그리기();
+    적어두기();
+    return;
+  }
+  var x = ev.target.closest && ev.target.closest('[data-clear]');
+  if (x) {
+    탭칸[x.getAttribute('data-clear')].forEach(function (id) { $(id).value = ''; });
+    떨림();
+    그리기();
+    적어두기();
+  }
+});
+
+(function () {
+  칩짓기();
+  읽어오기();
+  if (_s($('line').value) && !_s($('od').value)) 줄채우기();   // #line=… 로 열었을 때
+  var 뒤로 = function () { try { history.back(); } catch (e) {} };
+  var 상황판에서 = /\/admin\//.test(document.referrer || '');   // 🚦 상황판 앱의 '../calc/' 링크로 왔으면 돌아가는 단추
+  if (텔레그램안) {
+    try { tg.ready(); tg.expand(); } catch (e) {}
+    try { if (tg.isVersionAtLeast && tg.isVersionAtLeast('7.7')) tg.disableVerticalSwipes(); } catch (e) {}   // 올리다 앱이 접히지 않게
+    if (상황판에서) {
+      try {
+        if (tg.isVersionAtLeast && tg.isVersionAtLeast('6.1')) { tg.BackButton.onClick(뒤로); tg.BackButton.show(); }
+        else $('backBtn').hidden = false;
+      } catch (e) { $('backBtn').hidden = false; }
+    }
+  } else if (상황판에서) $('backBtn').hidden = false;
+  $('backBtn').addEventListener('click', 뒤로);
+  탭(지금탭);
+})();
+</script>
+</body>
+</html>
