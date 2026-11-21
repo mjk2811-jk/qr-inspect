@@ -299,6 +299,7 @@
   .pl-t.done { fill: var(--ok); } .pl-t.out { fill: var(--unk); font-weight: 700; }
   .pl-s { font-size: 9px; fill: var(--hint); }
   .pick-leg { padding: 0 12px 4px; font-size: 12px; color: var(--hint); line-height: 1.6; }
+  .pick-leg span { white-space: nowrap; }             /* 항목 가운데서 안 끊게('다/른 관', 11-21) */
   .pick-leg i { display: inline-block; width: 10px; height: 10px; border-radius: 5px; margin: 0 3px 0 8px; vertical-align: -1px; }
   .pick-leg i.todo { background: var(--warn); } .pick-leg i.cover { background: var(--danger); } .pick-leg i.done { background: var(--ok); }
   .pick-leg i.out { background: var(--unk); } .pick-leg i.other { background: var(--empty); }
@@ -1110,9 +1111,10 @@ function 들기배치도(지도, 칸들) {
   if (!대상.length) return '';
   var 범 = 네모(K), 눈 = 네모(대상), 여 = 90;                 // 대상 칸 둘레만 크게(봇이 둘레만 실어도 같은 그림)
   var x1 = Math.max(범.x1, 눈.x1 - 여), y1 = Math.max(범.y1, 눈.y1 - 여), x2 = Math.min(범.x2, 눈.x2 + 여), y2 = Math.min(범.y2, 눈.y2 + 여);
+  var 보일 = K.filter(function (k) { return k[1] < x2 && k[1] + k[3] > x1 && k[2] < y2 && k[2] + k[4] > y1; });
+  if (보일.length) { var 온 = 네모(보일); x1 = 온.x1; y1 = 온.y1; x2 = 온.x2; y2 = 온.y2; }   // 둘레에 걸친 칸은 통째로 — 칸 이름(왼쪽 위)이 안 잘리게(11-21)
   var h = '<svg viewBox="' + (x1 - 2) + ' ' + (y1 - 2) + ' ' + (x2 - x1 + 4) + ' ' + (y2 - y1 + 4) + '" role="img" aria-label="야드 배치도">';
-  K.forEach(function (k) {
-    if (k[1] > x2 || k[1] + k[3] < x1 || k[2] > y2 || k[2] + k[4] < y1) return;
+  보일.forEach(function (k) {
     var g = 칸표[k[0]], n = g ? 남은수(g) : 0, 반 = /^B\d{2}[AC]$/.test(k[0]);
     var cls = 'pk-c' + (g ? (n ? ' todo' : ' done') : '') + (g && g.칸 === 고른칸 ? ' sel' : '');
     h += '<g' + (g ? ' data-pk="' + esc(g.칸) + '" style="cursor:pointer"' : '') + '><rect class="' + cls + '" x="' + k[1] + '" y="' + k[2] +
@@ -1126,7 +1128,7 @@ function 들기배치도(지도, 칸들) {
 function 더미그림(g) {
   var ps = Object.keys(g.관);
   if (!ps.length) return '<div class="pick-none">이 칸은 적재 자리(단-순)가 적힌 관이 없어요 — 칸만 보세요</div>';
-  var R = 17, 높 = R * 1.72, 패 = 6, 아래 = 14;
+  var R = 19, 높 = R * 1.72, 패 = 6, 아래 = 14;          // 11-21 — 17 이면 굵은 번호 · ✓0306 이 동그라미 테에 걸쳤다
   var xs = ps.map(function (p) { return 그림x(g.관[p][0], g.관[p][1]); });
   var x0 = Math.min.apply(null, xs), xn = Math.max.apply(null, xs), 위단 = Math.max.apply(null, ps.map(function (p) { return g.관[p][0]; }));
   var W = Math.round((xn - x0) * 2 * R + 2 * R + 2 * 패), H = Math.round(2 * R + (위단 - 1) * 높 + 2 * 패 + 아래), 바닥 = H - 아래 - 패;
@@ -1139,9 +1141,10 @@ function 더미그림(g) {
     var z = g.관[p], x = cx(그림x(z[0], z[1])), y = cy(z[0]);
     var k = 남표[p] ? 'todo' : 끝표[p] ? 'done' : 밖표[p] ? 'out' : g.덮개표[p] ? 'cover' : 'other';
     if (k === 'todo' && (초점 === null || x < 초점)) 초점 = x;
-    var 글 = (k === 'done' ? '✓' : k === 'out' ? '⚠' : '') + p.slice(-4);
+    var 표 = k === 'done' ? '✓' : k === 'out' ? '⚠' : '';   // 표는 번호 위 한 줄 — 한 줄에 ✓0306 이면 동그라미를 넘었다(11-21)
     h += '<g><title>' + esc(p + ' · ' + z[0] + '-' + ('0' + z[1]).slice(-2)) + '</title><circle class="pl-' + k + '" cx="' + x + '" cy="' + y +
-      '" r="' + (R - 1.5) + '"/><text class="pl-t ' + k + '" x="' + x + '" y="' + (y + 3.5) + '" text-anchor="middle">' + esc(글) + '</text></g>';
+      '" r="' + (R - 1.5) + '"/>' + (표 ? '<text class="pl-t ' + k + '" x="' + x + '" y="' + (y - 3) + '" text-anchor="middle">' + 표 + '</text>' : '') +
+      '<text class="pl-t ' + k + '" x="' + x + '" y="' + (y + (표 ? 9 : 4)) + '" text-anchor="middle">' + esc(p.slice(-4)) + '</text></g>';
   });
   return '<div class="pile" data-focus="' + (초점 === null ? '' : Math.round(초점)) + '">' + h + '</svg></div>';
 }
@@ -1176,7 +1179,8 @@ function 들기그리기() {
       esc(x.칸 || '칸 모름') + ' ' + (n ? '남음 ' + n + ' / ' + 다 : '✓ ' + 다) + '</button>';
   }).join('') + '</div>';
   h += '<div class="pick-h">' + esc(g.칸 || '칸 모름') + ' 더미 — 왼쪽 = 1번(앞) · 아래 = 1단</div>' + 더미그림(g) +
-    '<div class="leg pick-leg"><i class="todo"></i>들 관<i class="cover"></i>먼저 들어낼 관<i class="done"></i>✓ 실음<i class="out"></i>⚠ 실린 예정 아님<i class="other"></i>다른 관</div>' +
+    '<div class="leg pick-leg"><span><i class="todo"></i>들 관</span> <span><i class="cover"></i>먼저 들어낼 관</span> <span><i class="done"></i>✓ 실음</span> ' +
+    '<span><i class="out"></i>⚠ 실린 예정 아님</span> <span><i class="other"></i>다른 관</span></div>' +
     들기글(g);
   $('pickCard').innerHTML = h;
   if (sec.open && 굴린칸 !== 고른칸) {                       // 칸을 바꿨을 때만 들 관이 가운데 오게(찍을 때마다 밀지 않게)
