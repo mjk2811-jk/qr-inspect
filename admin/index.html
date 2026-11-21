@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>상황판</title>
+<!--
+  🚦 상황판 — 텔레그램 미니 앱 한 파일(서버 · 외부 자료 없음 — telegram-web-app.js 만, 없으면 시험 모드). 관리자 폰에서 오늘 대기열 ·
+  입차 예정 · 오늘 출고를 한 화면에 보고, 그 자리에서 동작을 봇에 보낸다(2026-11-21).
+  · 봇이 관리자 답장 자판 맨 위 [🚦 상황판 열기 HH:MM] 로 연다. 단추 링크 #c=<base64url(zlib(JSON))> 에 그때 값 — #조각은 호스팅
+    서버로 가지 않는다. 이 파일(공개)에는 값이 없다 — 차는 뒤 4자리 · 도착지는 짧은 코드뿐, 기사 이름 · 전화 · 고객은 처음부터 없다.
+      {v:1, t:'YYYY-MM-DD HH:MM', 켬:[안내판, 승인], 받음:[동작 id…],
+       줄:{도착:[[id, 넷, 차례, 때, 곳, 밖]], 입차:[[카드 열쇠, 넷, 둘째, 상태, 딱지, 분, 늦음, 꼴]], 순번:[[순번, 넷, 곳, 역, 딱지, 분, 찬, 본, 송장대기]],
+           허용:[[순번, 넷]], 승인:[[순번, 넷, 때, 길, 경고]]},
+       예정:[[카드 열쇠, 넷, 곳, 시각, 표, 상태, 미리]],
+       출고:{요청:[[곳, 요청, 나감, 진행, 오는, 모름, 없음]], 송장:[n, 인쇄, 톤, 전체톤], 나감:[[순번, 넷, 톤, 때]], 안됨:[…],
+            검수:{스캔, 검수, 완료, 하는중, 멈춤, 다름, 없음}, 검수차:[[순번, 넷, 꼴, 맞음, 예정, 밖]], 상차중:[[순번, 넷, 본, 날]]},
+       못:[…], 뺌:{칸: 수}}
+  · 탭 셋: 🚦 대기열(순번 기다림 · ② 입차 예정 · 🕓 도착 전 · ③ 배정완료 · 진행 중 · 🖨 인쇄 허용 · 🔐 송장 승인 기다림 — 카드마다
+    그 자리에서 할 단추) · ⏱ 입차 예정(시각 모르는 차 먼저 · 💬 카톡 · 📞 손 · 📨 텔레그램 — 카드를 누르면 시각 단추: 지금 다음
+    10분 마디부터 1시간 + 직접 넣기 · 시각만 지우기 · ❌ 입차 취소) · 📊 오늘 출고(읽기만). 아래 📐 계산기 = 같은 저장소 ../calc/.
+  · 동작은 한 번 묻고(tg.showConfirm) sendData {k:'상황판', v:1, id, t, a, i | s | c, 시}(4096바이트 안 — c = 카드 열쇠: 링크의 입차 · 예정 첫 칸) — 앱이 닫히고 봇이 지금 채팅
+    명령과 같은 길로 하고 답한다(순번 주기 · 인쇄 허용 · 승인 · 보류는 그 글 명령 그대로). sendData 는 답장 자판 단추로 연 앱에서만 —
+    인라인 단추로 열면 보기만. 보낸 동작은 이 폰에 30분 '✓ 보냄'(봇이 다시 지은 링크의 받음에 그 id 가 있으면 지운다).
+  · 지어 둔 지 30분이 지나면 위에 '⌛ 다시 열기'(sendData a:'새로' — 봇이 지금 값으로 다시 지어 자판 맨 위에).
+  · 화면: 폰 세로 · 큰 글씨 · 큰 단추 · 텔레그램 테마 색(--tg-theme-*). 태블릿(화면 짧은 변 600px 이상)은 열 때 tg.requestFullscreen().
+  · 압축 풀기는 DecompressionStream('deflate')(웹뷰 80+). 텔레그램 밖에서 열면 시험 모드(가짜 차 · 가짜 도착지).
+-->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root {
+    --f-bg: #ffffff; --f-bg2: #eef1f5; --f-text: #15191e; --f-hint: #6b7480; --f-link: #2563eb; --f-btn: #2563eb; --f-btntext: #ffffff;
+    --ok: #15803d; --okbg: rgba(22, 163, 74, .14); --warn: #b45309; --warnbg: rgba(217, 119, 6, .16); --bad: #dc2626;
+    --badbg: rgba(220, 38, 38, .13); --info: #1d4ed8; --infobg: rgba(37, 99, 235, .13); --vio: #6d28d9; --viobg: rgba(124, 58, 237, .13);
+    --dim: rgba(127, 127, 127, .16);
+  }
+  :root {
+    --bg: var(--tg-theme-secondary-bg-color, var(--f-bg2)); --card: var(--tg-theme-section-bg-color, var(--tg-theme-bg-color, var(--f-bg)));
+    --head: var(--tg-theme-header-bg-color, var(--card));
+    --text: var(--tg-theme-text-color, var(--f-text)); --hint: var(--tg-theme-hint-color, var(--f-hint));
+    --link: var(--tg-theme-link-color, var(--f-link)); --btn: var(--tg-theme-button-color, var(--f-btn));
+    --btntext: var(--tg-theme-button-text-color, var(--f-btntext)); --sep: var(--tg-theme-section-separator-color, rgba(127, 127, 127, .25));
+    --red: var(--tg-theme-destructive-text-color, var(--bad));
+    /* 텔레그램 전체화면 — 위는 상태 줄 + 텔레그램 단추, 아래는 내비 줄(telegram-web-app.js 가 --tg-… 를 채운다 · 창 모드면 0) */
+    --top: calc(var(--tg-safe-area-inset-top, 0px) + var(--tg-content-safe-area-inset-top, 0px));
+    --bot: var(--tg-safe-area-inset-bottom, 0px);
+  }
+  [data-theme="dark"] { --f-bg: #17212b; --f-bg2: #0e1621; --f-text: #f5f5f5; --f-hint: #8b98a5; --ok: #4ade80; --warn: #fbbf24;
+                        --info: #93c5fd; --vio: #c4b5fd; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; }
+  body { background: var(--bg); color: var(--text); font: 17px/1.35 "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+         padding: var(--top) 0 var(--bot); }
+  header { position: sticky; top: 0; z-index: 5; background: var(--head); box-shadow: 0 1px 0 var(--sep); padding-top: var(--top);
+           margin-top: calc(0px - var(--top)); }
+  .bar { display: flex; align-items: center; gap: 10px; padding: 10px 14px 6px; }
+  .bar h1 { font-size: 21px; margin: 0; white-space: nowrap; }
+  .bar .when { flex: 1; font-size: 14px; color: var(--hint); }
+  .bar .full { border: 1px solid var(--sep); background: var(--card); color: var(--text); border-radius: 10px; padding: 6px 10px; font-size: 14px; }
+  .test { margin: 0 12px 8px; background: var(--viobg); color: var(--vio); border-radius: 10px; padding: 8px 10px; font-size: 14px; }
+  .stale, .note { margin: 0 12px 8px; border-radius: 12px; padding: 10px 12px; font-size: 15px; display: flex; gap: 10px; align-items: center; }
+  .stale { background: var(--warnbg); color: var(--warn); font-weight: 700; }
+  .stale button { margin-left: auto; border: 0; border-radius: 10px; background: var(--btn); color: var(--btntext); font: inherit;
+                  font-size: 16px; padding: 9px 14px; }
+  .note { background: var(--dim); color: var(--hint); }
+  .tabs { display: flex; gap: 6px; padding: 4px 10px 10px; }
+  .tabs button { flex: 1; border: 0; border-radius: 12px; padding: 11px 4px; font: inherit; font-size: 16px; font-weight: 700;
+                 background: var(--dim); color: var(--text); white-space: nowrap; }
+  .tabs button.on { background: var(--btn); color: var(--btntext); }
+  .tabs b { display: inline-block; min-width: 20px; margin-left: 4px; padding: 0 6px; border-radius: 999px; background: var(--red); color: #fff;
+            font-size: 13px; line-height: 20px; }
+  .tabs b:empty { display: none; }
+  main { padding: 12px 12px 24px; max-width: 760px; margin: 0 auto; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .chips button { border: 1px solid var(--sep); background: var(--card); color: var(--text); border-radius: 999px; font: inherit;
+                  font-size: 15px; font-weight: 700; padding: 7px 12px; }
+  .chips button.hot { border-color: var(--red); color: var(--red); }
+  h2 { font-size: 18px; margin: 18px 2px 8px; display: flex; align-items: baseline; gap: 8px; }
+  h2 small { font-size: 13px; color: var(--hint); font-weight: 600; }
+  h2 .n { font-size: 16px; color: var(--link); }
+  .empty { color: var(--hint); font-size: 15px; padding: 8px 4px 2px; }
+  .card { background: var(--card); border-radius: 14px; padding: 12px 14px; margin-bottom: 8px; box-shadow: 0 1px 2px rgba(0, 0, 0, .08);
+          border-left: 6px solid transparent; }
+  .card.go { border-left-color: var(--btn); }
+  .card.y { border-left-color: #eab308; }
+  .card.out { border: 2px dashed var(--red); border-left-width: 6px; }
+  .card.pre { border-left-color: var(--vio); background-image: linear-gradient(var(--viobg), var(--viobg)); }
+  .card.dim { opacity: .62; }
+  .card.s2 { border-left-color: var(--red); } .card.s3 { border-left-color: var(--ok); }
+  .card.s4 { border-left-color: var(--info); } .card.s5 { border-left-color: var(--warn); }
+  .r1 { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .plate { font-size: 23px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: .5px; }
+  .q { font-size: 15px; font-weight: 800; background: var(--dim); border-radius: 8px; padding: 1px 8px; }
+  .q::after { content: "번"; font-weight: 600; font-size: 13px; margin-left: 1px; }
+  .sub { font-size: 15px; color: var(--hint); flex: 1; min-width: 80px; }
+  .mins { font-size: 15px; font-weight: 700; color: var(--hint); white-space: nowrap; }
+  .mins.late { color: var(--red); }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
+  .tag { font-size: 14px; border-radius: 8px; padding: 3px 8px; background: var(--dim); }
+  .tag.ok { background: var(--okbg); color: var(--ok); } .tag.warn { background: var(--warnbg); color: var(--warn); }
+  .tag.bad { background: var(--badbg); color: var(--red); } .tag.info { background: var(--infobg); color: var(--info); }
+  .tag.vio { background: var(--viobg); color: var(--vio); }
+  .acts { display: flex; gap: 8px; margin-top: 10px; }
+  .act { flex: 1; min-height: 50px; border: 0; border-radius: 12px; font: inherit; font-size: 17px; font-weight: 800; padding: 8px 10px;
+         background: var(--btn); color: var(--btntext); }
+  .act.ok { background: #16a34a; color: #fff; } .act.no { background: var(--dim); color: var(--text); flex: 0 0 34%; }
+  .act.wide { width: 100%; margin-top: 2px; }
+  .sent { flex: 1; text-align: center; border-radius: 12px; padding: 13px 8px; font-size: 15px; font-weight: 700; background: var(--okbg); color: var(--ok); }
+  .bar2 { height: 8px; border-radius: 6px; background: var(--dim); margin-top: 8px; overflow: hidden; display: flex; }
+  .bar2 i { display: block; height: 100%; }
+  .big { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .big .card { text-align: center; padding: 12px 6px; margin: 0; border-left: 0; }
+  .big b { display: block; font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .big span { font-size: 13px; color: var(--hint); }
+  .row { display: flex; justify-content: space-between; gap: 8px; padding: 9px 2px; border-bottom: 1px solid var(--sep); font-size: 16px; }
+  .row:last-child { border-bottom: 0; }
+  .row .v { font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .list { background: var(--card); border-radius: 14px; padding: 4px 12px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 13px; color: var(--hint); margin: 6px 2px 0; }
+  .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 4px; }
+  .eta { display: flex; align-items: center; gap: 10px; }
+  .eta .t { margin-left: auto; text-align: right; }
+  .eta .t b { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; display: block; }
+  .eta .t span { font-size: 13px; color: var(--hint); }
+  .eta .t.none b { color: var(--red); font-size: 17px; }
+  .foot { text-align: center; margin-top: 22px; }
+  .calc { border: 1px solid var(--sep); background: var(--card); color: var(--link); border-radius: 14px; font: inherit; font-size: 18px;
+          font-weight: 800; padding: 14px 22px; width: 100%; }
+  #footNote { font-size: 12px; color: var(--hint); margin-top: 10px; }
+  .err { padding: 40px 18px; text-align: center; color: var(--hint); font-size: 16px; }
+  .back { position: fixed; inset: 0; background: rgba(0, 0, 0, .45); z-index: 20; }
+  .sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 21; background: var(--card); border-radius: 18px 18px 0 0;
+           padding: 16px 14px calc(16px + max(env(safe-area-inset-bottom), var(--bot))); max-height: 86vh; overflow: auto;
+           box-shadow: 0 -4px 18px rgba(0, 0, 0, .25); }
+  .sheet h3 { font-size: 20px; margin: 0 0 4px; }
+  .sheet .sub { display: block; margin-bottom: 12px; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .grid button { min-height: 54px; border: 0; border-radius: 12px; font: inherit; font-size: 20px; font-weight: 800;
+                 background: var(--btn); color: var(--btntext); font-variant-numeric: tabular-nums; }
+  .own { display: flex; gap: 8px; margin-top: 12px; }
+  .own input { flex: 1; min-height: 52px; font-size: 20px; border-radius: 12px; border: 1px solid var(--sep); background: var(--bg);
+               color: var(--text); padding: 0 12px; }
+  .own button, .sheet .line { min-height: 52px; border: 0; border-radius: 12px; font: inherit; font-size: 17px; font-weight: 800; padding: 0 16px; }
+  .own button { background: #16a34a; color: #fff; }
+  .sheet .line { display: block; width: 100%; margin-top: 10px; background: var(--dim); color: var(--text); }
+  .sheet .line.red { background: var(--badbg); color: var(--red); }
+  @media (min-width: 900px) {                         /* 태블릿 가로 — 카드를 두 줄로 */
+    main { max-width: 1100px; }
+    .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+  }
+</style>
+</head>
+<body>
+<header id="head">
+  <div class="bar"><h1>🚦 상황판</h1><span class="when" id="when"></span><button type="button" class="full" id="fullBtn" hidden>⛶ 전체화면</button></div>
+  <div class="test" id="testStrip" hidden>🧪 시험 모드 — 텔레그램 밖에서 열었어요(가짜 차 · 가짜 도착지 · 보내기는 흉내만)</div>
+  <div class="stale" id="stale" hidden></div>
+  <div class="note" id="viewOnly" hidden>👀 보기만 — 동작은 봇 대화 아래 자판 맨 위 [🚦 상황판 열기] 로 연 앱에서만 보낼 수 있어요</div>
+  <nav class="tabs" id="tabs">
+    <button type="button" data-tab="q" class="on">🚦 대기열<b id="nq"></b></button>
+    <button type="button" data-tab="e">⏱ 입차 예정<b id="ne"></b></button>
+    <button type="button" data-tab="s">📊 오늘 출고</button>
+  </nav>
+</header>
+<main id="main">
+  <section id="tab-q"></section>
+  <section id="tab-e" hidden></section>
+  <section id="tab-s" hidden></section>
+  <div class="foot"><button type="button" class="calc" id="calcBtn">📐 계산기</button><div id="footNote"></div></div>
+</main>
+<div class="err" id="err" hidden></div>
+<div class="back" id="sheetBack" hidden></div>
+<div class="sheet" id="sheet" hidden></div>
+<script>
+'use strict';
+var tg = window.Telegram && window.Telegram.WebApp;
+var 텔레그램안 = !!(tg && tg.platform && tg.platform !== 'unknown');
+var $ = function (id) { return document.getElementById(id); };
+var 자료 = null, 탭 = 'q', 보낸 = {};
+
+/* ── 셈 ─────────────────────────────────────────────────────────── */
+function _s(v) { return v == null ? '' : String(v).trim(); }
+function esc(t) { return _s(t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function 해시읽기(h) {
+  var out = {};
+  _s(h).replace(/^#/, '').split('&').forEach(function (kv) { var i = kv.indexOf('='); if (i > 0) out[kv.slice(0, i)] = decodeURIComponent(kv.slice(i + 1)); });
+  return out;
+}
+function b64바이트(t) {
+  t = _s(t).replace(/-/g, '+').replace(/_/g, '/');
+  while (t.length % 4) t += '=';
+  var s = atob(t), b = new Uint8Array(s.length);
+  for (var i = 0; i < s.length; i++) b[i] = s.charCodeAt(i);
+  return b;
+}
+function 풀기(조) {                                   // base64url(zlib(JSON)) → Promise<자료>
+  var 흐름 = new Blob([b64바이트(조)]).stream().pipeThrough(new DecompressionStream('deflate'));
+  return new Response(흐름).text().then(function (t) { return JSON.parse(t); });
+}
+function 두(n) { return ('0' + n).slice(-2); }
+function 때글(d) { return 두(d.getHours()) + ':' + 두(d.getMinutes()); }
+function 때값(t) {                                     // 'YYYY-MM-DD HH:MM' → ms(이 폰 시계 — PC 와 같은 한국 시각) | 0
+  var m = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})/.exec(_s(t));
+  return m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]).getTime() : 0;
+}
+function 지난분(t, 지금ms) { var v = 때값(t); return v ? Math.max(0, Math.floor((지금ms - v) / 60000)) : 0; }
+function 시각들(지금) {                               // 지금 다음 10분 마디부터 1시간까지 — 봇 telegram_eta.시각들 과 같은 셈
+  var d = new Date(지금.getTime()); d.setSeconds(0, 0);
+  var t = new Date(d.getTime() + (10 - d.getMinutes() % 10) * 60000), out = [];
+  while (t.getTime() - d.getTime() <= 60 * 60000) { out.push(때글(t)); t = new Date(t.getTime() + 10 * 60000); }
+  return out;
+}
+function 남음(r) { return Math.max(0, (r[1] || 0) - (r[2] || 0) - (r[3] || 0)); }   // 요청서 대비 — 요청 − 나감 − 진행
+function 동작열쇠(동) { return 동.a + ':' + (동.i != null ? 동.i : (동.s || 동.c || '')); }
+function 보낸표(기록, 받음, 지금ms) {                 // {id: [열쇠, ms]} → {열쇠: ms} — 30분 안 · 봇이 받았다고 실어 온 id(받음)는 뺌
+  var 받 = {}, out = {};
+  (받음 || []).forEach(function (i) { 받[i] = 1; });
+  Object.keys(기록 || {}).forEach(function (id) {
+    var x = 기록[id];
+    if (!x || 받[id] || 지금ms - x[1] > 30 * 60000) return;
+    out[x[0]] = Math.max(out[x[0]] || 0, x[1]);
+  });
+  return out;
+}
+function 새id() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+/* ── 화면 ───────────────────────────────────────────────────────── */
+function 칸(이름) { return (자료.줄 || {})[이름] || []; }
+function 보낼수() {                                    // 답장 자판 web_app 단추로 연 앱만 sendData 가 된다(인라인으로 열면 query_id 가 있다)
+  if (!텔레그램안) return !$('testStrip').hidden;     // 시험 모드
+  try { return typeof tg.sendData === 'function' && !(tg.initDataUnsafe && tg.initDataUnsafe.query_id); } catch (e) { return false; }
+}
+function 떨림(k) { try { if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred(k || 'light'); } catch (e) {} }
+function 알리기(말) { try { if (텔레그램안 && tg.showAlert) { tg.showAlert(말.slice(0, 250)); return; } } catch (e) {} alert(말); }
+function 묻기(말, 가) {
+  try { if (텔레그램안 && tg.showConfirm) { tg.showConfirm(말.slice(0, 250), 가); return; } } catch (e) {}
+  가(window.confirm(말));
+}
+function 저장읽기() { try { return JSON.parse(localStorage.getItem('board.sent') || '{}') || {}; } catch (e) { return {}; } }
+function 저장쓰기(기록) { try { localStorage.setItem('board.sent', JSON.stringify(기록)); } catch (e) {} }
+function 보낸적기(id, 열쇠) {
+  var 기록 = 저장읽기(), 지금 = Date.now();
+  Object.keys(기록).forEach(function (k) { if (지금 - 기록[k][1] > 30 * 60000) delete 기록[k]; });
+  기록[id] = [열쇠, 지금];
+  저장쓰기(기록);
+}
+function 보내기(동) {
+  var 자 = { k: '상황판', v: 1, id: 새id(), t: 자료.t };
+  Object.keys(동).forEach(function (k) { if (!/^(k|v|id|t)$/.test(k)) 자[k] = 동[k]; });   // 동작 칸이 머리(k · v · id · t)를 덮지 않게
+  var 글 = JSON.stringify(자);
+  if (new TextEncoder().encode(글).length > 4096) { 알리기('보낼 것이 너무 길어요'); return; }
+  if (동.a !== '새로') 보낸적기(자.id, 동작열쇠(동));
+  떨림('medium');
+  if (텔레그램안) { try { tg.sendData(글); } catch (e) { 알리기('보내지 못했어요 — ' + e.message); } return; }
+  알리기('🧪 시험 모드 — 보낼 것: ' + 글);
+  다시그리기();
+}
+function 하기(동, 물음) {
+  if (!보낼수()) { 알리기('이 창에서는 보기만 돼요 — 봇 대화 아래 자판 맨 위 [🚦 상황판 열기] 로 열어 주세요.'); return; }
+  var 분 = 지난분(자료.t, Date.now());
+  if (분 >= 30) 물음 = '⌛ ' + 분 + '분 전 값이에요 — 봇이 지금 상태로 다시 봅니다.\n' + 물음;
+  묻기(물음, function (ok) { if (ok) 보내기(동); });
+}
+function 단추(동, 글, 꼴, 물음) {                     // 보낸 동작이면 '✓ 보냄' 으로
+  var m = 보낸[동작열쇠(동)];
+  if (m) return '<span class="sent">✓ 보냄 ' + 때글(new Date(m)) + ' — 봇 답을 보세요</span>';
+  return '<button type="button" class="act ' + (꼴 || '') + '" data-do="' + esc(JSON.stringify(동)) + '" data-ask="' + esc(물음) + '">' + 글 + '</button>';
+}
+function 머리(id, 글, n, 덧) {
+  return '<h2 id="' + id + '">' + 글 + ' <span class="n">' + n + '</span>' + (덧 ? '<small>' + esc(덧) + '</small>' : '') + '</h2>';
+}
+function 없음(말) { return '<div class="empty">' + esc(말) + '</div>'; }
+function 딱지들(글, 꼴) {
+  return _s(글) ? '<div class="tags">' + _s(글).split(' · ').map(function (t) {
+    var k = 꼴 || (/^🚚/.test(t) ? 'warn' : /^⚠|⏸/.test(t) ? 'bad' : /^✓/.test(t) ? 'ok' : /^▶|^⏱|^💬|^📞|^📨/.test(t) ? 'info' : '');
+    return '<span class="tag ' + k + '">' + esc(t) + '</span>';
+  }).join('') + '</div>' : '';
+}
+function 분글(분, 늦) { return 분 == null ? '' : '<span class="mins' + (늦 ? ' late' : '') + '">' + 분 + '분</span>'; }
+
+function 대기열그리기() {
+  var 도 = 칸('도착'), 입 = 칸('입차'), 순 = 칸('순번'), 허 = 칸('허용'), 승 = 칸('승인'), 켬 = 자료.켬 || [0, 0];
+  var 미리 = 입.filter(function (c) { return c[3] === '도착전'; }), 보통 = 입.filter(function (c) { return c[3] !== '도착전'; });
+  var 배정 = 순.filter(function (c) { return c[3] === 2 || c[3] === 3; }), 진행 = 순.filter(function (c) { return c[3] === 4 || c[3] === 5; });
+  var h = '<div class="chips">' + [['sec-p', '🔐 승인', 승.length, 1], ['sec-h', '🖨 허용', 허.length, 1], ['sec-a', '🚚 순번 기다림', 도.length, 1],
+    ['sec-i', '② 입차 예정', 보통.length], ['sec-b', '🕓 도착 전', 미리.length], ['sec-s', '③ 배정완료', 배정.length], ['sec-g', '진행 중', 진행.length]]
+    .map(function (x) { return '<button type="button" data-go="' + x[0] + '" class="' + (x[3] && x[2] ? 'hot' : '') + '">' + x[1] + ' ' + x[2] + '</button>'; })
+    .join('') + '</div>';
+  // 🚚 📱 안내판 입차 — 순번 기다림
+  h += 머리('sec-a', '🚚 도착 — 순번 기다림', 도.length, '📱 안내판 입차 등록 · 온 차례');
+  h += 도.length ? 도.map(function (r) {
+    return '<div class="card y"><div class="r1"><span class="q">' + esc(r[2]) + '</span><b class="plate">' + esc(r[1]) + '</b><span class="sub">'
+      + esc([r[4], r[3] && r[3] + ' 등록'].filter(Boolean).join(' · ')) + '</span></div>'
+      + (r[5] ? '<div class="tags"><span class="tag bad">명단 밖</span></div>' : '')
+      + '<div class="acts">' + 단추({ a: '순번', i: r[0] }, '✅ ' + esc(r[1]) + ' 순번 주기', 'ok', r[1] + ' 차에 순번을 줄까요?\n(채팅 [✅ … 순번 주기] 와 같은 길)') + '</div></div>';
+  }).join('') : 없음('📱 안내판에서 등록하고 순번을 기다리는 차가 없어요');
+  // ② 입차 예정
+  h += 머리('sec-i', '② 입차 예정', 보통.length, '진행화면 ① 입차 예정 카드 그대로 · 누르면 입차 시각');
+  h += 보통.length ? '<div class="cols">' + 보통.map(function (c) {
+    var 꼴 = c[7] === '밖' ? 'out' : c[7] === '도착' ? 'y' : c[3] === '대기' ? 'go' : 'dim';
+    return '<div class="card ' + 꼴 + '"' + (c[0] ? ' data-ek="' + esc(c[0]) + '"' : '') + '><div class="r1"><b class="plate">' + esc(c[1] || '?')
+      + '</b><span class="sub">' + esc(c[2]) + '</span>' + 분글(c[5], c[6]) + '</div>' + 딱지들(c[4])
+      + (c[7] === '밖' ? '<div class="tags"><span class="tag bad">명단 밖 — PC 에서 확인</span></div>' : '') + '</div>';
+  }).join('') + '</div>' : 없음('입차 예정 차가 없어요');
+  // 🕓 도착 전
+  h += 머리('sec-b', '🕓 도착 전', 미리.length, '차량목록에서 순번을 미리 준 차');
+  h += 미리.length ? 미리.map(function (c) {
+    return '<div class="card pre"><div class="r1"><b class="plate">' + esc(c[1] || '?') + '</b><span class="sub">' + esc(c[2]) + '</span></div>'
+      + 딱지들(c[4]) + '<div class="acts">' + 단추({ a: '도착', c: c[0] }, '✅ 도착 확인', '',
+        c[1] + ' — ' + _s(c[2]).replace(/^🕓\s*/, '') + '\n도착했나요? 확인하면 입차 예정에서 빠지고 로봇이 판정 · 브리핑합니다(▶ 실행은 사람이).') + '</div></div>';
+  }).join('') : 없음('순번을 미리 준 차 가운데 도착 전인 차가 없어요');
+  // ③ 배정완료 · 진행 중
+  function 순카드(c) {
+    var 바 = c[3] === 5 && c[7] ? '<div class="bar2"><i style="width:' + Math.min(100, Math.round(100 * c[6] / c[7])) + '%;background:var(--warn)"></i></div>' : '';
+    return '<div class="card s' + c[3] + '"><div class="r1"><span class="q">' + esc(c[0]) + '</span><b class="plate">' + esc(c[1]) + '</b><span class="sub">'
+      + esc(c[2]) + '</span>' + 분글(c[5]) + '</div>' + 딱지들(c[4]) + 바 + '</div>';
+  }
+  h += 머리('sec-s', '③ 배정완료', 배정.length, '순번 받음 · ▶ 실행 전');
+  h += 배정.length ? '<div class="cols">' + 배정.map(순카드).join('') + '</div>' : 없음('배정완료 차가 없어요');
+  h += 머리('sec-g', '진행 중', 진행.length, '▶ 전송 중 · 상차 중');
+  h += 진행.length ? '<div class="cols">' + 진행.map(순카드).join('') + '</div>' : 없음('상차 중인 차가 없어요');
+  // 🖨 인쇄 허용 · 🔐 승인
+  h += 머리('sec-h', '🖨 인쇄 허용 기다림', 허.length, '상차가 끝나면 허용 → 기사가 안내판에서 인쇄');
+  if (!켬[0]) h += 없음('📱 안내판이 꺼져 있어요 — 인쇄 허용 기다림이 없어요');
+  else {
+    h += 허.length ? 허.map(function (r) {
+      return '<div class="card go"><div class="r1"><span class="q">' + esc(r[0]) + '</span><b class="plate">' + esc(r[1]) + '</b><span class="sub">⏳ 상차 중(잠김)</span></div>'
+        + '<div class="acts">' + 단추({ a: '허용', s: r[0] }, '✅ ' + esc(r[0]) + '번 인쇄 허용', 'ok', r[0] + '번(' + r[1] + ') 상차가 끝났나요?\n인쇄를 허용하면 기사님이 안내판에서 송장을 뽑습니다.') + '</div></div>';
+    }).join('') : 없음('인쇄 허용을 기다리는 차가 없어요');
+    if (허.length > 1) h += 단추({ a: '허용', s: '전부' }, '✅ 전부 인쇄 허용(' + 허.length + '대)', 'ok wide', '잠긴 ' + 허.length + '대를 다 인쇄 허용할까요?');
+  }
+  h += 머리('sec-p', '🔐 송장 승인 기다림', 승.length, 켬[1] ? '승인 받고 인쇄 켬' : '승인 받고 인쇄 꺼짐');
+  h += 승.length ? 승.map(function (r) {
+    return '<div class="card go"><div class="r1"><span class="q">' + esc(r[0]) + '</span><b class="plate">' + esc(r[1]) + '</b><span class="sub">'
+      + esc([r[3], r[2]].filter(Boolean).join(' · ')) + '</span></div>' + (r[4] ? '<div class="tags"><span class="tag bad">' + esc(r[4]) + '</span></div>' : '')
+      + '<div class="acts">' + 단추({ a: '승인', s: r[0] }, '✅ 승인', 'ok', r[0] + '번(' + r[1] + ') 송장 인쇄를 승인할까요?')
+      + 단추({ a: '보류', s: r[0] }, '✖ 보류', 'no', r[0] + '번(' + r[1] + ') 송장 인쇄를 보류할까요?\n(기사님께 보류 안내가 갑니다)') + '</div></div>';
+  }).join('') : 없음('송장 인쇄 승인을 기다리는 것이 없어요');
+  if (승.length > 1) h += 단추({ a: '승인', s: '전부' }, '✅ 전부 승인(' + 승.length + '건)', 'ok wide', '기다리는 ' + 승.length + '건을 다 승인할까요? 바로 인쇄됩니다.');
+  $('tab-q').innerHTML = h;
+  $('nq').textContent = (도.length + 허.length + 승.length) || '';
+}
+
+function 예정그리기() {
+  var 줄 = 자료.예정 || [], 모름 = 줄.filter(function (r) { return !r[3]; }).length;
+  var h = 머리('sec-e', '⏱ 입차 예정', 줄.length, '시각 모르는 차 먼저 · 카드를 누르면 시각 등록');
+  h += '<div class="legend"><span>💬 카톡</span><span>📞 손 등록</span><span>📨 텔레그램</span></div>';
+  h += 줄.length ? 줄.map(function (r, i) {
+    var 표 = r[3] ? '<div class="t"><b>' + esc(r[3]) + '</b><span>' + esc(r[4] || '') + ' 입차 예정</span></div>' : '<div class="t none"><b>시각 모름</b><span>눌러서 등록</span></div>';
+    var 꼴 = r[5] === '도착전' ? 'pre' : r[5] === '진행' ? 'dim' : r[3] ? 'go' : 'y';
+    var 덧 = r[5] === '도착전' ? '<span class="tag vio">🕓 도착 전 · ' + esc(r[6]) + '</span>' : r[5] === '진행' ? '<span class="tag">앞 순번 진행 중</span>' : '';
+    var m = 보낸['시각:' + r[0]] || 보낸['지움:' + r[0]] || 보낸['취소:' + r[0]];
+    return '<div class="card ' + 꼴 + '" data-e="' + i + '"><div class="eta"><div><b class="plate">' + esc(r[1] || '?') + '</b> <span class="sub">' + esc(r[2]) + '</span>'
+      + (덧 || m ? '<div class="tags">' + 덧 + (m ? '<span class="tag ok">✓ 보냄 ' + 때글(new Date(m)) + '</span>' : '') + '</div>' : '') + '</div>' + 표 + '</div></div>';
+  }).join('') : 없음('입차 예정 차가 없어요');
+  $('tab-e').innerHTML = h;
+  $('ne').textContent = 모름 || '';
+}
+
+function 시트열기(r) {
+  var 들 = 시각들(new Date());
+  var h = '<h3>' + esc(r[1]) + ' — 몇 시에 입차하나요?</h3><span class="sub">' + esc([r[2], r[3] ? '지금 ' + (r[4] || '') + ' ' + r[3] : '시각 모름'].filter(Boolean).join(' · ')) + '</span>'
+    + '<div class="grid">' + 들.map(function (t) { return '<button type="button" data-t="' + t + '">' + t + '</button>'; }).join('') + '</div>'
+    + '<div class="own"><input type="time" id="ownT" step="300"><button type="button" id="ownGo">직접 등록</button></div>'
+    + (r[3] ? '<button type="button" class="line" data-x="지움">⏱ 시각만 지우기</button>' : '')
+    + '<button type="button" class="line red" data-x="취소">❌ 입차 취소 (카드 보냄)</button>'
+    + '<button type="button" class="line" data-x="닫기">닫기</button>';
+  var s = $('sheet');
+  s.innerHTML = h;
+  s.hidden = false; $('sheetBack').hidden = false;
+  s.onclick = function (ev) {
+    var b = ev.target.closest('button');
+    if (!b) return;
+    var t = b.getAttribute('data-t') || (b.id === 'ownGo' ? _s($('ownT').value) : '');
+    var x = b.getAttribute('data-x');
+    if (x === '닫기') { 시트닫기(); return; }
+    if (t) {
+      if (!/^\d{2}:\d{2}$/.test(t)) { 알리기('시각을 골라 주세요'); return; }
+      시트닫기();
+      하기({ a: '시각', c: r[0], 시: t }, r[1] + ' — ' + t + ' 입차 예정으로 등록할까요?\n(📞 손 등록과 같은 길 · 기사 카톡방이 열려 있으면 등록완료 그림)');
+    } else if (x === '지움') {
+      시트닫기(); 하기({ a: '지움', c: r[0] }, r[1] + ' — 입차 예정시간(' + r[3] + ')만 지울까요?\n(카드는 안 보냄)');
+    } else if (x === '취소') {
+      시트닫기(); 하기({ a: '취소', c: r[0] }, r[1] + ' — 오늘 입차를 취소할까요?\n예정시각을 지우고 기사 카톡방 · 출고요청서 방에 ❌ 입차 취소 카드를 보냅니다.');
+    }
+  };
+}
+function 시트닫기() { $('sheet').hidden = true; $('sheetBack').hidden = true; }
+
+function 출고그리기() {
+  var o = 자료.출고 || {}, n = o.송장 || [0, 0, 0, 0], k = o.검수 || {};
+  var h = '<div class="big">'
+    + '<div class="card"><b>' + n[1] + '대</b><span>🖨 나감(송장 인쇄)</span></div>'
+    + '<div class="card"><b>' + Number(n[2] || 0).toFixed(1) + '</b><span>톤 · 송장 전체 ' + Number(n[3] || 0).toFixed(1) + '</span></div>'
+    + '<div class="card"><b>' + (k.완료 || 0) + ' / ' + (k.다름 || 0) + '</b><span>🔍 검수 ✓ / ⚠</span></div></div>';
+  var 요 = o.요청 || [];
+  h += 머리('sec-r', '📋 요청서 대비', 요.length, '나감 · 진행 · 남음');
+  h += 요.length ? '<div class="list">' + 요.map(function (r) {
+    var 전 = Math.max(r[1], r[2] + r[3] + r[4] + r[5] + r[6]) || 1;
+    var 칸 = [[r[2], 'var(--ok)'], [r[3], 'var(--info)'], [r[4], 'var(--warn)'], [r[5], 'var(--hint)'], [r[6], 'var(--dim)']];
+    return '<div class="row" style="display:block"><div style="display:flex;justify-content:space-between;gap:8px"><b>' + esc(r[0]) + '</b><span class="v">요청 ' + r[1]
+      + ' · 나감 ' + r[2] + ' · 진행 ' + r[3] + ' · 남음 ' + 남음(r) + '</span></div><div class="bar2">'
+      + 칸.map(function (x) { return x[0] ? '<i style="width:' + (100 * x[0] / 전) + '%;background:' + x[1] + '"></i>' : ''; }).join('') + '</div></div>';
+  }).join('') + '</div><div class="legend"><span><i style="background:var(--ok)"></i>나감</span><span><i style="background:var(--info)"></i>진행</span>'
+    + '<span><i style="background:var(--warn)"></i>오는 중</span><span><i style="background:var(--hint)"></i>시각 모름</span><span><i style="background:var(--dim)"></i>배차 없음</span></div>'
+    : 없음('오늘 요청서 묶음을 못 읽었어요(PC 🧭 오늘 계획과 같은 셈)');
+  var 안 = o.안됨 || [];
+  h += 머리('sec-u', '🧾 인쇄 안 된 송장', 안.length, '송장은 나왔는데 아직 안 뽑음');
+  h += 안.length ? '<div class="list">' + 안.map(function (r) {
+    return '<div class="row"><span><span class="q">' + esc(r[0]) + '</span> <b>' + esc(r[1]) + '</b></span><span class="v">' + Number(r[2]).toFixed(1) + '톤' + (r[3] ? ' · ' + esc(r[3]) + ' 발급' : '') + '</span></div>';
+  }).join('') + '</div>' : 없음('오늘 송장은 다 뽑았어요');
+  var 상 = o.상차중 || [];
+  h += 머리('sec-l', '🚛 상차중으로 남은 차', 상.length, '스캔만 되고 마감 전');
+  h += 상.length ? '<div class="list">' + 상.map(function (r) {
+    return '<div class="row"><span>' + (r[0] ? '<span class="q">' + esc(r[0]) + '</span> ' : '') + '<b>' + esc(r[1] || '스캔 기록 없음') + '</b>'
+      + (r[3] ? ' <span class="tag warn">' + esc(r[3]) + '</span>' : '') + '</span><span class="v">' + r[2] + '본</span></div>';
+  }).join('') + '</div>' : 없음('상차중으로 남은 관이 없어요');
+  var 검 = o.검수차 || [], 검표 = { ok: ['✓', 'ok'], diff: ['⚠ 다름', 'bad'], ing: ['⏳ 하는 중', 'info'], stop: ['⌛ 끝 기록 없음', 'warn'], closed: ['⏹ 닫힘', ''], none: ['— 검수 없음', ''] };
+  h += 머리('sec-k', '🔍 검수', 검.length, '✓ ' + (k.완료 || 0) + ' · ⚠ ' + (k.다름 || 0) + ' · ⏳ ' + (k.하는중 || 0) + ' · ⌛ ' + (k.멈춤 || 0) + ' · 검수 없음 ' + (k.없음 || 0));
+  h += 검.length ? '<div class="list">' + 검.map(function (r) {
+    var x = 검표[r[2]] || ['', ''];
+    return '<div class="row"><span><span class="q">' + esc(r[0]) + '</span> <b>' + esc(r[1]) + '</b> <span class="tag ' + x[1] + '">' + x[0] + '</span></span>'
+      + '<span class="v">' + r[3] + ' / ' + r[4] + (r[5] ? ' · 밖 ' + r[5] : '') + '</span></div>';
+  }).join('') + '</div>' : 없음('오늘 검수 기록이 없어요');
+  var 나 = (o.나감 || []).slice().reverse();
+  h += 머리('sec-o', '🖨 나간 차', 나.length, '송장 인쇄 때 · 최근 것 먼저');
+  h += 나.length ? '<div class="list">' + 나.map(function (r) {
+    return '<div class="row"><span><span class="q">' + esc(r[0]) + '</span> <b>' + esc(r[1]) + '</b></span><span class="v">' + Number(r[2]).toFixed(1) + '톤 · ' + esc(r[3]) + '</span></div>';
+  }).join('') + '</div>' : 없음('아직 나간 차가 없어요');
+  $('tab-s').innerHTML = h;
+}
+
+function 머리그리기() {
+  var 분 = 지난분(자료.t, Date.now());
+  $('when').textContent = _s(자료.t).slice(11, 16) + ' 기준' + (분 ? ' · ' + 분 + '분 전' : '');
+  var s = $('stale');
+  s.hidden = 분 < 30;
+  if (분 >= 30) s.innerHTML = '<span>⌛ ' + 분 + '분 지난 값이에요</span>' + (보낼수() ? '<button type="button" data-act="새로">🔄 다시 열기</button>' : '<span>봇에 \'상황판\' 을 보내 주세요</span>');
+  $('viewOnly').hidden = !(텔레그램안 && !보낼수());
+  var 뺌 = 자료.뺌 || {}, 뺀수 = Object.keys(뺌).reduce(function (a, k) { return a + 뺌[k]; }, 0);
+  $('footNote').textContent = (뺀수 ? '링크 한도로 ' + 뺀수 + '줄을 뺐어요(오래된 것부터) · ' : '') + ((자료.못 || []).length ? 'ℹ ' + 자료.못.join(' · ') : '');
+}
+function 다시그리기() {
+  보낸 = 보낸표(저장읽기(), 자료.받음, Date.now());
+  머리그리기(); 대기열그리기(); 예정그리기(); 출고그리기();
+}
+function 탭고르기(t) {
+  탭 = t;
+  document.querySelectorAll('#tabs button').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-tab') === t); });
+  ['q', 'e', 's'].forEach(function (k) { $('tab-' + k).hidden = k !== t; });
+  try { sessionStorage.setItem('board.tab', t); } catch (e) {}
+  window.scrollTo(0, 0);
+}
+function 시작(d) {
+  자료 = d;
+  try { var t = sessionStorage.getItem('board.tab'); if (t && /^[qes]$/.test(t)) 탭 = t; } catch (e) {}
+  다시그리기(); 탭고르기(탭);
+  setInterval(머리그리기, 30000);
+}
+function 오류(말) { $('err').textContent = 말; $('err').hidden = false; $('main').hidden = true; $('tabs').hidden = true; }
+
+$('tabs').addEventListener('click', function (ev) { var b = ev.target.closest('[data-tab]'); if (b) { 떨림(); 탭고르기(b.getAttribute('data-tab')); } });
+$('main').addEventListener('click', function (ev) {
+  var g = ev.target.closest('[data-go]');
+  if (g) { var el = $(g.getAttribute('data-go')); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+  var b = ev.target.closest('[data-do]');
+  if (b) { var 동 = JSON.parse(b.getAttribute('data-do')); 떨림(); 하기(동, b.getAttribute('data-ask') || '보낼까요?'); return; }
+  var e = ev.target.closest('[data-e]');
+  if (e) { 떨림(); 시트열기((자료.예정 || [])[+e.getAttribute('data-e')]); return; }
+  var ek = ev.target.closest('[data-ek]');                // ② 카드 → 그 차 입차 시각(⏱ 입차 예정과 같은 판)
+  if (ek) {
+    var r = (자료.예정 || []).filter(function (x) { return x[0] === ek.getAttribute('data-ek'); })[0];
+    if (r) { 떨림(); 시트열기(r); }
+  }
+});
+$('stale').addEventListener('click', function (ev) { if (ev.target.closest('[data-act="새로"]')) 보내기({ a: '새로' }); });
+$('sheetBack').addEventListener('click', 시트닫기);
+$('calcBtn').addEventListener('click', function () { location.href = '../calc/'; });   // 📐 같은 저장소 계산기(같은 출처 — 텔레그램 안 그대로)
+
+function 판짓기(v) { try { return !!(tg && tg.isVersionAtLeast && tg.isVersionAtLeast(v)); } catch (e) { return false; } }
+function 태블릿인가() { var s = window.screen || {}; return Math.min(s.width || 0, s.height || 0) >= 600; }   // 폰 짧은 변 360~430
+function 전체화면되나() { return 텔레그램안 && 판짓기('8.0') && typeof tg.requestFullscreen === 'function'; }
+function 전체단추() {
+  var b = $('fullBtn');
+  b.hidden = !전체화면되나();
+  b.textContent = tg && tg.isFullscreen ? '⛶ 창으로' : '⛶ 전체화면';
+}
+function 전체바꾸기() { try { if (tg.isFullscreen) tg.exitFullscreen(); else tg.requestFullscreen(); } catch (e) {} }
+$('fullBtn').addEventListener('click', 전체바꾸기);
+
+(function () {
+  if (텔레그램안) {
+    try { tg.ready(); tg.expand(); } catch (e) {}
+    if (판짓기('7.7')) { try { tg.disableVerticalSwipes(); } catch (e) {} }   // 목록을 내리다 앱이 접히지 않게
+    if (전체화면되나()) {                                // 태블릿은 좁은 가운데 창으로 뜬다 — 열 때 전체화면
+      try { tg.onEvent('fullscreenChanged', 전체단추); tg.onEvent('fullscreenFailed', 전체단추); } catch (e) {}
+      if (태블릿인가() && !tg.isFullscreen) { try { tg.requestFullscreen(); } catch (e) {} }
+    }
+    전체단추();
+    var 테마 = function () { document.documentElement.setAttribute('data-theme', tg.colorScheme === 'dark' ? 'dark' : 'light'); };
+    테마(); try { tg.onEvent('themeChanged', 테마); } catch (e) {}
+  }
+  var h = 해시읽기(location.hash);
+  if (h.c) {
+    if (typeof DecompressionStream === 'undefined') { 오류('이 폰의 텔레그램(웹뷰)이 오래돼 상황판을 못 풀어요 — 텔레그램 · Android System WebView 를 업데이트해 주세요.'); return; }
+    풀기(h.c).then(시작).catch(function (e) { 오류('상황판 자료를 못 읽었어요 — 봇에 [🚦 상황판] 을 다시 눌러 주세요. (' + e.message + ')'); });
+    return;
+  }
+  if (텔레그램안) { 오류('상황판 자료가 없어요 — 봇 대화에서 [🚦 상황판] 을 눌러 아래 자판 맨 위 [🚦 상황판 열기] 로 열어 주세요.'); return; }
+  $('testStrip').hidden = false;                        // 시험 모드 — 가짜 차 · 가짜 도착지(회사 자료 없음)
+  var 지금 = new Date(Date.now() - 3 * 60000);
+  시작({ v: 1, t: 지금.getFullYear() + '-' + 두(지금.getMonth() + 1) + '-' + 두(지금.getDate()) + ' ' + 때글(지금), 켬: [1, 1], 받음: [],
+    줄: { 도착: [[1, '0011', 1, '09:12', 'A1', 0], [2, '0022', 2, '09:20', 'B2', 1]],
+          입차: [['c0000000001', '0011', 'A1', '대기', '💬 10:20 입차 · 🚚 1번째 09:12', 12, 0, '도착'], ['c0000000003', '0033', 'C3 · 🔁 2/10', '대기', '', 47, 1, ''],
+                 ['c0000000005', '0055', 'A1 · 진행 5', '진행', '', null, 0, ''], ['c0000000007', '0044', '🕓 도착 전 · 7·7A', '도착전', '', null, 0, '']],
+          순번: [['5', '0055', 'A1', 4, '▶ 전송 중', 3, 0, 0, 0], ['6', '0066', 'B2', 5, '스캔 4/6', 18, 4, 6, 0], ['8', '0088', 'C3', 3, '✓ 배정완료 🤖', 2, 0, 0, 0],
+                 ['9', '0099', 'A1', 2, '⚠ 제품 없음', 5, 0, 0, 0]],
+          허용: [['4', '0040'], ['6', '0066']], 승인: [['3', '0030', '09:40', '기사 텔레그램', '']] },
+    예정: [['c0000000003', '0033', 'C3', '', '', '대기', ''], ['c0000000001', '0011', 'A1', '10:20', '💬', '대기', ''], ['c0000000007', '0044', 'D4', '11:00', '📞', '도착전', '7·7A']],
+    출고: { 요청: [['A1 시험', 8, 3, 1, 2, 1, 1], ['B2 시험', 4, 1, 1, 0, 0, 2]], 송장: [6, 4, 98.4, 140.2],
+            나감: [['1', '0001', 24.1, '08:12'], ['2', '0002', 25.0, '08:40'], ['3', '0030', 24.6, '09:55'], ['4', '0040', 24.7, '10:05']],
+            안됨: [['6', '0066', 20.5, '10:02'], ['7', '0077', 21.3, '10:31']],
+            검수: { 스캔: 5, 검수: 4, 완료: 3, 하는중: 1, 멈춤: 0, 다름: 1, 없음: 1 },
+            검수차: [['1', '0001', 'ok', 6, 6, 0], ['2', '0002', 'diff', 5, 6, 1], ['3', '0030', 'ing', 2, 6, 0], ['4', '0040', 'none', 0, 6, 0]],
+            상차중: [['6', '0066', 4, ''], ['2', '0002', 6, '01-01']] },
+    못: [] });
+})();
+</script>
+</body>
+</html>
