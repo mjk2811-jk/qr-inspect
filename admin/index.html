@@ -51,7 +51,7 @@
   [hidden] { display: none !important; }
   html, body { margin: 0; }
   body { background: var(--bg); color: var(--text); font: 17px/1.35 "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
-         padding: var(--top) 0 var(--bot); }
+         padding: var(--top) 0 var(--bot); word-break: keep-all; overflow-wrap: break-word; }   /* 한국어는 띄어쓰기에서만 줄바꿈(11-21) */
   header { position: sticky; top: 0; z-index: 5; background: var(--head); box-shadow: 0 1px 0 var(--sep); padding-top: var(--top);
            margin-top: calc(0px - var(--top)); }
   .bar { display: flex; align-items: center; gap: 10px; padding: 10px 14px 6px; }
@@ -77,8 +77,9 @@
                   font-size: 15px; font-weight: 700; padding: 7px 12px; }
   .chips button.hot { border-color: var(--red); color: var(--red); }
   h2 { font-size: 18px; margin: 18px 2px 8px; display: flex; align-items: baseline; gap: 8px; }
-  h2 small { font-size: 13px; color: var(--hint); font-weight: 600; }
-  h2 .n { font-size: 16px; color: var(--link); }
+  h2 .t { flex: 0 0 auto; max-width: 72%; }          /* 제목은 줄지 않게 — 덧말이 남은 폭에서 줄바꿈('순번 기다/림' 막기, 11-21) */
+  h2 small { font-size: 13px; color: var(--hint); font-weight: 600; flex: 1 1 auto; min-width: 0; }
+  h2 .n { font-size: 16px; color: var(--link); flex: none; }
   .empty { color: var(--hint); font-size: 15px; padding: 8px 4px 2px; }
   .card { background: var(--card); border-radius: 14px; padding: 12px 14px; margin-bottom: 8px; box-shadow: 0 1px 2px rgba(0, 0, 0, .08);
           border-left: 6px solid transparent; }
@@ -117,7 +118,7 @@
   .row:last-child { border-bottom: 0; }
   .row .v { font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
   .list { background: var(--card); border-radius: 14px; padding: 4px 12px; }
-  .legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 13px; color: var(--hint); margin: 6px 2px 0; }
+  .legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 13px; color: var(--hint); margin: 6px 2px 8px; }
   .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 4px; }
   .eta { display: flex; align-items: center; gap: 10px; }
   .eta .t { margin-left: auto; text-align: right; }
@@ -268,7 +269,7 @@ function 단추(동, 글, 꼴, 물음) {                     // 보낸 동작이
   return '<button type="button" class="act ' + (꼴 || '') + '" data-do="' + esc(JSON.stringify(동)) + '" data-ask="' + esc(물음) + '">' + 글 + '</button>';
 }
 function 머리(id, 글, n, 덧) {
-  return '<h2 id="' + id + '">' + 글 + ' <span class="n">' + n + '</span>' + (덧 ? '<small>' + esc(덧) + '</small>' : '') + '</h2>';
+  return '<h2 id="' + id + '"><span class="t">' + 글 + '</span><span class="n">' + n + '</span>' + (덧 ? '<small>' + esc(덧) + '</small>' : '') + '</h2>';
 }
 function 없음(말) { return '<div class="empty">' + esc(말) + '</div>'; }
 function 딱지들(글, 꼴) {
