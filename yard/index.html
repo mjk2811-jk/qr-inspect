@@ -49,12 +49,21 @@
        ERP QR(*P…)은 줄 p '#B통'(보낼 때 '#B 통.단' 묶음 — 봇이 바코드 → 번호), 상차요청서 QR 은 알림만.
     ⑥ [＋ 야드] — 🗺 배치도(K) 탭 · ⌨ 글자로 탭. 칸에 DB 본수 · 더미 실림 점. 더미 없는 칸은 [🔎 DB 더미 받기] → sendData
        q:[야드](앱이 닫히고 봇이 그 야드를 실은 단추로). 옮길 곳 고르기도 같은 판(📦 G1 단추 더).
+  · 2026-11-21 ⑦ 📋 실사 진행판 — 재고 조사 때 어느 칸까지 봤고 어디가 달랐는지 한눈에. 링크(바탕 몫 — 짧게)
+      P:'g..rO.o'(N 열쇠 이름 차례로 한 글자 · '.' 안 봄 — 오늘(05시부터) 봇이 받은 야드: g 맞음 · o 다름(DB 로는 다른 야드 ·
+       안 누른 DB 관 · 옮김) · r 걸림(재고에 없음 · 이미 나감 · 두 번 · 바코드 모름) · 대문자 = 채팅 [✅ 저장] 됨)
+      Px:{'A02': 'G'}(N 에 없는 본 야드) · Pw:'b1 m1u2'(초록 아닌 칸마다 까닭 — b 걸림 · m 옮겨옴 · u 안 누름 · x 옮김, P → Px 차례).
+      봇 yard_survey_progress — 날이 바뀌면 봇이 저절로 비운다.
+    머리 [📋 실사 n / m곳](m = 지금 DB 재고가 있는 칸 · N) → 다른 칸(까닭) · 보냄 · 확인 전 · 안 본 칸(본수 큰 차례) · 맞음 — 칸을 누르면
+    배치도에서 그 칸. 배치도 [📋 실사 색] / [🔢 본수 색](그날만 기억 — 본수 색이면 진행 표시를 안 함): 초록 · 주황 · 빨강 · ✓ 저장 ·
+    회색 = 안 본 칸(DB 재고) · 하늘 점선 = '보냄 · 확인 전'(태블릿이 보냈는데 봇 답 r 이 링크에 아직 — 상태.보냄 의 오늘 것).
   함수  셈: 해시읽기 · b64url풀기 · b64바이트 · 인플레이트 · 풀기 · 범위풀기 · 번호꼴 · 보낼글 · 더미풀기 · 보낼묶음 · 반복켜 ·
             자동켜찾기 · 다음단 · 쌓은자리 · 바꾼줄 · 끼운줄 · 뺀줄 · 누름인가 · 레일자리 · 손굴림 · 맞춤셈 · 옮김더하기 ·
-            QR가르기 · 칸야드 · 칸본수 · 되살릴줄
+            QR가르기 · 칸야드 · 칸본수 · 되살릴줄 · 토큰풀기 · 진행풀기 · 까닭글 · 작업날시작 · 확인전야드 · 진행셈 · 진행칸 · 칸진행
         화면: 그리기 · 칩그리기 · 판그리기 · 야드그리기 · 차례그리기 · 누름 · 단고름 · 야드고르기열기 · 보내기 · 시작 · 이어
             · 지킴 · 눌러도 · 지금고침 · 고침켜기 · 빼기 · 모드그리기 · 토스트 · 보기바꿈 · 레일그리기 · 레일굴림 · 레일잇기
             · 맞춤그리기 · 없는것열기 · 보낸것열기 · 되살리기 · 더미부탁 · 머리단추 · QR받음 · 스캔받기 · 스캔초점 · 카메라
+            · 진행지금 · 진행열기 · 진행야드 · 색모드읽기 · 색모드바꿈 · 진행한줄
 -->
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
@@ -212,6 +221,18 @@
   .wrow .why { border-radius: 8px; padding: 0 6px; margin-left: 6px; font-size: 13px; }
   .why.bad { background: #fee2e2; color: #b91c1c; } .why.info { background: #ffedd5; color: #9a3412; } .why.qr { background: #dbeafe; color: #1d4ed8; }
   .saved { color: var(--ok); font-weight: bold; margin-left: 6px; font-size: 14px; }
+  /* 2026-11-21 — ⑦ 📋 실사 진행판(머리 단추 · 진행 창 · 배치도 실사 색) */
+  .tabs .sp { flex: 1; }
+  .pstat { display: flex; flex-wrap: wrap; align-items: center; margin: 8px 0 2px; }
+  .pstat .c { display: inline-block; border-radius: 12px; padding: 3px 10px; margin: 0 6px 6px 0; font-size: 15px; white-space: nowrap; }
+  .pstat .k3 { padding: 8px 14px; font-size: 15px; margin: 0 0 6px auto; }
+  .c.bad { background: #fee2e2; color: #b91c1c; } .c.wait { background: #e0f2fe; color: #0369a1; } .c.un { background: #e5e7eb; color: #374151; }
+  .psec { margin: 12px 0 4px; font-size: 16px; font-weight: bold; }
+  .prow { display: flex; align-items: center; flex-wrap: wrap; width: 100%; text-align: left; margin: 0 0 6px; padding: 10px 12px; font-size: 17px; }
+  .prow .why { border-radius: 8px; padding: 1px 8px; margin-left: 8px; font-size: 14px; }
+  .prow .pw { margin-left: 8px; color: var(--hint); font-size: 14px; }
+  .plist .pq { background: #e0f2fe; border-color: #7dd3fc; }
+  .plist .pg { background: #dcfce7; border-color: #86efac; }
   @media (orientation: portrait) {
     #info { display: none; }                         /* 세로는 위 띠가 좁다 — 기본 1단은 차례 칸의 회색 '1단'으로 보인다 */
     .main { flex-direction: column; }
@@ -266,6 +287,8 @@
     .chk .k3 { font-size: 12px; padding: 3px 7px; }
     .pickline { font-size: 14px; }
     .pickline .k3 { padding: 8px 10px; font-size: 14px; }
+    .prow { font-size: 15px; padding: 8px 10px; }
+    .pstat .c { font-size: 13px; padding: 2px 8px; }
   }
 </style>
 </head>
@@ -276,6 +299,7 @@
   <span class="hint" id="saved"></span>
   <span class="grow"></span>
   <span class="hint" id="info"></span>
+  <button type="button" class="k3 hb" id="progBtn" hidden>📋 <span class="wide">실사 </span><span id="progN"></span><span class="wide">곳</span></button>
   <button type="button" class="k3 hb" id="sentBtn" hidden>📨 <span class="wide">보낸 것 </span><span id="sentN"></span></button>
   <button type="button" class="k3 hb" id="qrBtn" hidden>📷 QR</button>
   <button type="button" class="k3 full" id="fullBtn" hidden>⛶ 전체화면</button>
@@ -331,7 +355,8 @@ var 예시자료 = { v: 2, d: '시험', t: '시험', r: [], n: 46, m: 0, L: [
     for (var j = 1; j <= 8; j++) { K.push(['B0' + j + 'A', (8 - j) * 60, 110, 60, 22]); K.push(['B0' + j + 'C', (8 - j) * 60, 132, 60, 22]); }
     return K;
   })(),
-  W: [480, 260], N: { A03: 6, C05: 12, B02A: 2 }, Y: { A03: '00Y 0100 0101 0102 0103.2 0104.2 0105.3' } };
+  W: [480, 260], N: { A03: 6, C05: 12, B02A: 2, A05: 20, C02: 9, B04C: 3, A01: 4 }, Y: { A03: '00Y 0100 0101 0102 0103.2 0104.2 0105.3' },
+  P: 'g..r..o', Px: { A02: 'G' }, Pw: 'b1 m1u2' };   // ⑦ 시험 실사 진행(11-21) — N 이름 차례 A01 A03 A05 B02A B04C C02 C05
 var 보낼한도 = 4096;
 
 function 해시읽기() {
@@ -641,6 +666,92 @@ function 손굴림(트랙, 키, 전체, 보임, y) {
   var 비 = Math.max(0, Math.min(1, (y - 키 / 2) / (트랙 - 키)));
   return Math.round(비 * (전체 - 보임));
 }
+/** ⑦ 📋 실사 진행판(2026-11-21) — 링크 N · P(N 열쇠 이름 차례로 한 글자 · '.' 안 봄) · Px {야드: 글자}(N 밖) · Pw(초록 아닌 칸마다
+ *  까닭 토큰 'b1u2' 를 P → Px 차례로 빈칸 이음) → {야드: {s, 저장, w: [걸림, 옮겨옴, 안누름, 옮김] | null}} — 봇 yard_survey_progress.링크꼴 과 짝.
+ *  s: g 맞음 · o 다름(DB 로는 다른 야드 · 안 누른 DB 관 · 옮김) · r 걸림(재고에 없음 · 이미 나감 · 두 번 · 바코드 모름) · 대문자 = 저장 */
+function 토큰풀기(t) {
+  var w = [0, 0, 0, 0], re = /([bmux])(\d+)/g, m;
+  while ((m = re.exec(_s(t)))) w['bmux'.indexOf(m[1])] = parseInt(m[2], 10);
+  return w;
+}
+function 진행풀기(N, P, Px, Pw) {
+  var out = {}, 토큰 = _s(Pw).split(/\s+/).filter(Boolean), ti = 0, p = String(P || '');
+  function 하나(y, k) {
+    var s = String(k || '').toLowerCase();
+    if (!/^[gor]$/.test(s)) return;
+    out[y] = { s: s, 저장: k !== s, w: s === 'g' ? null : 토큰풀기(토큰[ti++]) };
+  }
+  Object.keys(N || {}).sort().forEach(function (y, i) { if (i < p.length) 하나(y, p.charAt(i)); });
+  Object.keys(Px || {}).sort().forEach(function (y) { 하나(y, Px[y]); });
+  return out;
+}
+/** 까닭 수 [걸림, 옮겨옴, 안누름, 옮김] → '걸린 줄 1 · 옮겨옴 1 · 안 누름 2'(0 은 뺌) */
+function 까닭글(w) {
+  var 이름 = ['걸린 줄', '옮겨옴', '안 누름', '옮김'], out = [];
+  (w || []).forEach(function (n, i) { if (n && 이름[i]) out.push(이름[i] + ' ' + n); });
+  return out.join(' · ');
+}
+/** 오늘 작업일이 시작한 때(ms) — 날은 05시에 바뀐다(봇과 같은 규칙 — 자정 ~ 05시는 아직 어제) */
+function 작업날시작(ms) {
+  var d = new Date(ms);
+  if (d.getHours() < 5) d.setDate(d.getDate() - 1);
+  d.setHours(5, 0, 0, 0);
+  return d.getTime();
+}
+/** 태블릿이 보냈는데 봇 답(링크 r)이 아직 없는 야드 — 상태.보냄 가운데 오늘 작업일 것 → {야드: 보낸 때} */
+function 확인전야드(보냄, 지금ms) {
+  var 시작 = 작업날시작(지금ms), out = {};
+  Object.keys(보냄 || {}).forEach(function (id) {
+    var x = 보냄[id];
+    if (!x || (x.때 || 0) < 시작) return;
+    (x.야드들 || []).forEach(function (y) { if (!out[y] || out[y] < x.때) out[y] = x.때; });
+  });
+  return out;
+}
+/** 진행판 셈 — 진행(진행풀기) · N(야드마다 DB 본수) · 확인전 → {n: 본 곳(DB 재고가 있는 칸 가운데 봇이 받은 곳), n2: 확인 전만인 곳,
+ *  m: DB 재고가 있는 칸 수, 안본: [[야드, 본수]](본수 큰 차례), 다른: [[야드, s, 저장, w]](걸림 먼저 · 이름 차례), 맞음: [야드],
+ *  확인전: [야드], 수: {g, o, r}, 저장: 수}. 확인 전인 야드(새로 보냄)는 옛 색 목록에서 빼고 확인 전에만 */
+function 진행셈(진행, N, 확인전) {
+  var out = { n: 0, n2: 0, m: 0, 안본: [], 다른: [], 맞음: [], 확인전: [], 수: { g: 0, o: 0, r: 0 }, 저장: 0 };
+  var 차례 = function (a, b) { return a < b ? -1 : a > b ? 1 : 0; };
+  진행 = 진행 || {}; 확인전 = 확인전 || {};
+  Object.keys(N || {}).forEach(function (y) {
+    if (!(N[y] > 0)) return;
+    out.m++;
+    if (진행[y]) out.n++;
+    else if (확인전[y]) out.n2++;
+    else out.안본.push([y, N[y]]);
+  });
+  Object.keys(진행).sort(차례).forEach(function (y) {
+    if (확인전[y]) return;
+    var x = 진행[y];
+    out.수[x.s] = (out.수[x.s] || 0) + 1;
+    if (x.저장) out.저장++;
+    if (x.s === 'g') out.맞음.push(y); else out.다른.push([y, x.s, !!x.저장, x.w || null]);
+  });
+  out.다른.sort(function (a, b) { return (a[1] === b[1] ? 0 : a[1] === 'r' ? -1 : 1) || 차례(a[0], b[0]); });
+  out.확인전 = Object.keys(확인전).sort(차례);
+  out.안본.sort(function (a, b) { return b[1] - a[1] || 차례(a[0], b[0]); });
+  return out;
+}
+/** 배치도 칸마다 진행 → {칸: {s: g | o | r | q(확인 전), 저장}} — 'B03' 은 두 반쪽에(칸야드), 한 칸에 둘이면 q > r > o > g */
+function 진행칸(진행, 확인전, K) {
+  var 이름들 = 칸이름들(K), 순 = { g: 1, o: 2, r: 3, q: 4 }, out = {};
+  function 넣기(y, s, 저장) {
+    칸야드(y, 이름들).forEach(function (c) {
+      var x = out[c];
+      if (!x || 순[s] > 순[x.s]) out[c] = { s: s, 저장: !!저장 || !!(x && x.저장) };
+      else if (저장) x.저장 = true;
+    });
+  }
+  Object.keys(진행 || {}).forEach(function (y) { 넣기(y, 진행[y].s, 진행[y].저장); });
+  Object.keys(확인전 || {}).forEach(function (y) { 넣기(y, 'q', false); });
+  return out;
+}
+/** 배치도 칸 이름 → 그 칸의 진행(야드 이름이 같거나 'B03A' 의 'B03') | null */
+function 칸진행(진행, c) {
+  return (진행 || {})[c] || (/^B\d{2}[AC]$/.test(c) ? (진행 || {})[c.slice(0, -1)] : null) || null;
+}
 
 /* ── 화면 ─────────────────────────────────────────────────────────────── */
 var tg = (window.Telegram && window.Telegram.WebApp) || null;
@@ -658,6 +769,8 @@ var 모든번호 = {};            // 번호 → 작지 줄
 var 더미 = {};                // 야드 → [{p, 단}] — 봇이 실어 준 지금 DB 더미(태블릿에 저장 안 함 — 늘 링크의 것)
 var 고침 = null;              // {k: '바꿈' | '끼움', 야드, i(대상 줄), p(대상 번호), n(끼운 수)} — 저장 안 함(앱을 닫으면 그만)
 var 보기 = 'list';            // 폰 아래 칸 — 'list'(📋 차례) | 'pic'(🔵 모양)
+var 진행 = {};                // ⑦ 야드 → {s, 저장, w} — 링크 P · Pw(봇이 받은 오늘 실사 — 태블릿에 저장 안 함)
+var 색모드 = 'heat';          // ⑦ 배치도 색 — 'prog'(📋 실사) | 'heat'(🔢 본수) · 그날만 기억
 var 토스트때 = 0;
 var $ = function (id) { return document.getElementById(id); };
 // ⛶ 전체화면(2026-11-20 '야드등록에서 테블릿 가로 전체화면이 안되') — 태블릿 텔레그램은 미니 앱을 가운데 좁은 창(세로로 긴 창)으로
@@ -1025,8 +1138,10 @@ function 알림(글) { if (텔레그램안 && tg.showAlert) tg.showAlert(글); e
 /* 야드 고르기 — ⑥ 🗺 배치도(링크 K · 칸에 DB 본수 · 초록 점 = 더미 있음) · ⌨ 글자로(줄 글자 · 번호 · B 줄은 쪽 A/C · 직접).
    목적 = {옮김: {에서, ps}} 이면 ② 옮길 곳 고르기(📦 G1 단추 더 · 받을 칸만) */
 function 야드고르기열기(목적) {
-  var 줄 = 'B', 쪽 = 'C', 배치 = !!(자료.K && 자료.K.length && 자료.W), 탭 = 배치 ? '그림' : '글자', 고른칸 = '';
+  var 줄 = 'B', 쪽 = 'C', 배치 = !!(자료.K && 자료.K.length && 자료.W), 탭 = 배치 ? '그림' : '글자', 고른칸 = (목적 && 목적.칸) || '';
   var 옮김 = 목적 && 목적.옮김, 이름들 = 칸이름들(자료.K), 본 = 칸본수(자료.N, 자료.K), 실린 = {}, 쓴야드 = {};
+  var 진색 = { g: ['#86efac', '#15803d'], o: ['#fdba74', '#c2410c'], r: ['#fca5a5', '#b91c1c'], q: ['#bae6fd', '#0369a1'] };   // ⑦ 실사 색(11-21)
+  var 칸진 = 진행칸(진행, 확인전야드(상태.보냄, Date.now()), 자료.K);
   Object.keys(더미).forEach(function (y) { 칸야드(y, 이름들).forEach(function (c) { 실린[c] = 1; }); });
   Object.keys(상태.야드들).forEach(function (y) { if (상태.야드들[y].length) 쓴야드[y] = 1; });
   function 정함(y) {
@@ -1042,12 +1157,21 @@ function 야드고르기열기(목적) {
     자료.K.forEach(function (k) {
       var y = k[0], x = k[1], t = k[2], w = k[3], hh = k[4], n = 본[y] || 0, 반 = /^B\d{2}[AC]$/.test(y), 고 = y === 고른칸;
       var 칠 = 고 ? '#2c6bd4' : 쓴야드[y] ? '#dbe8fb' : !n ? '#f3f4f6' : n < 10 ? '#eef2ff' : n < 30 ? '#c7d2fe' : n < 60 ? '#818cf8' : '#4f46e5';
-      var 글색 = 고 || n >= 30 ? '#ffffff' : '#1f2937';
+      var 글색 = 고 || n >= 30 ? '#ffffff' : '#1f2937', 테 = 쓴야드[y] || 고 ? '#2c6bd4' : '#94a3b8', 굵 = 쓴야드[y] || 고 ? 2 : 0.8, 점선 = '';
+      var p = 색모드 === 'prog' ? 칸진[y] : null;
+      if (색모드 === 'prog') {                                         // ⑦ 실사 색 — 초록 · 주황 · 빨강 · 하늘 점선(확인 전) · 회색(안 본 DB 재고)
+        칠 = 고 ? '#2c6bd4' : p ? 진색[p.s][0] : n ? '#d1d5db' : '#f8fafc';
+        글색 = 고 ? '#ffffff' : '#1f2937';
+        if (p && !고 && !쓴야드[y]) { 테 = 진색[p.s][1]; 굵 = 1.6; }
+        if (p && p.s === 'q' && !고) 점선 = ' stroke-dasharray="3 2"';
+      }
       s += '<g data-y="' + esc(y) + '"><rect x="' + x + '" y="' + t + '" width="' + w + '" height="' + hh + '" rx="2" fill="' + 칠 +
-        '" stroke="' + (쓴야드[y] || 고 ? '#2c6bd4' : '#94a3b8') + '" stroke-width="' + (쓴야드[y] || 고 ? 2 : 0.8) + '"/>' +
+        '" stroke="' + 테 + '" stroke-width="' + 굵 + '"' + 점선 + '/>' +
         '<text x="' + (x + 2) + '" y="' + (t + 9) + '" font-size="8" fill="' + 글색 + '">' + esc(반 ? y.slice(1) : y) + '</text>' +
         (n ? '<text x="' + (x + w / 2) + '" y="' + (t + hh / 2 + (반 ? 6 : 5)) + '" font-size="' + (반 ? 9 : 11) +
           '" font-weight="bold" text-anchor="middle" fill="' + 글색 + '">' + n + '</text>' : '') +
+        (p && p.저장 ? '<text x="' + (x + w - 2) + '" y="' + (t + hh - 2) + '" font-size="9" font-weight="bold" text-anchor="end" fill="' +
+          (고 ? '#ffffff' : '#14532d') + '">✓</text>' : '') +
         (실린[y] ? '<circle cx="' + (x + w - 4) + '" cy="' + (t + 4) + '" r="2.6" fill="#16a34a"/>' : '') + '</g>';
     });
     return s + '</svg>';
@@ -1056,11 +1180,14 @@ function 야드고르기열기(목적) {
     var el = $('pickLine');
     if (!el) return;
     if (!고른칸) {
-      el.innerHTML = '<span class="info hint">칸을 누르세요 — 숫자 = 지금 DB 본수 · 초록 점 = DB 더미가 앱에 있음(맞춰 보기) · 파란 테 = 오늘 누른 야드</span>';
+      el.innerHTML = '<span class="info hint">' + (색모드 === 'prog'
+        ? '칸을 누르세요 — 오늘 실사: 초록 맞음 · 주황 다름 · 빨강 걸림 · ✓ 채팅 저장 · 하늘 점선 보냄·확인 전 · 회색 안 본 칸(DB 재고) · 숫자 = 지금 DB 본수'
+        : '칸을 누르세요 — 숫자 = 지금 DB 본수 · 초록 점 = DB 더미가 앱에 있음(맞춰 보기) · 파란 테 = 오늘 누른 야드') + '</span>';
       return;
     }
     var n = 본[고른칸] || 0, 실 = 실린[고른칸];
-    var h = '<span class="info"><b>' + esc(고른칸) + '</b> — DB ' + n + '본' + (n ? (실 ? ' · 🗂 더미 있음' : ' · 더미가 앱에 없음') : '') + '</span>';
+    var h = '<span class="info"><b>' + esc(고른칸) + '</b> — DB ' + n + '본' + (n ? (실 ? ' · 🗂 더미 있음' : ' · 더미가 앱에 없음') : '') +
+      (색모드 === 'prog' ? esc(진행한줄(고른칸)) : '') + '</span>';
     if (!옮김 && n && !실) h += '<button class="k3" id="askDummy">🔎 DB 더미 받기</button>';
     h += '<button class="k3 blue" id="pickOk">' + (옮김 ? '여기로 옮기기' : '이 야드로') + '</button>';
     el.innerHTML = h;
@@ -1072,7 +1199,9 @@ function 야드고르기열기(목적) {
     if (배치 || 옮김) {
       h += '<div class="tabs">' + (배치 ? '<button class="k3' + (탭 === '그림' ? ' on' : '') + '" data-tab="그림">🗺 배치도</button>' +
         '<button class="k3' + (탭 === '글자' ? ' on' : '') + '" data-tab="글자">⌨ 글자로</button>' : '') +
-        (옮김 ? '<button class="k3" data-yard="G1">📦 G1 로</button>' : '') + '</div>';
+        (옮김 ? '<button class="k3" data-yard="G1">📦 G1 로</button>' : '') +
+        (배치 && 탭 === '그림' ? '<span class="sp"></span><button class="k3' + (색모드 === 'prog' ? ' on' : '') + '" data-color="prog">📋 실사 색</button>' +
+          '<button class="k3' + (색모드 !== 'prog' ? ' on' : '') + '" data-color="heat">🔢 본수 색</button>' : '') + '</div>';
     }
     if (탭 === '그림') {
       h += '<div class="mapbox">' + 그림판() + '</div><div class="pickline" id="pickLine"></div>';
@@ -1099,6 +1228,7 @@ function 야드고르기열기(목적) {
     $('sheet').className = 'sheet' + (탭 === '그림' ? ' wide' : '');
     $('sheet').innerHTML = h;
     Array.prototype.forEach.call($('sheet').querySelectorAll('[data-tab]'), function (b) { b.onclick = function () { 탭 = b.getAttribute('data-tab'); 그림(); }; });
+    Array.prototype.forEach.call($('sheet').querySelectorAll('[data-color]'), function (b) { b.onclick = function () { 색모드바꿈(b.getAttribute('data-color')); 그림(); }; });
     Array.prototype.forEach.call($('sheet').querySelectorAll('[data-line]'), function (b) { b.onclick = function () { 줄 = b.getAttribute('data-line'); 그림(); }; });
     Array.prototype.forEach.call($('sheet').querySelectorAll('[data-side]'), function (b) { b.onclick = function () { 쪽 = b.getAttribute('data-side'); 그림(); }; });
     Array.prototype.forEach.call($('sheet').querySelectorAll('[data-yard]'), function (b) { b.onclick = function () { 정함(b.getAttribute('data-yard')); }; });
@@ -1236,8 +1366,80 @@ function 되살리기(id, y) {
   닫기(); 저장(); 그리기();
   토스트('✏ ' + y + ' ' + 상태.야드들[y].length + '본을 목록으로 되살렸어요 — 고친 뒤 📤 보내기');
 }
-/** 머리 줄 [📨 보낸 것 n] · [📷 QR] */
+/* ⑦ 📋 오늘 실사 진행판(2026-11-21) — 머리 [📋 실사 n / m곳] → 다른 칸 · 확인 전 · 안 본 칸(본수 큰 차례) · 맞음 */
+function 진행지금() { return 진행셈(진행, 자료.N, 확인전야드(상태.보냄, Date.now())); }
+function 색모드읽기() {
+  var v = null;
+  try { v = JSON.parse(localStorage.getItem('yard|색') || 'null'); } catch (e) { v = null; }
+  if (v && v.날 === 작업날시작(Date.now()) && (v.v === 'prog' || v.v === 'heat')) { 색모드 = v.v; return; }
+  색모드 = Object.keys(진행).length || Object.keys(확인전야드(상태.보냄, Date.now())).length ? 'prog' : 'heat';   // 오늘 진행이 있으면 실사 색
+}
+function 색모드바꿈(v) {
+  색모드 = v === 'prog' ? 'prog' : 'heat';
+  try { localStorage.setItem('yard|색', JSON.stringify({ 날: 작업날시작(Date.now()), v: 색모드 })); } catch (e) {}
+}
+/** 고른 배치도 칸의 실사 한 줄 — ' · ✓ 맞음' · ' · ⚠ 걸림(걸림 1 · 안 누름 2)' · ' · ⏳ 보냄 · 확인 전' · ' · □ 오늘 안 봄' */
+function 진행한줄(c) {
+  var 확 = 확인전야드(상태.보냄, Date.now()), x = 칸진행(진행, c);
+  if (확[c] || (/^B\d{2}[AC]$/.test(c) && 확[c.slice(0, -1)])) return ' · ⏳ 보냄 · 확인 전';
+  if (!x) return ' · □ 오늘 안 봄';
+  var 글 = x.s === 'g' ? '✓ 맞음' : (x.s === 'r' ? '⚠ 걸림' : '≠ 다름') + (x.w ? '(' + 까닭글(x.w) + ')' : '');
+  return ' · ' + 글 + (x.저장 ? ' · ✅ 채팅 저장' : '');
+}
+function 진행야드(y) {
+  var cs = 칸야드(y, 칸이름들(자료.K));
+  if (자료.K && 자료.K.length && 자료.W && cs.length) { 색모드바꿈('prog'); 야드고르기열기({ 칸: cs[0] }); }
+  else 야드정함(y);
+}
+function 진행열기() {
+  var c = 진행지금(), 배치 = !!(자료.K && 자료.K.length && 자료.W);
+  var h = '<h2>📋 오늘 실사 — ' + c.n + (c.n2 ? '(+' + c.n2 + ' 확인 전)' : '') + ' / ' + c.m + '곳</h2>' +
+    '<div class="hint">오늘(05시부터) 봇이 받은 야드 — 봇 확인 ' + esc(자료.t || '') + ' 기준 · 날이 바뀌면 저절로 비워져요. ' +
+    'm = 지금 DB 재고가 있는 칸. 칸을 누르면 배치도에서 그 칸(이 야드로 · DB 더미 받기).</div>' +
+    '<div class="pstat"><span class="c ok">✓ 맞음 ' + c.수.g + '</span><span class="c miss">≠ 다름 ' + c.수.o + '</span>' +
+    '<span class="c bad">⚠ 걸림 ' + c.수.r + '</span><span class="c wait">⏳ 확인 전 ' + c.확인전.length + '</span>' +
+    '<span class="c un">□ 안 봄 ' + c.안본.length + '</span>' + (c.저장 ? '<span class="c ok">✅ 채팅 저장 ' + c.저장 + '</span>' : '') +
+    (배치 ? '<button class="k3" id="progMap">🗺 배치도로 보기</button>' : '') + '</div>';
+  if (c.다른.length) {
+    h += '<div class="psec">❗ 다른 칸 ' + c.다른.length + ' — 걸림 먼저(줄마다는 📨 보낸 것)</div>';
+    c.다른.forEach(function (x) {
+      h += '<button class="k3 prow" data-py="' + esc(x[0]) + '"><b>' + esc(x[0]) + '</b><span class="why ' + (x[1] === 'r' ? 'bad">⚠ 걸림' : 'info">≠ 다름') +
+        '</span><span class="pw">' + esc(까닭글(x[3])) + '</span>' + (x[2] ? '<span class="saved">✅ 저장</span>' : '') + '</button>';
+    });
+  }
+  if (c.확인전.length) {
+    h += '<div class="psec">⏳ 보냄 · 확인 전 ' + c.확인전.length + '</div><div class="hint">태블릿이 보냈는데 봇 답이 아직 링크에 없어요 — ' +
+      '봇 답의 새 [📍 야드 등록 열기] 로 열면 색이 들어와요</div><div class="plist">';
+    c.확인전.forEach(function (y) { h += '<button class="k3 pq" data-py="' + esc(y) + '">' + esc(y) + '</button>'; });
+    h += '</div>';
+  }
+  h += '<div class="psec">□ 안 본 칸 ' + c.안본.length + ' — DB 본수 큰 차례</div>';
+  if (!c.안본.length) h += '<div class="hint">' + (c.m ? 'DB 재고가 있는 칸은 다 봤어요' : '링크에 DB 본수가 없어요') + '</div>';
+  else {
+    h += '<div class="plist">';
+    c.안본.forEach(function (x) { h += '<button class="k3" data-py="' + esc(x[0]) + '">' + esc(x[0]) + '<br><small>' + x[1] + '본</small></button>'; });
+    h += '</div>';
+  }
+  if (c.맞음.length) {
+    h += '<div class="psec">✓ 맞음 ' + c.맞음.length + '</div><div class="plist">';
+    c.맞음.forEach(function (y) { h += '<button class="k3 pg" data-py="' + esc(y) + '">' + esc(y) + (진행[y].저장 ? ' ✅' : '') + '</button>'; });
+    h += '</div>';
+  }
+  h += '<div class="btns"><button class="k3" id="sheetX">닫기</button></div>';
+  $('sheet').className = 'sheet';
+  $('sheet').innerHTML = h;
+  Array.prototype.forEach.call($('sheet').querySelectorAll('[data-py]'), function (b) {
+    b.onclick = function () { 진행야드(b.getAttribute('data-py')); };
+  });
+  if ($('progMap')) $('progMap').onclick = function () { 색모드바꿈('prog'); 야드고르기열기(); };
+  $('sheetX').onclick = 닫기;
+  $('sheetBg').hidden = false;
+}
+/** 머리 줄 [📋 실사 n / m곳] · [📨 보낸 것 n] · [📷 QR] */
 function 머리단추() {
+  var c = 진행지금();
+  $('progBtn').hidden = !c.m && !Object.keys(진행).length && !c.확인전.length;
+  $('progN').textContent = c.n + (c.n2 ? '(+' + c.n2 + ')' : '') + ' / ' + c.m;
   var n = Object.keys(상태.보낸).length;
   $('sentBtn').hidden = !n;
   $('sentN').textContent = n ? String(n) : '';
@@ -1379,6 +1581,8 @@ function 이어(d, 오류) {
   자료.L.forEach(function (l) { l.번호들 = 범위풀기(l[3]).map(function (뒤) { return l[2] + 뒤; }); l.번호들.forEach(function (p) { 모든번호[p] = l; }); });
   읽기();
   var 지운 = 받은만큼();
+  진행 = 진행풀기(자료.N, 자료.P, 자료.Px, 자료.Pw);                  // ⑦ 오늘 실사 진행(봇 — 링크 P · Px · Pw)
+  색모드읽기();
   if (자료.K && 자료.K.length) { 받을곳 = 칸이름들(자료.K); 받을곳.G1 = 1; }
   var 부탁 = 자료.Yq || (자료.v === 2 ? [] : Object.keys(자료.Y || {}));   // 판 1 은 실린 더미 = 부탁한 야드
   Object.keys(자료.Y || {}).forEach(function (y) { 더미[y] = 더미풀기(자료.Y[y]); });   // 봇이 실어 준 DB 더미(② 맞춰 보기 · 회색)
@@ -1414,6 +1618,7 @@ function 이어(d, 오류) {
   $('send').onclick = 보내기;
   $('sheetBg').onclick = function (e) { if (e.target === $('sheetBg')) 닫기(); };
   $('sentBtn').onclick = 보낸것열기;
+  $('progBtn').onclick = 진행열기;
   $('qrBtn').onclick = 카메라;
   스캔칸 = $('scanIn');                                              // ⑤ 🔫 스캐너 — 보이지 않는 칸(Enter 로 끝, 없으면 0.4초 뒤)
   스캔칸.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' || ev.keyCode === 13) { ev.preventDefault(); 스캔받기(); } });
@@ -1430,6 +1635,8 @@ function 이어(d, 오류) {
   if (시험 && 해시.shot === 'y6map') 야드고르기열기();
   if (시험 && 해시.shot === 'y6miss') 없는것열기();
   if (시험 && 해시.shot === 'y6sent') 보낸것열기();
+  if (시험 && 해시.shot === 'y7') setTimeout(진행열기, 30);            // 시안 그림용(11-21) — 📋 실사 진행판(빈 앱이 여는 야드 고르기 뒤에)
+  if (시험 && 해시.shot === 'y7map') setTimeout(function () { 색모드바꿈('prog'); 야드고르기열기(); }, 30);
 }
 시작();
 </script>
