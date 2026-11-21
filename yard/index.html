@@ -84,6 +84,7 @@
   body { background: var(--bg); color: var(--text); font: 17px/1.3 "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
          display: flex; flex-direction: column; overflow: hidden; -webkit-user-select: none; user-select: none;
          padding: var(--top) 0 var(--bot); }               /* 전체화면 — 머리 줄이 텔레그램 단추 아래 · 보내기 줄이 내비 줄 위(11-20) */
+  body { word-break: keep-all; overflow-wrap: break-word; }   /* 한국어는 띄어쓰기에서만 줄바꿈 — '배/치도' · '태블/릿' 처럼 낱자로 안 끊게(11-21) */
   .bar .full { padding: 6px 12px; font-size: 15px; white-space: nowrap; }
   .bar { display: flex; align-items: center; padding: 8px 12px; background: var(--card); border-bottom: 1px solid var(--sep); }
   .bar > * + * { margin-left: 10px; }
@@ -202,10 +203,10 @@
   .num.mvq { background: #f5f3ff; border-color: #a78bfa; color: #5b21b6; }
   .num.missq { box-shadow: 0 0 0 3px #fb923c; }
   .sheet.wide { max-width: 1180px; }
-  .tabs { display: flex; margin-bottom: 8px; }
-  .tabs .k3 { padding: 8px 14px; font-size: 16px; margin-right: 6px; }
+  .tabs { display: flex; flex-wrap: wrap; margin-bottom: 2px; }   /* 줄이 넘치면 다음 줄로(단추 아래 여백 — 옛 웹뷰 79 는 flex gap 을 모름) */
+  .tabs .k3 { padding: 8px 14px; font-size: 16px; margin: 0 6px 6px 0; white-space: nowrap; }
   .mapbox { border: 1px solid var(--sep); border-radius: 10px; background: #f8fafc; overflow: auto; max-height: 56vh; }
-  .mapbox svg { display: block; width: 100%; min-width: 600px; height: auto; max-height: 58vh; }
+  .mapbox svg { display: block; width: 100%; min-width: 600px; height: auto; max-height: calc(56vh - 2px); }   /* 칸 테두리 안(.mapbox 56vh) — 아래 줄이 안 잘리게(11-21) */
   .mapbox g { cursor: pointer; }
   .pickline { display: flex; align-items: center; flex-wrap: wrap; margin-top: 8px; font-size: 16px; }
   .pickline .k3 { padding: 10px 14px; font-size: 16px; margin: 0 0 4px 8px; }
@@ -241,8 +242,11 @@
   }
   /* 📱 폰(폭 600 아래 — 11-19 '번호 단추를 조금 줄이고 · 사이를 띄워 굴리다 눌림 없게 · 차례 목록이 보이게'). 번호 단추는 위(폰 · 태블릿 같음) */
   @media (max-width: 600px) {
-    .bar { padding: 6px 10px; }
+    .bar { padding: 6px 10px; flex-wrap: wrap; }
     .bar h1 { font-size: 18px; }
+    .bar .test { order: 9; flex: 1 0 100%; margin: 4px 0 0; }  /* 🧪 시험 띠는 둘째 줄 한 줄로(텔레그램 안에서는 숨음) */
+    .bar #saved { min-width: 0; }
+    .tabs .sp { flex: 1 0 100%; height: 0; }                   /* 배치도 · 글자로 | 실사 색 · 본수 색 — 두 줄로 나눠 단추 글이 안 끊기게 */
     .chips { padding: 6px 8px; }
     .chips .k3 { padding: 7px 10px; font-size: 14px; }
     .find { padding: 4px 10px; }
@@ -1187,7 +1191,7 @@ function 야드고르기열기(목적) {
     }
     var n = 본[고른칸] || 0, 실 = 실린[고른칸];
     var h = '<span class="info"><b>' + esc(고른칸) + '</b> — DB ' + n + '본' + (n ? (실 ? ' · 🗂 더미 있음' : ' · 더미가 앱에 없음') : '') +
-      (색모드 === 'prog' ? esc(진행한줄(고른칸)) : '') + '</span>';
+      (색모드 === 'prog' ? ' ' + esc(진행한줄(고른칸)) : '') + '</span>';   // esc 가 앞 빈칸을 깎는다 — '없음 · ≠ 다름'(11-21)
     if (!옮김 && n && !실) h += '<button class="k3" id="askDummy">🔎 DB 더미 받기</button>';
     h += '<button class="k3 blue" id="pickOk">' + (옮김 ? '여기로 옮기기' : '이 야드로') + '</button>';
     el.innerHTML = h;
