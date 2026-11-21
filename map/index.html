@@ -563,7 +563,8 @@ function 담기(로) {                                    // 고른 관 → 에�
 }
 function 바그리기() {
   var bar = $('bar'), n = 고른수(), 본 = 옮김.reduce(function (a, m) { return a + m[2].length; }, 0), html = '';
-  var 붙본 = 붙임.reduce(function (a, x) { return a + x[3].length; }, 0);
+  var 순붙 = 붙임.filter(function (x) { return x[0]; }), 몫붙 = 붙임.filter(function (x) { return !x[0]; });   // 📌 순번 차 · 🧷 도착지 몫 — 보내기 단추에 따로(11-21)
+  var 본수 = function (xs) { return xs.reduce(function (a, x) { return a + x[3].length; }, 0); };
   document.body.classList.toggle('picking', 받을고르기);
   if (붙고르기 && n) html += 붙고르기글(n);
   else if (받을고르기) html += '<div class="row"><span class="msg">받을 야드 칸을 누르세요 · G1 은 위 단추(' + n + '본)</span>' +
@@ -588,7 +589,7 @@ function 바그리기() {
   if ((옮김.length || 예.length || 붙임.length) && !받을고르기 && !(붙고르기 && n))
     html += '<button type="button" class="b3" data-act="보내기">📨 봇에 보내기 — ' +
       [옮김.length ? '옮김 ' + 옮김.length + '건 · ' + 본 + '본' : '', 예.length ? '출고 예정 ' + 예.length + '본' : '',
-       붙임.length ? '📌 ' + 붙임.length + '건 · ' + 붙본 + '본' : '']
+       순붙.length ? '📌 ' + 순붙.length + '건 · ' + 본수(순붙) + '본' : '', 몫붙.length ? '🧷 ' + 몫붙.length + '건 · ' + 본수(몫붙) + '본' : '']
         .filter(Boolean).join(' · ') + '</button>';
   bar.innerHTML = html;
   bar.hidden = !html;
@@ -670,7 +671,7 @@ function 보이기() { if (!넓은가()) $('detail').scrollIntoView({ behavior: 
 $('map').addEventListener('click', function (ev) {
   var g = ev.target.closest && ev.target.closest('[data-y]');
   if (g && 받을고르기) { 담기(g.getAttribute('data-y')); return; }
-  if (g) { 자세히(g.getAttribute('data-y')); 보이기(); }
+  if (g) { 자세히(g.getAttribute('data-y')); 칸으로(g.getAttribute('data-y')); 보이기(); }   // 누른 칸이 가운데 오게(가장자리 칸 — 11-21)
 });
 $('outChips').addEventListener('click', function (ev) {
   var b = ev.target.closest('[data-y]');
