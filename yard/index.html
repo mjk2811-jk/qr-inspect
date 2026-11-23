@@ -54,17 +54,23 @@
       P:'g..rO.o'(N 열쇠 이름 차례로 한 글자 · '.' 안 봄 — 오늘(05시부터) 봇이 받은 야드: g 맞음 · o 다름(DB 로는 다른 야드 ·
        안 누른 DB 관 · 옮김) · r 걸림(재고에 없음 · 이미 나감 · 두 번 · 바코드 모름) · 대문자 = 채팅 [✅ 저장] 됨)
       Px:{'A02': 'G'}(N 에 없는 본 야드) · Pw:'b1 m1u2'(초록 아닌 칸마다 까닭 — b 걸림 · m 옮겨옴 · u 안 누름 · x 옮김, P → Px 차례).
+  · 2026-11-23 ⑧ ℹ 정보 불러오기 — 현장에서 번호가 겹칠 때(뒤 번호가 같은 관 · 같은 번호 두 본) 찾기 칸에 뒤 번호(0617) 나 번호
+    전체(26K0617)를 넣고 [ℹ 정보] → sendData i:'0617'(앱이 닫힘 — 누른 목록은 그대로) → 봇이 DB 재고표 · ERP 재고 파일에서 찾아
+    채팅으로 번호 · HEAT_NO · PRODUCTS_NO · 작지 · 규격 · 야드 자리 · 상태를 답하고, 다음 링크 I {q, t, r:[[번호, HEAT, PRODUCTS,
+    야드, 자리, 상태, 작지, 규격]…], x} → 다시 열면 찾기 칸 아래 ℹ 상자(찾기 칸에 그 번호 — 번호판도 그 번호만) · [닫기] 면 그 답은
+    다시 안 뜸(상태.정보본). 봇 셈은 yard_pipe_info.
       봇 yard_survey_progress — 날이 바뀌면 봇이 저절로 비운다.
     머리 [📋 실사 n / m곳](m = 지금 DB 재고가 있는 칸 · N) → 다른 칸(까닭) · 보냄 · 확인 전 · 안 본 칸(본수 큰 차례) · 맞음 — 칸을 누르면
     배치도에서 그 칸. 배치도 [📋 실사 색] / [🔢 본수 색](그날만 기억 — 본수 색이면 진행 표시를 안 함): 초록 · 주황 · 빨강 · ✓ 저장 ·
     회색 = 안 본 칸(DB 재고) · 하늘 점선 = '보냄 · 확인 전'(태블릿이 보냈는데 봇 답 r 이 링크에 아직 — 상태.보냄 의 오늘 것).
   함수  셈: 해시읽기 · b64url풀기 · b64바이트 · 인플레이트 · 풀기 · 범위풀기 · 번호꼴 · 보낼글 · 더미풀기 · 보낼묶음 · 반복켜 ·
             자동켜찾기 · 다음단 · 단자리 · 쌓은자리 · 끝자리 · 바꾼줄 · 끼운줄 · 뺀줄 · 누름인가 · 레일자리 · 손굴림 · 맞춤셈 · 옮김더하기 ·
-            QR가르기 · 칸야드 · 칸본수 · 되살릴줄 · 토큰풀기 · 진행풀기 · 까닭글 · 작업날시작 · 확인전야드 · 진행셈 · 진행칸 · 칸진행
+            QR가르기 · 칸야드 · 칸본수 · 되살릴줄 · 토큰풀기 · 진행풀기 · 까닭글 · 작업날시작 · 확인전야드 · 진행셈 · 진행칸 · 칸진행 ·
+            정보글 · 정보열쇠
         화면: 그리기 · 칩그리기 · 판그리기 · 야드그리기 · 차례그리기 · 누름 · 단고름 · 야드고르기열기 · 보내기 · 시작 · 이어
             · 지킴 · 눌러도 · 지금고침 · 고침켜기 · 빼기 · 모드그리기 · 토스트 · 보기바꿈 · 레일그리기 · 레일굴림 · 레일잇기
             · 맞춤그리기 · 없는것열기 · 보낸것열기 · 되살리기 · 더미부탁 · 머리단추 · QR받음 · 스캔받기 · 스캔초점 · 카메라
-            · 진행지금 · 진행열기 · 진행야드 · 색모드읽기 · 색모드바꿈 · 진행한줄
+            · 진행지금 · 진행열기 · 진행야드 · 색모드읽기 · 색모드바꿈 · 진행한줄 · 정보부탁 · 정보그리기
 -->
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
@@ -179,6 +185,14 @@
   .viewtog button.on { background: var(--sel-bg); border-color: var(--sel); color: var(--sel); font-weight: bold; }
   .num, .stack tr, .chips .k3, .foot .k3 { touch-action: manipulation; }
   .note { margin: 0 10px 8px; padding: 8px 10px; border-radius: 8px; background: var(--warn-bg); color: var(--warn); font-size: 14px; }
+  /* ⑧ ℹ 정보 불러오기(11-23) — 찾기 칸 아래, 봇이 답한 HEAT · PRODUCTS_NO */
+  .infobox { margin: 0 10px 8px; padding: 6px 10px; border-radius: 8px; background: #e0f2fe; color: #0c4a6e; font-size: 15px;
+             border: 1px solid #7dd3fc; max-height: 38vh; overflow-y: auto; }
+  .infobox .ih { display: flex; align-items: center; padding: 2px 0 4px; }
+  .infobox .ih .k3 { padding: 4px 12px; font-size: 14px; margin-left: 8px; }
+  .infobox .ir { padding: 5px 0; border-top: 1px dashed #7dd3fc; line-height: 1.35; }
+  .infobox .ir b.num { font-size: 17px; margin-right: 6px; }
+  .infobox .ir small { color: #075985; }
   .sheet-bg { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 60; background: rgba(0, 0, 0, .45);
               display: flex; align-items: center; justify-content: center; }
   .sheet { background: var(--card); border-radius: 14px; padding: 14px; width: 92%; max-width: 760px; max-height: 92%; overflow-y: auto; }
@@ -254,6 +268,8 @@
     .find input { font-size: 18px; width: 120px; padding: 5px 8px; }
     .note { font-size: 12px; padding: 5px 8px; margin: 0 10px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .note.open { white-space: normal; }
+    .infobox { font-size: 13px; padding: 4px 8px; margin: 0 10px 4px; max-height: 30vh; }
+    .infobox .ir b.num { font-size: 15px; }
     .grid { padding: 0 6px 14px 10px; }
     .rail { width: 50px; padding: 2px 6px 6px 0; }
     .rail .rb { height: 46px; font-size: 18px; }
@@ -316,8 +332,10 @@
     <div class="find">
       <span class="hint">찾기</span><input id="q" inputmode="text" autocomplete="off" placeholder="뒤 번호">
       <button class="k3" id="addTyped" hidden></button>
+      <button class="k3" id="infoBtn" hidden>ℹ 정보</button>
       <span class="grow"></span><span class="hint" id="cnt"></span>
     </div>
+    <div class="infobox" id="infoBox" hidden></div>
     <div class="note" id="note" hidden></div>
     <div class="mode" id="mode" hidden><span id="modeT"></span><button class="k3" id="modeX">그만</button></div>
     <div class="gridrow">
@@ -502,6 +520,15 @@ function 번호꼴(글) {
   var m = /^([A-Z]*\d{2}[A-Z])[-_]?(\d{1,4})$/.exec(t);
   return m ? m[1] + ('000' + m[2]).slice(-4) : '';
 }
+/** ⑧ 찾기 칸 글 → 봇에 물을 번호(11-23) — 번호 전체면 정식 번호(26K0617), 숫자 1~4자면 뒤 네 자리(0617), 아니면 ''
+ *  (봇 yard_pipe_info.찾기글 과 같은 셈) */
+function 정보글(글) {
+  var t = _s(글).toUpperCase().replace(/\s+/g, ''), 번 = 번호꼴(t);
+  if (번) return 번;
+  return /^\d{1,4}$/.test(t) ? ('000' + t).slice(-4) : '';
+}
+/** ⑧ 링크 I 한 통의 열쇠(때 | 번호) — [닫기] 한 답은 다시 안 띄운다 */
+function 정보열쇠(I) { return _s(I && I.t) + '|' + _s(I && I.q); }
 /** 한 야드 → '26K 0805 0806.2;26J 0101' — 누른 차례, 접두가 바뀌면 ';'. ⑤ QR 바코드 줄(p '#B통')은 '#B 통' 묶음 */
 function 보낼글(줄들) {
   var 조각 = [], 앞 = '';
@@ -968,6 +995,7 @@ function 판그리기() {
   var 친 = 번호꼴(q);
   $('addTyped').hidden = !(친 && !모든번호[친] && !쓴[친]);
   $('addTyped').textContent = '＋ ' + 친 + ' 넣기';
+  $('infoBtn').hidden = !정보글(q);                                   // ⑧ 뒤 번호 · 번호 전체면 [ℹ 정보]
 }
 function 야드그리기() {
   var ys = $('yards');
@@ -1271,6 +1299,41 @@ function 더미부탁(y) {
     alert('🧪 시험 — 실제로는 봇에 보냅니다\n' + 글);
   };
   if (텔레그램안 && tg.showConfirm) tg.showConfirm(묻, 가); else 가(confirm(묻));
+}
+/** ⑧ ℹ 정보 불러오기(11-23) — 찾기 칸 번호의 HEAT · PRODUCTS_NO 를 봇에 묻는다(sendData i). 앱이 닫히고 봇이 채팅으로 답 */
+function 정보부탁() {
+  var q = 정보글($('q').value);
+  if (!q) { 토스트('찾기 칸에 뒤 번호(0617) 나 번호 전체(26K0617)를 넣어 주세요'); return; }
+  var 묻 = q + ' 의 HEAT · PRODUCTS_NO 를 봇에 물을까요?\n앱이 닫히고 봇이 채팅으로 알려 줘요 — [📍 야드 등록 열기] 로 다시 열면 ' +
+    '찾기 칸 아래에도 보여요(누른 목록은 태블릿에 그대로).';
+  var 가 = function (ok) {
+    if (!ok) return;
+    저장();
+    var 글 = JSON.stringify({ k: '야드', v: 2, id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7), d: 자료.d, y: {}, i: q });
+    if (텔레그램안) { tg.sendData(글); return; }
+    alert('🧪 시험 — 실제로는 봇에 보냅니다\n' + 글);
+  };
+  if (텔레그램안 && tg.showConfirm) tg.showConfirm(묻, 가); else 가(confirm(묻));
+}
+/** ⑧ 링크 I(봇 답) → 찾기 칸 아래 ℹ 상자. [닫기] 한 답(상태.정보본)은 숨김 */
+function 정보그리기() {
+  var I = 자료 && 자료.I, 박 = $('infoBox');
+  if (!I || !I.r || 상태.정보본 === 정보열쇠(I)) { 박.hidden = true; 박.innerHTML = ''; return; }
+  var h = '<div class="ih"><span><b>ℹ ' + esc(I.q) + '</b> — ' + (I.r.length + (I.x || 0)) + '본' +
+    (I.t ? ' <span class="hint">· ' + esc(I.t) + ' 봇 답</span>' : '') + '</span><span class="grow"></span>' +
+    '<button class="k3" id="infoX">닫기</button></div>';
+  if (!I.r.length) h += '<div class="ir">DB 재고표 · ERP 재고 파일에 그런 번호가 없어요</div>';
+  I.r.forEach(function (r) {                                         // [번호, HEAT, PRODUCTS, 야드, 자리, 상태, 작지, 규격]
+    var 곳 = [r[3], r[4]].filter(function (v) { return v; }).join(' ');
+    var 덧 = [r[6], r[7], 곳, r[5]].filter(function (v) { return v; }).join(' · ');
+    h += '<div class="ir"><b class="num">' + esc(r[0]) + '</b>HEAT <b>' + esc(r[1] || '—') + '</b> · PRODUCTS <b>' + esc(r[2] || '—') + '</b>' +
+      (덧 ? '<br><small>' + esc(덧) + '</small>' : '') + '</div>';
+  });
+  if (I.x) h += '<div class="ir"><small>그 밖 ' + I.x + '본은 채팅에 — 번호 전체로 찾으면 하나만</small></div>';
+  if (I.o) h += '<div class="ir"><small>나간(출고완료) 관 ' + I.o + '본은 뺐어요 — 번호 전체로 찾으면 보여요</small></div>';
+  박.innerHTML = h;
+  박.hidden = false;
+  $('infoX').onclick = function () { 상태.정보본 = 정보열쇠(I); 저장(); 정보그리기(); };
 }
 function 야드정함(y) {
   고침 = null;
@@ -1585,6 +1648,10 @@ function 이어(d, 오류) {
              야드: 'B06C', 작지: '', 고른: 9, 보냄: {}, 자동: {} };
     try { localStorage.setItem(열쇠, JSON.stringify(상태)); } catch (e) {}
   }
+  if (시험 && 해시.shot === 'info') {                                  // 시안 그림용(11-23) — ℹ 정보 상자(야드 고르기 창 없이)
+    상태 = { 야드들: { B06C: [{ p: '00X0101', 단: 1 }, { p: '00X0102', 단: 2 }] }, 야드: 'B06C', 작지: '', 고른: 1, 보냄: {}, 자동: {} };
+    try { localStorage.setItem(열쇠, JSON.stringify(상태)); } catch (e) {}
+  }
   if (시험 && /^y6/.test(해시.shot || '')) {                        // 시안 그림용(11-20) — 맞춰 보기 · 옮김 · 보낸 것
     상태 = { 야드들: { A03: [{ p: '00Y0100', 단: 1 }, { p: '00Y0101', 단: 1 }, { p: '00X0101', 단: 1 }, { p: '#B2015050799123', 단: 1 }] },
              야드: 'A03', 작지: '', 고른: 3, 보냄: {}, 자동: {}, 옮김: [{ 에서: 'A03', 로: 'G1', ps: ['00Y0105'] }],
@@ -1629,6 +1696,12 @@ function 이어(d, 오류) {
   레일잇기();
   $('q').oninput = 판그리기;
   $('addTyped').onclick = function () { var p = 번호꼴($('q').value); if (p) { 누름(p); $('q').value = ''; 판그리기(); } };
+  $('infoBtn').onclick = 정보부탁;
+  if (시험 && 해시.shot === 'info') 자료.I = { q: '0617', t: '11-23 10:12', x: 0, r: [                       // 시안 그림용(11-23)
+    ['00X0617', 'ZK582150', 'B64879003', 'B06C', '1-03', '재고', 'RB26K010', '914 X 12.7 X 12000'],
+    ['00Y0617', '25415999', 'B64866802', 'G1', '', '재고', 'RB26J004', '762 X 9.53 X 12000']] };
+  if (자료.I && 자료.I.q && 상태.정보본 !== 정보열쇠(자료.I)) $('q').value = 자료.I.q;   // 번호판도 그 번호만
+  정보그리기();
   $('send').onclick = 보내기;
   $('sheetBg').onclick = function (e) { if (e.target === $('sheetBg')) 닫기(); };
   $('sentBtn').onclick = 보낸것열기;
