@@ -59,6 +59,18 @@
     채팅으로 번호 · HEAT_NO · PRODUCTS_NO · 작지 · 규격 · 야드 자리 · 상태를 답하고, 다음 링크 I {q, t, r:[[번호, HEAT, PRODUCTS,
     야드, 자리, 상태, 작지, 규격]…], x} → 다시 열면 찾기 칸 아래 ℹ 상자(찾기 칸에 그 번호 — 번호판도 그 번호만) · [닫기] 면 그 답은
     다시 안 뜸(상태.정보본). 봇 셈은 yard_pipe_info.
+  · 2026-11-23 ⑨ 작지 전체 번호(재배치) — '다른 야드에 있다가 전부 다시 재배치를 할 때 번호가 보여서 선택하고 저장을 누르면 새
+    야드로' · '다른 야드를 고르는 게 아니라 해당 작지 전체 번호가 보여야 해, 어떤 야드에서 이동한 제품인지 몰라서'. 번호판에는 G1 과
+    지금 야드 DB 만 나왔다 → 작지 칩에 '야드 n'(링크 LN — 그 작지가 야드에 놓인 본수) · 야드에만 있는 작지도 칩(값 '@작지:…').
+    칩을 고르면 G1 번호 아래 그 작지의 야드 번호(링크 LY — 작지야드풀기)를 호박색 '← B06C' 단추로(누르면 지금 야드 차례에 · 지금
+    야드 것은 '이 야드'). 아직 안 실린 작지면 [🔎 이 작지 전체 번호 받기] → sendData w:[작지](앱이 닫힘 — 다시 열면 같은 칩 ·
+    봇이 3개까지 12시간). 모든 작지를 늘 싣기엔 링크가 모자라 부탁해서 싣는다. 찾기 칸에 번호를 치면 실린 야드 번호(더미 Y · LY —
+    야드번호합침)도 찾는다. 이미 다른 야드에 DB 등록된 번호는 호박색(단추 · 차례 목록 '← B06C' — 다른곳, 같은 날 '색상을 다르게').
+    보내면 봇이 '옮김 B06C'(노랑 — 경고 아님)로 알리고, 저장([✅ 저장] · PC 📝)하면 새 야드 · 새 적재순번으로 바뀐다.
+  · 2026-11-23 ⑩ 🧹 기존 재고 해제 — '야드 재등록을 할 때 해당 야드에 기존 재고를 전부 해제하고 넣을 수 있어야 해'. 차례 목록 머리
+    [🧹 기존 재고 해제](야드마다 · 상태.해제 — 켤 때 한 번 묻고, 야드 단추에 🧹) → 보낼 때 x:[야드](보낼묶음) → 봇 채팅
+    [✅ 저장 · 🧹 n본 해제] 가 목록에 없는 DB 재고를 G1(단 · 적재순번 지움)로 해제하고 이번 목록만 그 야드에(봇 yard_release ·
+    되돌리기도 함께). 보낸 야드는 해제 표시를 끈다.
       봇 yard_survey_progress — 날이 바뀌면 봇이 저절로 비운다.
     머리 [📋 실사 n / m곳](m = 지금 DB 재고가 있는 칸 · N) → 다른 칸(까닭) · 보냄 · 확인 전 · 안 본 칸(본수 큰 차례) · 맞음 — 칸을 누르면
     배치도에서 그 칸. 배치도 [📋 실사 색] / [🔢 본수 색](그날만 기억 — 본수 색이면 진행 표시를 안 함): 초록 · 주황 · 빨강 · ✓ 저장 ·
@@ -66,11 +78,11 @@
   함수  셈: 해시읽기 · b64url풀기 · b64바이트 · 인플레이트 · 풀기 · 범위풀기 · 번호꼴 · 보낼글 · 더미풀기 · 보낼묶음 · 반복켜 ·
             자동켜찾기 · 다음단 · 단자리 · 쌓은자리 · 끝자리 · 바꾼줄 · 끼운줄 · 뺀줄 · 누름인가 · 레일자리 · 손굴림 · 맞춤셈 · 옮김더하기 ·
             QR가르기 · 칸야드 · 칸본수 · 되살릴줄 · 토큰풀기 · 진행풀기 · 까닭글 · 작업날시작 · 확인전야드 · 진행셈 · 진행칸 · 칸진행 ·
-            정보글 · 정보열쇠
+            정보글 · 정보열쇠 · 다른더미 · 다른곳 · 작지야드풀기 · 야드번호합침 · 야드만작지
         화면: 그리기 · 칩그리기 · 판그리기 · 야드그리기 · 차례그리기 · 누름 · 단고름 · 야드고르기열기 · 보내기 · 시작 · 이어
             · 지킴 · 눌러도 · 지금고침 · 고침켜기 · 빼기 · 모드그리기 · 토스트 · 보기바꿈 · 레일그리기 · 레일굴림 · 레일잇기
             · 맞춤그리기 · 없는것열기 · 보낸것열기 · 되살리기 · 더미부탁 · 머리단추 · QR받음 · 스캔받기 · 스캔초점 · 카메라
-            · 진행지금 · 진행열기 · 진행야드 · 색모드읽기 · 색모드바꿈 · 진행한줄 · 정보부탁 · 정보그리기
+            · 진행지금 · 진행열기 · 진행야드 · 색모드읽기 · 색모드바꿈 · 진행한줄 · 정보부탁 · 정보그리기 · 고른작지 · 작지부탁 · 해제바꿈
 -->
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
@@ -216,6 +228,17 @@
   .chk .mvline { margin-top: 4px; color: #5b21b6; display: flex; align-items: center; }
   .chk .mvline .k3 { margin-left: 8px; }
   .num.mvq { background: #f5f3ff; border-color: #a78bfa; color: #5b21b6; }
+  /* ⑨ 이미 다른 야드에 DB 등록된 번호(11-23 '색상을 다르게') — 호박색. G1 흰색 · 누름 회색 · 옮김 보라와 안 겹치게 */
+  .num.oth { background: #fff4d6; border-color: #f59e0b; color: #78350f; }
+  .num.oth .p { color: #b45309; font-weight: bold; }
+  .chips .yd { color: #b45309; font-weight: bold; }
+  /* ⑩ 🧹 기존 재고 해제(11-23) */
+  .stackhead .clr { font: inherit; font-size: 13px; padding: 3px 10px; margin-left: 8px; border: 1px solid #b9c2cd; border-radius: 12px;
+                    background: #fff; color: var(--hint); }
+  .stackhead .clr.on { background: #fee2e2; border-color: #dc2626; color: #b91c1c; font-weight: bold; }
+  .yards .clrmark { color: #b91c1c; }
+  .stack .from { display: inline-block; margin-left: 8px; padding: 1px 7px; border-radius: 10px; font-size: 13px; font-weight: bold;
+                 color: #92400e; background: #fde68a; border: 1px solid #f59e0b; vertical-align: middle; }
   .num.missq { box-shadow: 0 0 0 3px #fb923c; }
   .sheet.wide { max-width: 1180px; }
   .tabs { display: flex; flex-wrap: wrap; margin-bottom: 2px; }   /* 줄이 넘치면 다음 줄로(단추 아래 여백 — 옛 웹뷰 79 는 flex gap 을 모름) */
@@ -347,7 +370,8 @@
     <div class="yards" id="yards"></div>
     <div class="chk" id="chk" hidden></div>
     <div class="pic" id="pic" hidden><div class="t" id="picT"></div><div class="picbox" id="picBox"></div></div>
-    <div class="stackhead"><span id="sh"></span><span class="grow"></span><span class="danh">단</span>
+    <div class="stackhead"><span id="sh"></span><button type="button" class="clr" id="clrBtn" hidden>🧹 기존 재고 해제</button>
+      <span class="grow"></span><span class="danh">단</span>
       <span class="viewtog"><button data-v="list">📋 차례</button><button data-v="pic">🔵 모양</button></span></div>
     <div class="stack" id="stackBox"><table id="stack"></table></div>
     <div class="autoline" id="autoLine" hidden></div>
@@ -529,6 +553,53 @@ function 정보글(글) {
 }
 /** ⑧ 링크 I 한 통의 열쇠(때 | 번호) — [닫기] 한 답은 다시 안 띄운다 */
 function 정보열쇠(I) { return _s(I && I.t) + '|' + _s(I && I.q); }
+/** ⑨ 링크 LY [[작지, 접두, 야드, 범위]…] → {작지: [{p, y}]}(그 작지의 야드에 놓인 번호 — 재배치 11-23) */
+function 작지야드풀기(LY) {
+  var out = {};
+  (LY || []).forEach(function (r) {
+    if (!r || r.length < 4) return;
+    범위풀기(r[3]).forEach(function (뒤) { (out[r[0]] = out[r[0]] || []).push({ p: _s(r[1]) + 뒤, y: _s(r[2]) }); });
+  });
+  return out;
+}
+/** ⑨ 야드 더미(Y) · 작지 야드 번호(LY)를 한 꼴로 → {야드: [{p, 단}]}(같은 번호는 한 번 — 더미 먼저, LY 는 단 0) — 호박색 · 찾기용 */
+function 야드번호합침(더미, 작지야드) {
+  var out = {}, 본 = {};
+  Object.keys(더미 || {}).forEach(function (y) { out[y] = 더미[y].slice(); 더미[y].forEach(function (r) { 본[r.p] = 1; }); });
+  Object.keys(작지야드 || {}).forEach(function (작) {
+    작지야드[작].forEach(function (r) { if (본[r.p]) return; 본[r.p] = 1; (out[r.y] = out[r.y] || []).push({ p: r.p, 단: 0 }); });
+  });
+  return out;
+}
+/** ⑨ 칩으로 더할 '야드에만 있는 작지' — 부탁한 작지 먼저, LN(작지: 야드 본수)은 이름 거꾸로(새 작지 먼저) · G1 칩이 있는 작지는 뺌 */
+function 야드만작지(작지수, G1작, 요청) {
+  var 본 = {}, out = [];
+  (요청 || []).concat(Object.keys(작지수 || {}).sort().reverse()).forEach(function (작) {
+    if (!(G1작 || {})[작] && !본[작]) { 본[작] = 1; out.push(작); }
+  });
+  return out;
+}
+/** ⑨ 앱에 실린 더미로 본 '이미 다른 야드에 DB 등록된 번호' → {번호: 야드}(지금 야드 더미에도 있으면 뺌 — 그 야드 관) */
+function 다른곳(더미, 지금야드) {
+  var out = {}, 여기 = {};
+  (더미 && 더미[지금야드] || []).forEach(function (r) { 여기[r.p] = 1; });
+  Object.keys(더미 || {}).forEach(function (y) {
+    if (y === 지금야드) return;
+    더미[y].forEach(function (r) { if (!여기[r.p] && !out[r.p]) out[r.p] = y; });
+  });
+  return out;
+}
+/** ⑨ 🗂 다른 야드 DB(11-23 재배치) — 앱에 실린 더미 가운데 지금 야드 밖 → [{y, rs: [{p, 단}]}](앞(가져올 · 부탁한 야드) 먼저 ·
+ *  나머지 이름 차례). q 가 있으면 G1 찾기와 같은 셈(뒤 네 자리에 들거나 번호에 듦)으로 걸러, 남는 것이 없는 야드는 뺀다 */
+function 다른더미(더미, 지금야드, 앞, q) {
+  var Q = _s(q).toUpperCase(), 앞표 = {};
+  (앞 || []).forEach(function (y, i) { if (!앞표[y]) 앞표[y] = i + 1; });
+  return Object.keys(더미 || {}).filter(function (y) { return y !== 지금야드; }).sort(function (a, b) {
+    return (앞표[a] || 1e9) - (앞표[b] || 1e9) || (a < b ? -1 : a > b ? 1 : 0);
+  }).map(function (y) {
+    return { y: y, rs: (더미[y] || []).filter(function (r) { return !Q || r.p.slice(-4).indexOf(Q) >= 0 || r.p.indexOf(Q.replace('-', '')) >= 0; }) };
+  }).filter(function (g) { return g.rs.length; });
+}
 /** 한 야드 → '26K 0805 0806.2;26J 0101' — 누른 차례, 접두가 바뀌면 ';'. ⑤ QR 바코드 줄(p '#B통')은 '#B 통' 묶음 */
 function 보낼글(줄들) {
   var 조각 = [], 앞 = '';
@@ -653,9 +724,14 @@ function 더미풀기(글) {
   return out;
 }
 /** 보낼 묶음(판 2) — ② 옮김(m)을 먼저 싣고, 한도 안에서 야드 차례대로(넘는 야드는 다음에). → {글, 야드들, n, m(옮김 묶음 수)} */
-function 보낼묶음(야드들, id, 날, 옮김) {
+function 보낼묶음(야드들, id, 날, 옮김, 해제) {
   var y = {}, 들 = [], n = 0, m = (옮김 || []).map(function (o) { return [o.에서, o.로, o.ps]; });
-  function 짓기(nn) { var d = { k: '야드', v: 2, id: id, d: 날, y: y, n: nn }; if (m.length) d.m = m; return JSON.stringify(d); }
+  function 짓기(nn) {
+    var d = { k: '야드', v: 2, id: id, d: 날, y: y, n: nn }, x = Object.keys(y).filter(function (야) { return 해제 && 해제[야]; });
+    if (m.length) d.m = m;
+    if (x.length) d.x = x;                                             // ⑩ 🧹 기존 재고 해제하고 넣을 야드(11-23)
+    return JSON.stringify(d);
+  }
   var 글 = m.length ? 짓기(0) : '';
   Object.keys(야드들).forEach(function (야) {
     var xs = 야드들[야];
@@ -803,6 +879,8 @@ var 해시 = 해시읽기();
 var 텔레그램안 = !!(tg && tg.platform && tg.platform !== 'unknown');
 var 시험 = !텔레그램안;
 var 자료 = null;
+var 작지칩 = '@작지:';          // ⑨ 상태.작지 — 야드에만 있는 작지 칩(재배치 11-23 · G1 칩은 '작지|접두')
+var 작지야드 = {}, 작지요청 = [], 작지수 = null, 야드번호 = {};   // ⑨ 링크 LY · LYq · LN · (더미 + LY) — 시작에서
 var 열쇠 = 'yard|v1';
 var 상태 = { 야드들: {}, 야드: '', 작지: '', 고른: -1, 보냄: {}, 자동: {}, 보낸: {}, 옮김: [] };   // 자동 = {야드: 켜}
 // 보낸 = {id: {때, 야드들: {야드: [줄]}, w: [[야드, 줄 자리, 번호, 까닭]], s: [야드], 되살림: {야드: 1}}} — 봇이 받은 목록(③ 하루)
@@ -866,6 +944,7 @@ function 읽기() {
   if (!상태.자동) 상태.자동 = {};
   if (!상태.보낸) 상태.보낸 = {};
   if (!상태.옮김) 상태.옮김 = [];
+  if (!상태.해제) 상태.해제 = {};
 }
 function 쓴곳() {
   var m = {};
@@ -938,15 +1017,28 @@ function 칩그리기() {
     칩.appendChild(b);
   }
   하나('G1 전부 <small>' + 자료.n + '</small>', '');
+  var G1작 = {}, 수표 = 작지수 || {};
   자료.L.forEach(function (l) {
     var 번호들 = l.번호들, 남 = 번호들.filter(function (p) { return !쓴[p]; }).length;
-    하나(esc(l[0]) + ' <small>' + esc(l[1]) + ' · ' + 남 + '/' + 번호들.length + '</small>', l[0] + '|' + l[2]);
+    G1작[l[0]] = 1;
+    하나(esc(l[0]) + ' <small>' + esc(l[1]) + ' · ' + 남 + '/' + 번호들.length +
+      (수표[l[0]] ? ' · <span class="yd">야드 ' + 수표[l[0]] + '</span>' : '') + '</small>', l[0] + '|' + l[2]);
   });
+  야드만작지(수표, G1작, 작지요청).forEach(function (작) {           // ⑨ 야드에만 있는 작지(재배치 11-23)
+    하나(esc(작) + ' <small><span class="yd">야드 ' + (수표[작] != null ? 수표[작] : (작지야드[작] || []).length) + '</span></small>', 작지칩 + 작);
+  });
+}
+/** ⑨ 고른 작지 칩 → 작지 이름(G1 칩 '작지|접두' · 야드에만 '@작지:…') | '' */
+function 고른작지() {
+  var k = _s(상태.작지);
+  if (k.indexOf(작지칩) === 0) return k.slice(작지칩.length);
+  return k.charAt(0) === '@' ? '' : k.split('|')[0];
 }
 function 판그리기() {
   var 쓴 = 쓴곳(), q = _s($('q').value).toUpperCase(), g = $('grid'), 수 = 0;
   g.innerHTML = '';
-  var 옛 = (더미[상태.야드] || []).filter(function (r) { return !q || r.p.slice(-4).indexOf(q) >= 0; });
+  var 작 = 고른작지(), 야드만 = _s(상태.작지).indexOf(작지칩) === 0;
+  var 옛 = 야드만 ? [] : (더미[상태.야드] || []).filter(function (r) { return !q || r.p.slice(-4).indexOf(q) >= 0; });
   if (옛.length) {                                                     // 지금 야드의 DB 번호 — 야드 전체를 다시 조사할 때 앞에서부터 눌러 넣기
     var oh = document.createElement('div');
     oh.className = 'lot';
@@ -989,7 +1081,57 @@ function 판그리기() {
       box.appendChild(b);
     });
   });
-  if (!수) { var e = document.createElement('div'); e.className = 'empty'; e.textContent = q ? "'" + q + "' 에 맞는 G1 번호가 없어요" : '보일 번호가 없어요'; g.appendChild(e); }
+  function 묶음(제목, rs) {                                          // ⑨ 야드에 놓인 번호 — 호박색 '← 야드'(지금 야드 것은 '이 야드')
+    var h = document.createElement('div');
+    h.className = 'lot';
+    h.innerHTML = 제목;
+    g.appendChild(h);
+    var box = document.createElement('div');
+    box.className = 'nums';
+    g.appendChild(box);
+    rs.forEach(function (r) {
+      수++;
+      var 여기 = r.y === 상태.야드, b = document.createElement('button');
+      b.className = 'k3 num' + (쓴[r.p] ? ' used' : 여기 ? '' : ' oth');      // 호박색 = 이미 다른 야드에 DB 등록
+      b.innerHTML = (쓴[r.p] ? '<span class="p badge">' + esc(쓴[r.p]) + '</span>' : '<span class="p">' + (여기 ? '이 야드' : '← ' + esc(r.y)) + '</span>') +
+        '<span class="t">' + r.p.slice(-4).replace(/^0/, '') + '</span>';
+      b.title = r.p + ' · DB ' + r.y;
+      b.onclick = function (e) { if (눌러도(g, e)) 누름(r.p); };
+      box.appendChild(b);
+    });
+  }
+  var 받을 = '';
+  if (작) {                                                          // ⑨ 그 작지의 야드 번호(재배치 11-23)
+    var 전부 = 작지야드[작] || [], 곳수 = {};
+    전부.forEach(function (r) { 곳수[r.y] = (곳수[r.y] || 0) + 1; });
+    var rs = 전부.filter(function (r) { return !q || r.p.slice(-4).indexOf(q) >= 0 || r.p.indexOf(q.replace('-', '')) >= 0; });
+    if (rs.length) {
+      묶음('<b>🗂 ' + esc(작) + '</b> 야드에 놓인 번호 ' + 전부.length + '본(' + esc(Object.keys(곳수).sort().map(function (y) { return y + ' ' + 곳수[y]; }).join(' · ')) +
+        ') — 호박색 = 다른 야드 · 누르면 <b>' + esc(상태.야드 || '고른 야드') + '</b> 로, 저장하면 옮겨져요', rs);
+    }
+    var n = 작지수 ? (작지수[작] || 0) : null;
+    if ((자료.LYx || []).indexOf(작) >= 0) 받을 = '🗂 ' + esc(작) + ' 야드 번호는 너무 많아 링크에 못 실었어요 — 번호 전체를 찾기 칸에 쳐서 ＋ 넣기';
+    else if (작지요청.indexOf(작) < 0 && n !== 0) 받을 = '🗂 ' + esc(작) + (n ? ' — 다른 야드에 ' + n + '본' : '') + ' <button class="k3" id="getLot">🔎 이 작지 전체 번호 받기</button>';
+    else if (!전부.length) 받을 = '🗂 ' + esc(작) + ' — 야드에 놓인 번호가 없어요(G1 만)';
+  } else if (q) {                                                    // 찾기 — 실린 야드 번호(더미 · LY)도
+    다른더미(야드번호, 상태.야드, 자료.Yq || [], q).forEach(function (gr) {
+      묶음('<b>🗂 ' + esc(gr.y) + '</b> DB — 누르면 <b>' + esc(상태.야드 || '고른 야드') + '</b> 로 · 저장하면 옮겨져요',
+        gr.rs.map(function (r) { return { p: r.p, y: gr.y }; }));
+    });
+  }
+  if (!수 && !(작 && 받을)) {
+    var e = document.createElement('div');
+    e.className = 'empty';
+    e.textContent = q ? "'" + q + "' 에 맞는 번호가 없어요" : '보일 번호가 없어요';
+    g.appendChild(e);
+  }
+  if (받을) {
+    var 받 = document.createElement('div');
+    받.className = 'lot';
+    받.innerHTML = 받을;
+    g.appendChild(받);
+    if ($('getLot')) $('getLot').onclick = function () { 작지부탁(작); };
+  }
   $('cnt').textContent = '보이는 번호 ' + 수;
   레일그리기();
   var 친 = 번호꼴(q);
@@ -1004,7 +1146,7 @@ function 야드그리기() {
     var b = document.createElement('button');
     b.className = 'k3' + (y === 상태.야드 ? ' on' : '');
     b.innerHTML = esc(y) + '  ' + 상태.야드들[y].length + (더미[y] ? ' <span class="hint">· DB ' + 더미[y].length + '</span>' : '') +
-      (보낸야드(y) ? ' <span class="sent">📤 보냄</span>' : '');
+      (보낸야드(y) ? ' <span class="sent">📤 보냄</span>' : '') + ((상태.해제 || {})[y] ? ' <span class="clrmark">🧹</span>' : '');
     b.onclick = function () {
       고침 = null;
       if (y === 상태.야드 && !상태.야드들[y].length) { delete 상태.야드들[y]; 상태.야드 = Object.keys(상태.야드들)[0] || ''; }
@@ -1023,14 +1165,20 @@ function 보낸야드(y) {
   return Object.keys(상태.보냄).some(function (id) { return (상태.보냄[id].야드들 || []).indexOf(y) >= 0; });
 }
 function 차례그리기() {
-  var xs = 지금줄들(), t = $('stack');
+  var xs = 지금줄들(), t = $('stack'), 딴 = 다른곳(야드번호, 상태.야드);
   $('sh').textContent = 상태.야드 ? 상태.야드 + ' 쌓은 차례 — ' + xs.length + '본' : '먼저 ＋ 야드 로 야드를 고르세요';
+  var 해 = !!(상태.해제 || {})[상태.야드], 남수 = 해제남은수();
+  $('clrBtn').hidden = !상태.야드;
+  $('clrBtn').classList.toggle('on', 해);
+  $('clrBtn').textContent = 해 ? '🧹 기존 재고 해제 켬' + (남수 ? ' · DB ' + 남수 + '본 → G1' : '') : '🧹 기존 재고 해제';
   t.innerHTML = '';
   var 지 = 지금고침(), 판 = $('stackBox');
   xs.forEach(function (x, i) {
     var tr = document.createElement('tr');
     tr.className = (i === 상태.고른 ? 'cur' : '') + (지 && i === 지.i ? (지.k === '바꿈' ? ' tgt-fix' : ' tgt-ins') : '');
-    tr.innerHTML = '<td class="n">' + (i + 1) + '</td><td class="p">' + esc(보일번호(x.p)) + '</td><td class="d"><span class="dan ' +
+    tr.innerHTML = '<td class="n">' + (i + 1) + '</td><td class="p">' + esc(보일번호(x.p)) +
+      (딴[x.p] ? '<span class="from" title="DB 로는 ' + esc(딴[x.p]) + ' — 저장하면 ' + esc(상태.야드) + ' 로 옮겨져요">← ' + esc(딴[x.p]) + '</span>' : '') +
+      '</td><td class="d"><span class="dan ' +
       (x.고름 ? 'set' : x.자동 ? 'auto' : 'def') + '">' + x.단 + '단' + (x.자동 ? ' <small>자동</small>' : '') + '</span></td>';
     tr.onclick = function (e) {                                       // 고르기만 — 빼기 · 바꾸기 · 끼우기는 아래 단추(굴리다 지워지지 않게)
       if (!눌러도(판, e)) return;
@@ -1287,6 +1435,37 @@ function 야드고르기열기(목적) {
   }
   그림();
   $('sheetBg').hidden = false;
+}
+/** ⑩ 지금 야드 DB 더미(앱에 실렸으면) 가운데 아직 안 누른 본수 — 🧹 해제 때 G1 로 갈 수(실리지 않았으면 0 — 봇이 셈) */
+function 해제남은수() {
+  var 쓴 = 쓴곳();
+  return (더미[상태.야드] || []).filter(function (r) { return !쓴[r.p]; }).length;
+}
+/** ⑩ 🧹 기존 재고 해제 켬 · 끔(야드마다) — 켤 때 한 번 묻는다 */
+function 해제바꿈() {
+  var y = 상태.야드;
+  if (!y) return;
+  if (!상태.해제) 상태.해제 = {};
+  if (상태.해제[y]) { delete 상태.해제[y]; 저장(); 그리기(); 토스트('🧹 ' + y + ' 기존 재고 해제 끔'); return; }
+  var n = 해제남은수();
+  var 묻 = y + ' 를 다시 등록 — 저장할 때 지금 DB 재고 가운데 이번 목록에 없는 관을 모두 해제(G1 · 단 · 적재순번 지움)할까요?\n' +
+    (n ? '(앱에 실린 DB 로는 ' + n + '본 — 끝까지 누르지 않으면 그 관들이 G1 로 가요)' : '(정확한 수는 보낸 뒤 봇이 알려 줘요)') +
+    '\n저장은 채팅 [✅ 저장] 에서 — 10분 안에 되돌릴 수 있어요.';
+  var 가 = function (ok) { if (!ok) return; 상태.해제[y] = 1; 저장(); 그리기(); };
+  if (텔레그램안 && tg.showConfirm) tg.showConfirm(묻, 가); else 가(confirm(묻));
+}
+/** ⑨ 작지 칩 — 그 작지의 야드에 놓인 번호를 봇에 청한다(sendData w). 앱이 닫히고, 다시 열면 같은 칩에 호박색으로 */
+function 작지부탁(작) {
+  var 묻 = 작 + ' 의 전체 번호(다른 야드에 있는 것까지)를 봇에 청할까요?\n앱이 닫히고, 봇이 [📍 야드 등록 열기] 단추를 줘요 — 다시 열면 ' +
+    '이 작지 칩에 다른 야드 번호가 호박색으로 보여요(누른 목록은 태블릿에 그대로).';
+  var 가 = function (ok) {
+    if (!ok) return;
+    저장();                                                          // 상태.작지(고른 칩) 그대로 — 다시 열면 같은 칩
+    var 글 = JSON.stringify({ k: '야드', v: 2, id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7), d: 자료.d, y: {}, w: [작] });
+    if (텔레그램안) { tg.sendData(글); return; }
+    alert('🧪 시험 — 실제로는 봇에 보냅니다\n' + 글);
+  };
+  if (텔레그램안 && tg.showConfirm) tg.showConfirm(묻, 가); else 가(confirm(묻));
 }
 /** ⑥ 더미가 앱에 없는 야드 — 봇에 청한다(sendData q). 앱이 닫히고 봇이 그 야드를 먼저 실은 단추를 준다 */
 function 더미부탁(y) {
@@ -1561,7 +1740,7 @@ function 카메라() {
 /* 보내기 — sendData 는 앱을 닫는다. 보낸 야드는 봇이 받았다고(r) 알려 오면 지운다 */
 function 보내기() {
   var id = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-  var 묶 = 보낼묶음(상태.야드들, id, 자료.d, 상태.옮김);
+  var 묶 = 보낼묶음(상태.야드들, id, 자료.d, 상태.옮김, 상태.해제);
   if (!묶.n && !묶.m) { 알림('보낼 번호가 없어요'); return; }
   var 남은 = Object.keys(상태.야드들).filter(function (y) { return 상태.야드들[y].length && 묶.야드들.indexOf(y) < 0; });
   var 줄 = [];
@@ -1572,12 +1751,14 @@ function 보내기() {
     var c = 맞춤셈(상태.야드들[y], 더미[y], 상태.옮김, y);
     if (c.안누름.length) 줄.push('❓ ' + y + ' 안 누른 DB 번호 ' + c.안누름.length + '본 — 그대로면 PC 저장 때 물어요([❓ 처리] 로 G1 · 다른 야드로)');
   });
+  묶.야드들.forEach(function (y) { if ((상태.해제 || {})[y]) 줄.push('🧹 ' + y + ' 기존 재고 해제 — 저장할 때 목록에 없는 DB 재고는 G1 로'); });
   if (남은.length) 줄.push('(목록이 커서 ' + 남은.join(' · ') + ' 는 다음에 보내요)');
   if (묶.n) 줄.push('봇이 확인해 답하고, 경고 없는 야드는 채팅 [✅ 저장] 으로도 넣어요.');
   var 가 = function (ok) {
     if (!ok) return;
     상태.보냄[id] = { 때: Date.now(), 야드들: 묶.야드들 };
     상태.옮김 = [];                                                // 옮김은 보낸 것으로(봇 답의 [↩ 되돌리기])
+    묶.야드들.forEach(function (y) { if (상태.해제) delete 상태.해제[y]; });   // ⑩ 해제 표시는 보낸 것에 실려 갔다
     저장();
     if (텔레그램안) { tg.sendData(묶.글); return; }          // 키보드 단추로 연 앱이면 여기서 닫힌다
     alert('🧪 시험 — 실제로는 텔레그램으로 보냅니다(' + 바이트(묶.글) + ' / ' + 보낼한도 + '바이트)\n\n' + 묶.글.slice(0, 800));
@@ -1648,6 +1829,12 @@ function 이어(d, 오류) {
              야드: 'B06C', 작지: '', 고른: 9, 보냄: {}, 자동: {} };
     try { localStorage.setItem(열쇠, JSON.stringify(상태)); } catch (e) {}
   }
+  if (시험 && 해시.shot === 'lot') {                                   // 시안 그림용(11-23) — 작지 칩에 다른 야드 번호(A12 로 재배치)
+    자료.LY = [['RB00X003', '00X', 'B06C', '0130-0133'], ['RB00X003', '00X', 'A03', '0140,0142'], ['RB00X003', '00X', 'A12', '0150']];
+    자료.LYq = ['RB00X003']; 자료.LN = { RB00X003: 7, RB00Z009: 12 };
+    상태 = { 야드들: { A12: [{ p: '00X0131', 단: 1 }] }, 야드: 'A12', 작지: 'RB00X003|00X', 고른: 0, 보냄: {}, 자동: {}, 해제: { A12: 1 } };
+    try { localStorage.setItem(열쇠, JSON.stringify(상태)); } catch (e) {}
+  }
   if (시험 && 해시.shot === 'info') {                                  // 시안 그림용(11-23) — ℹ 정보 상자(야드 고르기 창 없이)
     상태 = { 야드들: { B06C: [{ p: '00X0101', 단: 1 }, { p: '00X0102', 단: 2 }] }, 야드: 'B06C', 작지: '', 고른: 1, 보냄: {}, 자동: {} };
     try { localStorage.setItem(열쇠, JSON.stringify(상태)); } catch (e) {}
@@ -1667,6 +1854,8 @@ function 이어(d, 오류) {
   if (자료.K && 자료.K.length) { 받을곳 = 칸이름들(자료.K); 받을곳.G1 = 1; }
   var 부탁 = 자료.Yq || (자료.v === 2 ? [] : Object.keys(자료.Y || {}));   // 판 1 은 실린 더미 = 부탁한 야드
   Object.keys(자료.Y || {}).forEach(function (y) { 더미[y] = 더미풀기(자료.Y[y]); });   // 봇이 실어 준 DB 더미(② 맞춰 보기 · 회색)
+  작지야드 = 작지야드풀기(자료.LY); 작지요청 = 자료.LYq || []; 작지수 = 자료.LN || null;   // ⑨ 작지 전체 번호(재배치 11-23)
+  야드번호 = 야드번호합침(더미, 작지야드);
   부탁.forEach(function (y) {                                        // 부탁한 야드만 탭을 만들어 둔다(남는 자리 더미는 배치도에서 고르면)
     if (!더미[y]) return;
     if (!상태.야드들[y]) 상태.야드들[y] = [];
@@ -1697,6 +1886,7 @@ function 이어(d, 오류) {
   $('q').oninput = 판그리기;
   $('addTyped').onclick = function () { var p = 번호꼴($('q').value); if (p) { 누름(p); $('q').value = ''; 판그리기(); } };
   $('infoBtn').onclick = 정보부탁;
+  $('clrBtn').onclick = 해제바꿈;
   if (시험 && 해시.shot === 'info') 자료.I = { q: '0617', t: '11-23 10:12', x: 0, r: [                       // 시안 그림용(11-23)
     ['00X0617', 'ZK582150', 'B64879003', 'B06C', '1-03', '재고', 'RB26K010', '914 X 12.7 X 12000'],
     ['00Y0617', '25415999', 'B64866802', 'G1', '', '재고', 'RB26J004', '762 X 9.53 X 12000']] };
