@@ -357,7 +357,7 @@
   @media (orientation: portrait) and (min-width: 601px) {
     .left, .right { display: contents; }
     .left > *, .right > * { flex-shrink: 0; }
-    .yards, .stackhead, .stack, .tier, .foot, .right .box, .chk { background: var(--card); }
+    .yards, .stackhead, .stack, .tier, .foot { background: var(--card); }   /* 작업 상자(.box) · 확인 칸(.chk)은 제 흰 바탕 그대로 — 다크에서 글자가 묻혔다 */
     .yards { order: 1; } .right .box, .chk { order: 2; } .pic { order: 3; }
     .stackhead { order: 4; } .stack { order: 5; flex: none; height: 128px; border-bottom: 1px solid var(--sep); }
     .autoline { order: 6; } .tier { order: 7; }
@@ -508,7 +508,7 @@ var 예시자료 = { v: 2, d: '시험', t: '시험', r: [], n: 46, m: 0, L: [
   WL: [['RB00Y001', 'mvpsh', '내면 한관단', 'Y (BLACK)'], ['RB00Y002', '?h', '', '']],   // ⑫ 시험 작업(11-24) — A03 더미 여섯 본
   WY: { A03: ['000011', 'PPPNAA', '111100'] } };
 var 보낼한도 = 4096;
-var 앱날 = '2026-11-24i';       // 링크 av(봇 yard_tablet.앱날)가 이보다 새로우면 '예전 판' 알림 — 텔레그램이 옛 앱을 붙들고 있을 때(11-24)
+var 앱날 = '2026-11-24j';       // 링크 av(봇 yard_tablet.앱날)가 이보다 새로우면 '예전 판' 알림 — 텔레그램이 옛 앱을 붙들고 있을 때(11-24)
 
 function 해시읽기() {
   var h = '';
