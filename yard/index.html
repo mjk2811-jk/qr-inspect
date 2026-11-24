@@ -75,14 +75,29 @@
     머리 [📋 실사 n / m곳](m = 지금 DB 재고가 있는 칸 · N) → 다른 칸(까닭) · 보냄 · 확인 전 · 안 본 칸(본수 큰 차례) · 맞음 — 칸을 누르면
     배치도에서 그 칸. 배치도 [📋 실사 색] / [🔢 본수 색](그날만 기억 — 본수 색이면 진행 표시를 안 함): 초록 · 주황 · 빨강 · ✓ 저장 ·
     회색 = 안 본 칸(DB 재고) · 하늘 점선 = '보냄 · 확인 전'(태블릿이 보냈는데 봇 답 r 이 링크에 아직 — 상태.보냄 의 오늘 것).
+  · 2026-11-24 ⑪ 🚢 모선 — '모선별로 선적에 필요한 제품을 야드에서 등록'. PC 선적 잔량 탭이 실은 배를 링크 B
+      {s: [[id, 이름, 양하지, 출항, 시트, 필요, 재고, G1, 야드, 남은, '작지 …']], c: 봇이 기억한 고른 배, l: [[작지, 필요, 수요가, 규격]],
+       o: 모선명이 다른 배인 관(더미글), n: 작지 못 맞춘 줄, t: 실은 때}. 칩 줄 맨 앞 [🚢 모선] → 배 고르기 창(출항 차례 · 필요 / 야드 /
+      G1 막대) → 다른 배를 고르면 sendData s:id(앱이 닫힘 — 봇이 그 배 작지의 야드 번호를 LY 에 실은 단추로). 고른 배면 칩 = 그 배
+      작지만(값 '@배' · '@배작:작지') · 번호판 = G1 + 다른 야드 호박색 · 머리 띠(필요 = 야드 + 이번 + G1 남음) · 오른쪽 '이 배 몫' 표 ·
+      다른 배 몫을 누르면 막지 않고 알림 · 차례 줄 '🚢 다른 배'. 보낼 때 b:id(봇 답 '이 배 몫' · [✅ 저장] 때 빈 모선명에 그 배).
+    ⑫ 🛠 작업 — '마킹사양 · 타각 · 바니쉬 · 쉬핑마크 같은 추가 작업도 제품별로 같이 선택해서 등록'. 머리 [📍 자리 | 🛠 작업].
+      작업 보기는 부탁한 야드(링크 WL [[작지, 글자, 마킹위치, 바니쉬]] · WY {야드: [작지자리글, 끝 비트글, 인쇄글]} — Y 더미 차례 한 자씩)의
+      관을 작업 칩(그 야드 작지가 시킨 것만 — m 마킹 · v 바니쉬 · p PP·BP · s 지지대 · t 타각 · h 쉬핑마크)마다 눌러 끝남 · 풂(상태.작업 —
+      파랑 = 이번) · [이 야드 남은 n본 전부 ✓]. 자리 보기에서는 '🛠 이미 끝난 작업' 칩을 켜 두면 새로 누르는 관마다 붙고(줄.작) 줄 점으로
+      켜고 끔. 보낼 때 a:[[작업, 켬, 번호글]] → 봇이 바로 DB(yard_work) · [↩ 작업 되돌리기]. 쉬핑마크는 현장에서 붙이고 누른 것이 끝
+      (인쇄 이력은 🖨 표시만). 야드에 작업이 안 실렸으면 [🔎 DB 더미 · 작업 받기](q).
   함수  셈: 해시읽기 · b64url풀기 · b64바이트 · 인플레이트 · 풀기 · 범위풀기 · 번호꼴 · 보낼글 · 더미풀기 · 보낼묶음 · 반복켜 ·
             자동켜찾기 · 다음단 · 단자리 · 쌓은자리 · 끝자리 · 바꾼줄 · 끼운줄 · 뺀줄 · 누름인가 · 레일자리 · 손굴림 · 맞춤셈 · 옮김더하기 ·
             QR가르기 · 칸야드 · 칸본수 · 되살릴줄 · 토큰풀기 · 진행풀기 · 까닭글 · 작업날시작 · 확인전야드 · 진행셈 · 진행칸 · 칸진행 ·
-            정보글 · 정보열쇠 · 다른더미 · 다른곳 · 작지야드풀기 · 야드번호합침 · 야드만작지
+            정보글 · 정보열쇠 · 다른더미 · 다른곳 · 작지야드풀기 · 야드번호합침 · 야드만작지 · 기본작지 · 배풀기 · 배작지인가 ·
+            딴배이름 · 배필요 · 비트풀기 · 작업풀기 · 작업지금 · 작업셈 · 작업보낼
         화면: 그리기 · 칩그리기 · 판그리기 · 야드그리기 · 차례그리기 · 누름 · 단고름 · 야드고르기열기 · 보내기 · 시작 · 이어
             · 지킴 · 눌러도 · 지금고침 · 고침켜기 · 빼기 · 모드그리기 · 토스트 · 보기바꿈 · 레일그리기 · 레일굴림 · 레일잇기
             · 맞춤그리기 · 없는것열기 · 보낸것열기 · 되살리기 · 더미부탁 · 머리단추 · QR받음 · 스캔받기 · 스캔초점 · 카메라
             · 진행지금 · 진행열기 · 진행야드 · 색모드읽기 · 색모드바꿈 · 진행한줄 · 정보부탁 · 정보그리기 · 고른작지 · 작지부탁 · 해제바꿈
+            · 지금배 · 번호작지 · 배몫인가 · 배칩들 · 배띠그리기 · 배상자그리기 · 배알림 · 배고르기열기 · 배부탁 · 모드바꿈 · 작업관들
+            · 작업칩그리기 · 작업판그리기 · 작업상자그리기 · 작업누름 · 작업전부 · 끝작업그리기
 -->
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
@@ -272,6 +287,55 @@
   .prow .pw { margin-left: 8px; color: var(--hint); font-size: 14px; }
   .plist .pq { background: #e0f2fe; border-color: #7dd3fc; }
   .plist .pg { background: #dcfce7; border-color: #86efac; }
+  /* 2026-11-24 — ⑪ 🚢 모선 · ⑫ 🛠 작업 */
+  .seg { display: inline-flex; border: 1px solid #b9c2cd; border-radius: 10px; overflow: hidden; flex: none; }
+  .seg button { font: inherit; font-size: 15px; padding: 6px 12px; border: 0; background: #fff; color: #334155; white-space: nowrap; }
+  .seg button.on { background: #1e3a8a; color: #fff; font-weight: bold; }
+  .chips .k3.ship { background: linear-gradient(#2f4fa5, #1e3a8a); border-color: #172554; color: #fff; font-weight: bold; }
+  .chips .k3.ship small { color: #bfdbfe; }
+  .chips .k3.tk { white-space: nowrap; }
+  .chips .k3.tk.done { background: linear-gradient(#ecfdf5, #d1fae5); border-color: #6ee7b7; color: #065f46; }
+  .chips .k3.tk.na { opacity: .5; }
+  .need { color: #3730a3; background: #e0e7ff; border-radius: 6px; padding: 0 6px; font-weight: bold; }
+  .shipbar { margin: 6px 10px 0; padding: 5px 10px; border-radius: 8px; background: var(--card); border: 1px solid #c7d2fe; font-size: 14px; }
+  .sbar { height: 10px; border-radius: 5px; background: #e5e7eb; overflow: hidden; display: flex; margin-top: 4px; }
+  .sbar i { display: block; height: 100%; }
+  .tinfo { margin: 6px 10px 0; padding: 6px 10px; border-radius: 8px; background: #eff6ff; border: 1px solid #bfdbfe; font-size: 14px;
+           display: flex; align-items: center; flex-wrap: wrap; }
+  .tinfo .k3 { margin-left: auto; padding: 6px 12px; font-size: 14px; background: linear-gradient(#22c55e, #16a34a); border-color: #15803d;
+               color: #fff; font-weight: bold; }
+  .box { margin: 6px 10px 2px; padding: 6px 10px; border-radius: 10px; background: #fff; border: 1px solid #c7d2fe; font-size: 14px; }
+  .box h5 { margin: 0 0 4px; font-size: 14px; display: flex; align-items: center; flex-wrap: wrap; }
+  .box .mini { width: 100%; border-collapse: collapse; }
+  .box .mini td, .box .mini th { padding: 2px 5px; font-size: 13px; border-bottom: 1px solid #eef0f4; text-align: right; white-space: nowrap; }
+  .box .mini td:first-child, .box .mini th:first-child { text-align: left; }
+  .box .mini th { color: var(--hint); font-weight: normal; }
+  .box .mini tr.tot td { font-weight: bold; border-top: 1px solid #c7d2fe; }
+  .box .mini td.now { color: var(--sel); font-weight: bold; }
+  .box .mini td.wok { background: #f0fdf4; color: #166534; } .box .mini td.wpt { background: #fef9c3; } .box .mini td.wno { background: #fee2e2; }
+  .box .tks .k3 { padding: 5px 9px; font-size: 14px; margin: 0 5px 4px 0; }
+  .box .tks .k3.on { background: linear-gradient(#ecfdf5, #d1fae5); border-color: #10b981; color: #065f46; font-weight: bold; }
+  .num.wok { background: #dcfce7; border-color: #86efac; }
+  .num.wok::after { content: '✓'; position: absolute; right: 4px; top: 2px; color: #16a34a; font-size: 12px; font-weight: bold; }
+  .num.wnow { background: linear-gradient(#4a9bf0, #2477d3); border-color: #1d5fa8; color: #fff; }
+  .num.wnow .p { color: #dbeafe; }
+  .num.woff { background: #fee2e2; border-color: #f87171; }
+  .num.wna { opacity: .35; }
+  .dt { display: inline-block; min-width: 26px; padding: 0 3px; margin-left: 3px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 13px;
+        text-align: center; vertical-align: middle; background: #fff; }
+  .dt.y { background: #dcfce7; border-color: #86efac; }
+  .stack .shipx { display: inline-block; margin-left: 8px; padding: 1px 7px; border-radius: 10px; font-size: 13px; font-weight: bold;
+                  color: #713f12; background: #fef08a; border: 1px solid #eab308; vertical-align: middle; }
+  .sv { display: flex; flex-wrap: wrap; align-items: center; width: 100%; text-align: left; margin: 0 0 6px; padding: 8px 12px; font-size: 16px; }
+  .sv .nm { font-weight: bold; margin-right: 8px; }
+  .sv .wh { color: var(--hint); font-size: 14px; margin-right: 8px; }
+  .sv .num2 { margin-left: auto; font-size: 14px; }
+  .sv .sbar { width: 100%; }
+  .sv.on { border-color: #1e3a8a; background: linear-gradient(#eef4ff, #dbe8fb); }
+  .sv.off { opacity: .55; }
+  .c-yard { background: #16a34a; } .c-now { background: #2563eb; } .c-g1 { background: #f59e0b; } .c-make { background: #cbd5e1; }
+  body.m-work #pic, body.m-work .stackhead, body.m-work #stackBox, body.m-work #autoLine, body.m-work .tier, body.m-work #chk,
+  body.m-work #del, body.m-work #fix, body.m-work #ins, body.m-work #doneBox, body.m-work #shipBox, body.m-work #shipBar { display: none !important; }
   @media (orientation: portrait) {
     #info { display: none; }                         /* 세로는 위 띠가 좁다 — 기본 1단은 차례 칸의 회색 '1단'으로 보인다 */
     .main { flex-direction: column; }
@@ -333,12 +397,16 @@
     .pickline .k3 { padding: 8px 10px; font-size: 14px; }
     .prow { font-size: 15px; padding: 8px 10px; }
     .pstat .c { font-size: 13px; padding: 2px 8px; }
+    .right .box { order: 1; font-size: 12px; margin: 4px 8px 0; padding: 4px 8px; }
+    .seg button { font-size: 13px; padding: 4px 8px; }
+    .shipbar, .tinfo { font-size: 12px; margin: 4px 8px 0; padding: 4px 8px; }
   }
 </style>
 </head>
 <body>
 <div class="bar">
   <h1>📍 야드 등록</h1>
+  <span class="seg" id="modeSeg"><button type="button" data-m="yard">📍 자리</button><button type="button" data-m="work">🛠 작업</button></span>
   <span class="test" id="testStrip" hidden>🧪 시험 모드(텔레그램 밖) — 보내기는 화면에만</span>
   <span class="hint" id="saved"></span>
   <span class="grow"></span>
@@ -352,6 +420,8 @@
 <div class="main" id="main">
   <div class="left">
     <div class="chips" id="chips"></div>
+    <div class="shipbar" id="shipBar" hidden></div>
+    <div class="tinfo" id="workInfo" hidden></div>
     <div class="find">
       <span class="hint">찾기</span><input id="q" inputmode="text" autocomplete="off" placeholder="뒤 번호">
       <button class="k3" id="addTyped" hidden></button>
@@ -368,6 +438,9 @@
   </div>
   <div class="right">
     <div class="yards" id="yards"></div>
+    <div class="box" id="shipBox" hidden></div>
+    <div class="box" id="doneBox" hidden></div>
+    <div class="box" id="workBox" hidden></div>
     <div class="chk" id="chk" hidden></div>
     <div class="pic" id="pic" hidden><div class="t" id="picT"></div><div class="picbox" id="picBox"></div></div>
     <div class="stackhead"><span id="sh"></span><button type="button" class="clr" id="clrBtn" hidden>🧹 기존 재고 해제</button>
@@ -383,6 +456,7 @@
       <button class="k3 ed" id="del">✕ 빼기</button>
       <button class="k3 ed" id="fix">✏ 바꾸기</button>
       <button class="k3 ed" id="ins">⤴ 끼우기</button>
+      <button class="k3 ed" id="wclr" hidden>↩ 이번 것 지우기</button>
       <button class="k3 blue send" id="send">📤 보내기</button>
     </div>
   </div>
@@ -403,7 +477,12 @@ var 예시자료 = { v: 2, d: '시험', t: '시험', r: [], n: 46, m: 0, L: [
     return K;
   })(),
   W: [480, 260], N: { A03: 6, C05: 12, B02A: 2, A05: 20, C02: 9, B04C: 3, A01: 4 }, Y: { A03: '00Y 0100 0101 0102 0103.2 0104.2 0105.3' },
-  P: 'g..r..o', Px: { A02: 'G' }, Pw: 'b1 m1u2' };   // ⑦ 시험 실사 진행(11-21) — N 이름 차례 A01 A03 A05 B02A B04C C02 C05
+  P: 'g..r..o', Px: { A02: 'G' }, Pw: 'b1 m1u2',   // ⑦ 시험 실사 진행(11-21) — N 이름 차례 A01 A03 A05 B02A B04C C02 C05
+  B: { t: '시험', s: [['TESTSHIP', 'TEST SHIP', 'HOUSTON', 'BUSAN 12/12 ~ 12/14', '7. 시험 시트', 46, 46, 40, 6, 0, 'RB00X003 RB00X002'],   // ⑪ 시험 배(11-24)
+                      ['OTHER', 'OTHER SHIP', 'LA', 'BUSAN 11/29', '6. 시험 시트', 4, 4, 4, 0, 0, 'PB00W001'],
+                      ['UNDECIDED', '선명미정', 'HOUSTON', '', '8. 시험 시트', 300, 0, 0, 0, 300, '']] },
+  WL: [['RB00Y001', 'mvpsh', '내면 한관단', 'Y (BLACK)'], ['RB00Y002', '?h', '', '']],   // ⑫ 시험 작업(11-24) — A03 더미 여섯 본
+  WY: { A03: ['000011', 'PPPNAA', '111100'] } };
 var 보낼한도 = 4096;
 
 function 해시읽기() {
@@ -600,6 +679,106 @@ function 다른더미(더미, 지금야드, 앞, q) {
     return { y: y, rs: (더미[y] || []).filter(function (r) { return !Q || r.p.slice(-4).indexOf(Q) >= 0 || r.p.indexOf(Q.replace('-', '')) >= 0; }) };
   }).filter(function (g) { return g.rs.length; });
 }
+/** ⑪ 🚢 모선(11-24) — 작지 꼬리 뗌 'RB00X003(40')S1' → 'RB00X003'(봇 ship_vessel.기본작지 와 같다) */
+function 기본작지(작) { return _s(작).replace(/\(.*$/, '').trim().toUpperCase(); }
+/** ⑪ 링크 B → {배들: [{id, 이름, 양하지, 출항, 시트, 필요, 재고, G1, 야드, 남은, 작지들}], 고른, 줄: [{작지들, 필요, 수요가, 규격}], 다른: {번호: 1}, n, t} | null */
+function 배풀기(B) {
+  if (!B || !B.s) return null;
+  var 다른 = {};
+  더미풀기(B.o || '').forEach(function (r) { 다른[r.p] = 1; });
+  return {
+    배들: B.s.map(function (r) {
+      return { id: _s(r[0]), 이름: _s(r[1]), 양하지: _s(r[2]), 출항: _s(r[3]), 시트: _s(r[4]), 필요: r[5] || 0, 재고: r[6] || 0, G1: r[7] || 0,
+               야드: r[8] || 0, 남은: r[9] || 0, 작지들: _s(r[10]).split(/\s+/).filter(Boolean) };
+    }),
+    고른: _s(B.c),
+    줄: (B.l || []).map(function (r) { return { 작지들: _s(r[0]).split(/\s+/).filter(Boolean), 필요: r[1] || 0, 수요가: _s(r[2]), 규격: _s(r[3]) }; }),
+    다른: 다른, n: B.n || 0, t: _s(B.t)
+  };
+}
+/** ⑪ 그 배의 작지인가(작지 꼬리가 있어도) */
+function 배작지인가(배, 작) { return !!배 && !!작 && 배.작지들.indexOf(기본작지(작)) >= 0; }
+/** ⑪ 그 작지가 든 다른 배(고른 배 밖 — 처음 것) 이름 | '' */
+function 딴배이름(배들, 고른id, 작) {
+  var k = 기본작지(작), out = '';
+  (배들 || []).forEach(function (b) { if (!out && b.id !== 고른id && b.작지들.indexOf(k) >= 0) out = b.이름; });
+  return out;
+}
+/** ⑪ 고른 배 줄(B.l) → {기본작지: 필요}(한 줄에 작지가 여럿이면 줄 필요를 작지마다) */
+function 배필요(줄) {
+  var out = {};
+  (줄 || []).forEach(function (r) { r.작지들.forEach(function (k) { out[k] = (out[k] || 0) + r.필요; }); });
+  return out;
+}
+/** ⑫ 🛠 작업(11-24) — 글자 · 비트 차례는 봇 yard_work 와 같다(m 1 · v 2 · p 4 · s 8 · t 16 · h 32 → 64글자 한 자) */
+var 작업글자 = 'mvpsth';
+function 글자줄(시작, 수) { var out = ''; for (var i = 0; i < 수; i++) out += String.fromCharCode(시작 + i); return out; }
+var 비트글 = 글자줄(65, 26) + 글자줄(97, 26) + 글자줄(48, 10) + '-_';   // A~Z a~z 0~9 - _ (봇 yard_work._비트글 과 같다)
+var 자리글 = 글자줄(48, 10) + 글자줄(97, 26) + 글자줄(65, 26);          // 0~9 a~z A~Z (봇 yard_work._자리글 과 같다)
+var 작업이름 = { m: '마킹', v: '바니쉬', p: 'PP·BP', s: '지지대', t: '타각', h: '쉬핑마크' };
+var 작업아이콘 = { m: '🖌', v: '🛢', p: '🧢', s: '🦴', t: '🔨', h: '🏷' };
+/** ⑫ 끝 비트 한 자 → 'mv…'(끝난 작업 글자들) */
+function 비트풀기(c) {
+  var n = 비트글.indexOf(c), out = '';
+  if (n < 0) return '';
+  for (var i = 0; i < 6; i++) if (n & (1 << i)) out += 작업글자.charAt(i);
+  return out;
+}
+/** ⑫ 링크 WL · WY · 더미 → {야드: [{p, 단, 작지, 글자, 위치, 바니쉬, 끝, 인쇄}]}(Y 더미 차례 — WY 글이 한 자씩 맞다) */
+function 작업풀기(WL, WY, 더미) {
+  var out = {};
+  Object.keys(WY || {}).forEach(function (y) {
+    var w = WY[y] || [], a = _s(w[0]), b = _s(w[1]), c = _s(w[2]);
+    out[y] = ((더미 || {})[y] || []).map(function (r, i) {
+      var k = 자리글.indexOf(a.charAt(i)), l = (WL || [])[k] || ['', '?', '', ''];
+      return { p: r.p, 단: r.단, 작지: _s(l[0]), 글자: _s(l[1]), 위치: _s(l[2]), 바니쉬: _s(l[3]), 끝: 비트풀기(b.charAt(i)), 인쇄: c.charAt(i) === '1' };
+    });
+  });
+  return out;
+}
+/** ⑫ 한 관 한 작업의 지금 — 이번에 고친 것(고침표 {작업: {번호: 1 | 0}})이 먼저 → {끝, 이번: 1 | 0 | null} */
+function 작업지금(r, k, 고침표) {
+  var x = 고침표 && 고침표[k] ? 고침표[k][r.p] : undefined;
+  return { 끝: x === 1 ? true : x === 0 ? false : r.끝.indexOf(k) >= 0, 이번: x === 1 || x === 0 ? x : null };
+}
+/** ⑫ 관들 → {작업: {필요, 끝, 이번}, 모름(작업지시서 없는 관)} — 작지가 시킨 작업만 센다 */
+function 작업셈(관들, 고침표) {
+  var out = { 모름: 0 };
+  작업글자.split('').forEach(function (k) { out[k] = { 필요: 0, 끝: 0, 이번: 0 }; });
+  (관들 || []).forEach(function (r) {
+    if (r.글자.indexOf('?') >= 0) out.모름++;
+    작업글자.split('').forEach(function (k) {
+      if (r.글자.indexOf(k) < 0) return;
+      var x = 작업지금(r, k, 고침표);
+      out[k].필요++;
+      if (x.끝) out[k].끝++;
+      if (x.이번 !== null) out[k].이번++;
+    });
+  });
+  return out;
+}
+/** ⑫ 보낼 작업 a — 고침표(🛠 작업 보기) · 자리 줄들 {야드: [줄(.작 = 'mv')]}(이미 끝난 작업) → [[작업, 켬 1|0, 번호글]](QR 바코드 줄은 뺌) */
+function 작업보낼(고침표, 야드들) {
+  var 켬 = {}, 끔 = {}, out = [];
+  function 넣기(표, k, p) { if (!표[k]) 표[k] = []; if (표[k].indexOf(p) < 0) 표[k].push(p); }
+  Object.keys(고침표 || {}).forEach(function (k) {
+    Object.keys(고침표[k] || {}).forEach(function (p) { if (고침표[k][p] === 1) 넣기(켬, k, p); else if (고침표[k][p] === 0) 넣기(끔, k, p); });
+  });
+  Object.keys(야드들 || {}).forEach(function (y) {
+    (야드들[y] || []).forEach(function (x) {
+      if (x.p.indexOf('#B') === 0) return;
+      _s(x.작).split('').forEach(function (k) { if (작업글자.indexOf(k) >= 0 && !(끔[k] && 끔[k].indexOf(x.p) >= 0)) 넣기(켬, k, x.p); });
+    });
+  });
+  function 글(ps) { return 보낼글(ps.map(function (p) { return { p: p, 단: 1 }; })); }
+  작업글자.split('').forEach(function (k) {
+    if (켬[k]) out.push([k, 1, 글(켬[k])]);
+    if (끔[k]) out.push([k, 0, 글(끔[k])]);
+  });
+  return out;
+}
+/** ⑫ 보낼 작업 a → 관 · 작업 건수 */
+function 작업건수(a) { var n = 0; (a || []).forEach(function (e) { n += 더미풀기(e[2]).length; }); return n; }
 /** 한 야드 → '26K 0805 0806.2;26J 0101' — 누른 차례, 접두가 바뀌면 ';'. ⑤ QR 바코드 줄(p '#B통')은 '#B 통' 묶음 */
 function 보낼글(줄들) {
   var 조각 = [], 앞 = '';
@@ -723,16 +902,19 @@ function 더미풀기(글) {
   });
   return out;
 }
-/** 보낼 묶음(판 2) — ② 옮김(m)을 먼저 싣고, 한도 안에서 야드 차례대로(넘는 야드는 다음에). → {글, 야드들, n, m(옮김 묶음 수)} */
-function 보낼묶음(야드들, id, 날, 옮김, 해제) {
-  var y = {}, 들 = [], n = 0, m = (옮김 || []).map(function (o) { return [o.에서, o.로, o.ps]; });
+/** 보낼 묶음(판 2) — ② 옮김(m) · ⑫ 작업(a)을 먼저 싣고, 한도 안에서 야드 차례대로(넘는 야드는 다음에). ⑪ 배 = 고른 배 id(b).
+ *  → {글, 야드들, n, m(옮김 묶음 수), a(작업 묶음 수)} */
+function 보낼묶음(야드들, id, 날, 옮김, 해제, 작업, 배) {
+  var y = {}, 들 = [], n = 0, m = (옮김 || []).map(function (o) { return [o.에서, o.로, o.ps]; }), a = 작업 || [];
   function 짓기(nn) {
     var d = { k: '야드', v: 2, id: id, d: 날, y: y, n: nn }, x = Object.keys(y).filter(function (야) { return 해제 && 해제[야]; });
     if (m.length) d.m = m;
     if (x.length) d.x = x;                                             // ⑩ 🧹 기존 재고 해제하고 넣을 야드(11-23)
+    if (a.length) d.a = a;                                             // ⑫ 🛠 작업(11-24)
+    if (배) d.b = 배;                                                   // ⑪ 🚢 고른 배(11-24)
     return JSON.stringify(d);
   }
-  var 글 = m.length ? 짓기(0) : '';
+  var 글 = m.length || a.length ? 짓기(0) : '';
   Object.keys(야드들).forEach(function (야) {
     var xs = 야드들[야];
     if (!xs.length) return;
@@ -741,7 +923,7 @@ function 보낼묶음(야드들, id, 날, 옮김, 해제) {
     if (바이트(시험글) > 보낼한도) { delete y[야]; return; }
     들.push(야); n += xs.length; 글 = 시험글;
   });
-  return { 글: 글, 야드들: 들, n: n, m: m.length };
+  return { 글: 글, 야드들: 들, n: n, m: m.length, a: a.length };
 }
 /** 중간 고치기(11-19) — 새 줄들을 돌려준다(본 줄들은 그대로). 바꾼줄: i 번째 번호만 p 로(단 · 고름 · 자동 그대로) ·
  *  끼운줄: i 번째 앞에 p(기본 1단 — 자동 번갈아는 끝에 더할 때만) · 뺀줄: i 번째를 뺌 */
@@ -882,7 +1064,9 @@ var 자료 = null;
 var 작지칩 = '@작지:';          // ⑨ 상태.작지 — 야드에만 있는 작지 칩(재배치 11-23 · G1 칩은 '작지|접두')
 var 작지야드 = {}, 작지요청 = [], 작지수 = null, 야드번호 = {};   // ⑨ 링크 LY · LYq · LN · (더미 + LY) — 시작에서
 var 열쇠 = 'yard|v1';
-var 상태 = { 야드들: {}, 야드: '', 작지: '', 고른: -1, 보냄: {}, 자동: {}, 보낸: {}, 옮김: [] };   // 자동 = {야드: 켜}
+var 상태 = { 야드들: {}, 야드: '', 작지: '', 고른: -1, 보냄: {}, 자동: {}, 보낸: {}, 옮김: [], 모드: 'yard', 작업: {}, 끝작업: {}, 작업야드: '', 작업키: '' };   // 자동 = {야드: 켜}
+// 모드 = 'yard'(📍 자리) | 'work'(🛠 작업 — 11-24) · 작업 = {작업: {번호: 1 | 0}}(이번에 고친 것) · 끝작업 = {작업: 1}(자리 등록 때 같이) ·
+// 배끔 = 봇이 고른 배를 앱에서만 끈 그 배 id · 배본 = 마지막으로 본 고른 배(바뀌면 '이 배 전부' 칩으로)
 // 보낸 = {id: {때, 야드들: {야드: [줄]}, w: [[야드, 줄 자리, 번호, 까닭]], s: [야드], 되살림: {야드: 1}}} — 봇이 받은 목록(③ 하루)
 // 옮김 = [{에서, 로, ps: [번호]}] — ② 실제 야드에 없는 관(다음 📤 보내기에 m 으로)
 var 받을곳 = null;            // ⑥ 배치도 칸 이름(+ G1) — 옮길 곳(봇 받을곳들 과 같다) · 없으면 null(옛 링크)
@@ -894,6 +1078,9 @@ var 보기 = 'list';            // 폰 아래 칸 — 'list'(📋 차례) | 'pic
 var 진행 = {};                // ⑦ 야드 → {s, 저장, w} — 링크 P · Pw(봇이 받은 오늘 실사 — 태블릿에 저장 안 함)
 var 색모드 = 'heat';          // ⑦ 배치도 색 — 'prog'(📋 실사) | 'heat'(🔢 본수) · 그날만 기억
 var 토스트때 = 0;
+var 배자료 = null;            // ⑪ 배풀기(자료.B) — 시작에서(태블릿에 저장 안 함 — 늘 링크의 것)
+var 번호작지표 = {};          // ⑪ 번호 → 작지(작지야드 LY · 작업표) — 다른 배 몫 알림(G1 번호는 모든번호)
+var 작업표 = {};              // ⑫ 작업풀기(WL, WY, 더미) — 야드 → 관들
 var $ = function (id) { return document.getElementById(id); };
 // ⛶ 전체화면(2026-11-20 '야드등록에서 테블릿 가로 전체화면이 안되') — 태블릿 텔레그램은 미니 앱을 가운데 좁은 창(세로로 긴 창)으로
 // 띄워 가로로 들어도 세로 꼴(orientation)로 그려졌다. 태블릿(화면 짧은 변 600px 이상)은 열 때 전체화면 — 지도 · 검수 앱과 같은 규칙
@@ -945,6 +1132,9 @@ function 읽기() {
   if (!상태.보낸) 상태.보낸 = {};
   if (!상태.옮김) 상태.옮김 = [];
   if (!상태.해제) 상태.해제 = {};
+  if (!상태.작업) 상태.작업 = {};
+  if (!상태.끝작업) 상태.끝작업 = {};
+  if (상태.모드 !== 'work') 상태.모드 = 'yard';
 }
 function 쓴곳() {
   var m = {};
@@ -953,7 +1143,10 @@ function 쓴곳() {
 }
 function 지금줄들() { return 상태.야드들[상태.야드] || []; }
 
-function 그리기() { 칩그리기(); 모드그리기(); 판그리기(); 야드그리기(); 맞춤그리기(); 그림그리기(); 차례그리기(); 머리단추(); }   // 그림 먼저 — 목록 굴림이 자리를 맞게 잼
+function 그리기() {
+  보기그리기(); 칩그리기(); 모드그리기(); 판그리기(); 야드그리기(); 맞춤그리기(); 그림그리기(); 차례그리기(); 머리단추();
+  배띠그리기(); 배상자그리기(); 끝작업그리기(); 작업상자그리기(); 보내기단추();
+}   // 그림 먼저 — 목록 굴림이 자리를 맞게 잼
 /** 그 야드에서 옮김에 담긴 번호 → 갈 곳 */
 function 옮길곳(야드) {
   var m = {};
@@ -1007,6 +1200,7 @@ function 그림그리기() {
 }
 
 function 칩그리기() {
+  if (상태.모드 === 'work') { 작업칩그리기(); return; }
   var 쓴 = 쓴곳(), 칩 = $('chips');
   칩.innerHTML = '';
   function 하나(글, 값) {
@@ -1015,6 +1209,22 @@ function 칩그리기() {
     b.innerHTML = 글;
     b.onclick = function (e) { if (!눌러도(칩, e)) return; 상태.작지 = 값; 저장(); 그리기(); $('grid').scrollTop = 0; };
     칩.appendChild(b);
+  }
+  if (배자료) {                                                      // ⑪ 🚢 모선(11-24) — 맨 앞
+    var 배 = 지금배(), sb = document.createElement('button');
+    sb.className = 'k3 ship';
+    sb.innerHTML = 배 ? '🚢 ' + esc(배.이름) + ' ▾' : '🚢 모선 <small>' + 배자료.배들.length + '척</small>';
+    sb.onclick = function (e) { if (눌러도(칩, e)) 배고르기열기(); };
+    칩.appendChild(sb);
+    if (배) {
+      하나('이 배 전부 <small>필요 ' + 배.필요 + '</small>', '@배');
+      배칩들().forEach(function (k) {
+        var g = G1수(k), y = (작지야드[k] || []).length;
+        하나(esc(k) + ' <small>' + (g ? 'G1 ' + g : '') + (g && y ? ' · ' : '') + (y ? '<span class="yd">야드 ' + y + '</span>' : '') + '</small>', '@배작:' + k);
+      });
+      하나('G1 전부 <small>' + 자료.n + '</small>', '');
+      return;
+    }
   }
   하나('G1 전부 <small>' + 자료.n + '</small>', '');
   var G1작 = {}, 수표 = 작지수 || {};
@@ -1032,12 +1242,15 @@ function 칩그리기() {
 function 고른작지() {
   var k = _s(상태.작지);
   if (k.indexOf(작지칩) === 0) return k.slice(작지칩.length);
+  if (k.indexOf('@배작:') === 0) return k.slice(4);                 // ⑪ 고른 배의 작지 칩
   return k.charAt(0) === '@' ? '' : k.split('|')[0];
 }
 function 판그리기() {
+  if (상태.모드 === 'work') { 작업판그리기(); return; }
   var 쓴 = 쓴곳(), q = _s($('q').value).toUpperCase(), g = $('grid'), 수 = 0;
   g.innerHTML = '';
   var 작 = 고른작지(), 야드만 = _s(상태.작지).indexOf(작지칩) === 0;
+  var 배 = 지금배(), 배전부 = !!배 && 상태.작지 === '@배', 필요표 = 배자료 ? 배필요(배자료.줄) : {};   // ⑪ 이 배 전부 · 작지마다 필요
   var 옛 = 야드만 ? [] : (더미[상태.야드] || []).filter(function (r) { return !q || r.p.slice(-4).indexOf(q) >= 0; });
   if (옛.length) {                                                     // 지금 야드의 DB 번호 — 야드 전체를 다시 조사할 때 앞에서부터 눌러 넣기
     var oh = document.createElement('div');
@@ -1060,13 +1273,16 @@ function 판그리기() {
     });
   }
   자료.L.forEach(function (l) {
-    if (상태.작지 && 상태.작지 !== l[0] + '|' + l[2]) return;
+    var 맞 = !상태.작지 || 상태.작지 === l[0] + '|' + l[2] || (작 && l[0] === 작 && _s(상태.작지).indexOf('@배작:') === 0) ||
+      (배전부 && 배작지인가(배, l[0]));
+    if (!맞) return;
     var 번호들 = l.번호들.filter(function (p) { return !q || p.slice(-4).indexOf(q) >= 0 || p.indexOf(q.replace('-', '')) >= 0; });
     if (!번호들.length) return;
     var h = document.createElement('div');
     h.className = 'lot';
     h.innerHTML = '<b>' + esc(l[0]) + '</b> · ' + esc(l[1]) + ' · ' + l.번호들.length + '본 (남은 ' +
-      l.번호들.filter(function (p) { return !쓴[p]; }).length + ')';
+      l.번호들.filter(function (p) { return !쓴[p]; }).length + ')' +
+      (배작지인가(배, l[0]) && 필요표[기본작지(l[0])] ? ' · <span class="need">필요 ' + 필요표[기본작지(l[0])] + '</span>' : '');
     g.appendChild(h);
     var box = document.createElement('div');
     box.className = 'nums';
@@ -1101,7 +1317,16 @@ function 판그리기() {
     });
   }
   var 받을 = '';
-  if (작) {                                                          // ⑨ 그 작지의 야드 번호(재배치 11-23)
+  if (배전부) {                                                      // ⑪ 이 배 전부 — 배 작지마다 다른 야드 번호(호박색)
+    배칩들().forEach(function (k) {
+      var rs = (작지야드[k] || []).filter(function (r) { return !q || r.p.slice(-4).indexOf(q) >= 0 || r.p.indexOf(q.replace('-', '')) >= 0; });
+      if (rs.length) {
+        묶음('<b>🗂 ' + esc(k) + '</b> 다른 야드 ' + rs.length + '본' + (필요표[기본작지(k)] ? ' · <span class="need">필요 ' + 필요표[기본작지(k)] + '</span>' : '') +
+          ' — 호박색 · 누르면 <b>' + esc(상태.야드 || '고른 야드') + '</b> 로, 저장하면 옮겨져요', rs);
+      }
+    });
+    if (자료.BYx) 받을 = '🗂 이 배의 다른 야드 번호는 너무 많아 링크에 못 실었어요 — 작지 칩을 하나씩 골라 🔎 받거나 찾기 칸에 번호 전체로';
+  } else if (작) {                                                          // ⑨ 그 작지의 야드 번호(재배치 11-23)
     var 전부 = 작지야드[작] || [], 곳수 = {};
     전부.forEach(function (r) { 곳수[r.y] = (곳수[r.y] || 0) + 1; });
     var rs = 전부.filter(function (r) { return !q || r.p.slice(-4).indexOf(q) >= 0 || r.p.indexOf(q.replace('-', '')) >= 0; });
@@ -1111,7 +1336,7 @@ function 판그리기() {
     }
     var n = 작지수 ? (작지수[작] || 0) : null;
     if ((자료.LYx || []).indexOf(작) >= 0) 받을 = '🗂 ' + esc(작) + ' 야드 번호는 너무 많아 링크에 못 실었어요 — 번호 전체를 찾기 칸에 쳐서 ＋ 넣기';
-    else if (작지요청.indexOf(작) < 0 && n !== 0) 받을 = '🗂 ' + esc(작) + (n ? ' — 다른 야드에 ' + n + '본' : '') + ' <button class="k3" id="getLot">🔎 이 작지 전체 번호 받기</button>';
+    else if (작지요청.indexOf(작) < 0 && n !== 0 && !(배작지인가(배, 작) && !자료.BYx)) 받을 = '🗂 ' + esc(작) + (n ? ' — 다른 야드에 ' + n + '본' : '') + ' <button class="k3" id="getLot">🔎 이 작지 전체 번호 받기</button>';
     else if (!전부.length) 받을 = '🗂 ' + esc(작) + ' — 야드에 놓인 번호가 없어요(G1 만)';
   } else if (q) {                                                    // 찾기 — 실린 야드 번호(더미 · LY)도
     다른더미(야드번호, 상태.야드, 자료.Yq || [], q).forEach(function (gr) {
@@ -1142,6 +1367,23 @@ function 판그리기() {
 function 야드그리기() {
   var ys = $('yards');
   ys.innerHTML = '';
+  if (상태.모드 === 'work') {                                       // ⑫ 🛠 작업 — 작업이 실린 야드(부탁한 야드)
+    var 들 = Object.keys(작업표);
+    if (상태.작업야드 && 들.indexOf(상태.작업야드) < 0) 들.push(상태.작업야드);
+    들.forEach(function (y) {
+      var b = document.createElement('button');
+      b.className = 'k3' + (y === 상태.작업야드 ? ' on' : '');
+      b.innerHTML = '🛠 ' + esc(y) + (작업표[y] ? ' <span class="hint">· DB ' + 작업표[y].length + '</span>' : ' <span class="hint">· 안 실림</span>');
+      b.onclick = function () { 상태.작업야드 = y; 저장(); 그리기(); $('grid').scrollTop = 0; };
+      ys.appendChild(b);
+    });
+    var 더w = document.createElement('button');
+    더w.className = 'k3';
+    더w.textContent = '＋ 야드';
+    더w.onclick = function () { 야드고르기열기(); };
+    ys.appendChild(더w);
+    return;
+  }
   Object.keys(상태.야드들).forEach(function (y) {
     var b = document.createElement('button');
     b.className = 'k3' + (y === 상태.야드 ? ' on' : '');
@@ -1176,12 +1418,18 @@ function 차례그리기() {
   xs.forEach(function (x, i) {
     var tr = document.createElement('tr');
     tr.className = (i === 상태.고른 ? 'cur' : '') + (지 && i === 지.i ? (지.k === '바꿈' ? ' tgt-fix' : ' tgt-ins') : '');
-    tr.innerHTML = '<td class="n">' + (i + 1) + '</td><td class="p">' + esc(보일번호(x.p)) +
+    var 점 = 작업글자.split('').filter(function (k) { return 상태.끝작업[k] || _s(x.작).indexOf(k) >= 0; }).map(function (k) {
+      return '<span class="dt' + (_s(x.작).indexOf(k) >= 0 ? ' y' : '') + '" data-k="' + k + '" title="' + 작업이름[k] + '">' + 작업아이콘[k] + '</span>';
+    }).join('');                                                        // ⑫ 이미 끝난 작업 점 — 누르면 그 관만 켜고 끔
+    var 배x = 지금배() && x.p.indexOf('#B') !== 0 && !배몫인가(x.p) ? '<span class="shipx">🚢 다른 배</span>' : '';
+    tr.innerHTML = '<td class="n">' + (i + 1) + '</td><td class="p">' + esc(보일번호(x.p)) + 배x + 점 +
       (딴[x.p] ? '<span class="from" title="DB 로는 ' + esc(딴[x.p]) + ' — 저장하면 ' + esc(상태.야드) + ' 로 옮겨져요">← ' + esc(딴[x.p]) + '</span>' : '') +
       '</td><td class="d"><span class="dan ' +
       (x.고름 ? 'set' : x.자동 ? 'auto' : 'def') + '">' + x.단 + '단' + (x.자동 ? ' <small>자동</small>' : '') + '</span></td>';
     tr.onclick = function (e) {                                       // 고르기만 — 빼기 · 바꾸기 · 끼우기는 아래 단추(굴리다 지워지지 않게)
       if (!눌러도(판, e)) return;
+      var dk = e.target && e.target.getAttribute ? e.target.getAttribute('data-k') : null;
+      if (dk) { var cur = _s(x.작); x.작 = cur.indexOf(dk) >= 0 ? cur.replace(dk, '') : cur + dk; 저장(); 그리기(); return; }
       고침 = null; 상태.고른 = i;
       저장(); 그리기();
     };
@@ -1232,14 +1480,18 @@ function 누름(p, 스캔) {
   if (쓴[p]) { 겹침(보일번호(p) + ' 는 이미 ' + 쓴[p] + ' 에 넣었어요'); return false; }
   if (지 && 지.k === '끼움') {                                      // ⤴ 끼우기 — 대상 줄 앞에, 누른 차례로
     상태.야드들[상태.야드] = 끼운줄(xs, 지.i, p);
+    상태.야드들[상태.야드][지.i].작 = 끝작업글();                    // ⑫ 이미 끝난 작업
     상태.고른 = 지.i; 지.i += 1; 지.n += 1;
+    배알림(p);
     떨림(); 저장(); 그리기();
     return true;
   }
   var 켜 = 상태.자동[상태.야드];
   xs.push(켜 ? { p: p, 단: 다음단(xs, 켜), 고름: false, 자동: true } : { p: p, 단: 1, 고름: false, 자동: false });
+  xs[xs.length - 1].작 = 끝작업글();                                // ⑫ 이미 끝난 작업(켜 둔 것)
   상태.고른 = xs.length - 1;
   떨림(); 저장(); 그리기();
+  배알림(p);
   return true;
 }
 /** 고침이 지금 야드 · 그 줄에 아직 맞나 → 고침 | null */
@@ -1335,6 +1587,7 @@ function 야드고르기열기(목적) {
   Object.keys(더미).forEach(function (y) { 칸야드(y, 이름들).forEach(function (c) { 실린[c] = 1; }); });
   Object.keys(상태.야드들).forEach(function (y) { if (상태.야드들[y].length) 쓴야드[y] = 1; });
   function 정함(y) {
+    if (!옮김 && 상태.모드 === 'work') { 상태.작업야드 = y; 닫기(); 저장(); 그리기(); $('grid').scrollTop = 0; return; }   // ⑫
     if (!옮김) { 야드정함(y); return; }
     if (y === 옮김.에서) { 알림('같은 야드예요 — 다른 곳을 고르세요'); return; }
     if (받을곳 && !받을곳[y]) { 알림(y + ' 는 받을 칸이 아니에요 — 배치도 칸이나 📦 G1 으로'); return; }
@@ -1378,7 +1631,9 @@ function 야드고르기열기(목적) {
     var n = 본[고른칸] || 0, 실 = 실린[고른칸];
     var h = '<span class="info"><b>' + esc(고른칸) + '</b> — DB ' + n + '본' + (n ? (실 ? ' · 🗂 더미 있음' : ' · 더미가 앱에 없음') : '') +
       (색모드 === 'prog' ? ' ' + esc(진행한줄(고른칸)) : '') + '</span>';   // esc 가 앞 빈칸을 깎는다 — '없음 · ≠ 다름'(11-21)
-    if (!옮김 && n && !실) h += '<button class="k3" id="askDummy">🔎 DB 더미 받기</button>';
+    if (!옮김 && n && (상태.모드 === 'work' ? !작업표[고른칸] : !실)) {
+      h += '<button class="k3" id="askDummy">' + (상태.모드 === 'work' ? '🔎 DB 더미 · 작업 받기' : '🔎 DB 더미 받기') + '</button>';
+    }
     h += '<button class="k3 blue" id="pickOk">' + (옮김 ? '여기로 옮기기' : '이 야드로') + '</button>';
     el.innerHTML = h;
     if ($('askDummy')) $('askDummy').onclick = function () { 더미부탁(고른칸); };
@@ -1472,7 +1727,7 @@ function 더미부탁(y) {
   var 묻 = y + ' 의 지금 DB 더미를 봇에 청할까요?\n앱이 닫히고, 봇이 그 야드를 실은 [📍 야드 등록 열기] 단추를 줘요(누른 목록은 태블릿에 그대로).';
   var 가 = function (ok) {
     if (!ok) return;
-    야드정함(y);                                                    // 다시 열면 그 야드에서
+    if (상태.모드 === 'work') { 상태.작업야드 = y; 닫기(); 저장(); } else 야드정함(y);   // 다시 열면 그 야드에서(⑫ 작업 보기면 작업 야드)
     var 글 = JSON.stringify({ k: '야드', v: 2, id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7), d: 자료.d, y: {}, q: [y] });
     if (텔레그램안) { tg.sendData(글); return; }
     alert('🧪 시험 — 실제로는 봇에 보냅니다\n' + 글);
@@ -1521,6 +1776,286 @@ function 야드정함(y) {
   닫기(); 저장(); 그리기();
 }
 function 닫기() { $('sheetBg').hidden = true; $('sheet').innerHTML = ''; $('sheet').className = 'sheet'; }
+
+/* ⑪ 🚢 모선(2026-11-24) — 봇이 고른 배(B.c)를 앱에서 끄지 않았으면 그 배 */
+function 지금배() {
+  if (!배자료 || !배자료.고른 || 상태.배끔 === 배자료.고른) return null;
+  return 배자료.배들.filter(function (b) { return b.id === 배자료.고른; })[0] || null;
+}
+function 번호작지(p) { return 모든번호[p] ? 모든번호[p][0] : 번호작지표[p] || ''; }
+/** 이 배 몫인가 — 작지가 그 배 것이고 모선명이 다른 배가 아님(작지를 모르는 번호는 아님) */
+function 배몫인가(p) { var 배 = 지금배(); return !!배 && !배자료.다른[p] && 배작지인가(배, 번호작지(p)); }
+/** 고른 배의 작지 칩 — G1 칩 작지(L) 먼저, 그 다음 야드에만 있는 작지(LY) */
+function 배칩들() {
+  var 배 = 지금배(), out = [];
+  if (!배) return out;
+  자료.L.forEach(function (l) { if (배작지인가(배, l[0]) && out.indexOf(l[0]) < 0) out.push(l[0]); });
+  Object.keys(작지야드).sort().reverse().forEach(function (k) { if (배작지인가(배, k) && out.indexOf(k) < 0) out.push(k); });
+  return out;
+}
+function G1수(작) { var n = 0; 자료.L.forEach(function (l) { if (l[0] === 작) n += l.번호들.length; }); return n; }
+/** 누른 번호 가운데 이 배 몫 → {모두, G1}(G1 = 링크 L 에 있던 번호) */
+function 배이번() {
+  var out = { 모두: 0, G1: 0 };
+  Object.keys(상태.야드들).forEach(function (y) {
+    상태.야드들[y].forEach(function (x) { if (배몫인가(x.p)) { out.모두++; if (모든번호[x.p]) out.G1++; } });
+  });
+  return out;
+}
+function 배띠그리기() {
+  var 배 = 지금배(), 띠 = $('shipBar');
+  띠.hidden = !배 || 상태.모드 === 'work';
+  if (띠.hidden) return;
+  var 이 = 배이번(), 필 = Math.max(1, 배.필요), G1남 = Math.max(0, 배.G1 - 이.G1);
+  function 몫(n) { return Math.max(0, Math.min(100, Math.round(1000 * n / 필) / 10)); }
+  띠.innerHTML = '🚢 <b>' + esc(배.이름) + ' ' + 배.필요 + '본</b> — 야드 <b>' + 배.야드 + '</b> · 이번 <b style="color:#1d4ed8">' + 이.모두 + '</b>' +
+    ' · G1 남음 <b style="color:#b45309">' + G1남 + '</b>' + (배.남은 ? ' · 남은 생산 ' + 배.남은 : '') +
+    (배자료.n ? ' <span class="hint">· 작지 못 맞춘 줄 ' + 배자료.n + '</span>' : '') +
+    '<div class="sbar"><i class="c-yard" style="width:' + 몫(배.야드) + '%"></i><i class="c-now" style="width:' + 몫(이.G1) + '%"></i>' +
+    '<i class="c-g1" style="width:' + 몫(G1남) + '%"></i><i class="c-make" style="width:' + 몫(배.남은) + '%"></i></div>';
+}
+/** 오른쪽 '이 배 몫 — 어디 있나' — 작지마다 필요 · 야드(실린 다른 야드 번호) · G1 · 이번 */
+function 배상자그리기() {
+  var 배 = 지금배(), 박 = $('shipBox');
+  박.hidden = !배 || 상태.모드 === 'work';
+  if (박.hidden) return;
+  var 필 = 배필요(배자료.줄), 작들 = Object.keys(필), 이번 = {}, 합 = { 필: 0, 야: 0, g: 0, 이: 0 };
+  Object.keys(상태.야드들).forEach(function (y) { 상태.야드들[y].forEach(function (x) { if (배몫인가(x.p)) { var k = 기본작지(번호작지(x.p)); 이번[k] = (이번[k] || 0) + 1; } }); });
+  var h = '<h5>🚢 이 배 몫 — 어디 있나</h5><table class="mini"><tr><th>작지</th><th>필요</th><th>야드</th><th>G1</th><th>이번</th></tr>';
+  작들.slice(0, 8).forEach(function (k) {
+    var 야 = 0, g = 0;
+    Object.keys(작지야드).forEach(function (r) { if (기본작지(r) === k) 야 += 작지야드[r].length; });
+    자료.L.forEach(function (l) { if (기본작지(l[0]) === k) g += l.번호들.length; });
+    합.필 += 필[k]; 합.야 += 야; 합.g += g; 합.이 += 이번[k] || 0;
+    h += '<tr><td>' + esc(k) + '</td><td>' + 필[k] + '</td><td>' + (야 || '—') + '</td><td>' + (g || '—') + '</td><td class="now">' + (이번[k] || '') + '</td></tr>';
+  });
+  h += '<tr class="tot"><td>합' + (작들.length > 8 ? '(' + 작들.length + '작지)' : '') + '</td><td>' + 배.필요 + '</td><td>' + 배.야드 + '</td><td>' + 배.G1 +
+    '</td><td class="now">' + (합.이 || '') + '</td></tr></table>';
+  if (자료.BYx) h += '<div class="hint">다른 야드 번호 일부는 링크에 못 실었어요</div>';
+  박.innerHTML = h;
+}
+/** 고른 배가 있는데 이 배 몫이 아닌 번호를 눌렀으면 알림만(막지 않음 — 11-24 '제안대로') */
+function 배알림(p) {
+  var 배 = 지금배();
+  if (!배 || _s(p).indexOf('#B') === 0 || 배몫인가(p)) return;
+  if (배자료.다른[p]) { 토스트('🚢 ' + 뒤(p) + ' 는 모선명이 다른 배예요 — 그대로 넣었어요(봇이 알려 줘요)'); 떨림('error'); return; }
+  var 작 = 번호작지(p), 딴 = 작 ? 딴배이름(배자료.배들, 배.id, 작) : '';
+  토스트('🚢 ' + 뒤(p) + ' 는 ' + 배.이름 + ' 몫이 아니에요' + (딴 ? ' — ' + 딴 + ' 몫' : 작 ? '' : '(작지를 몰라요 — 봇이 확인)') + ' · 그대로 넣었어요');
+  떨림('error');
+}
+/** [🚢 모선] — 배 고르기 창(재고 · 남은 생산이 없는 배는 아래 흐리게) */
+function 배고르기열기() {
+  if (!배자료) return;
+  var 배 = 지금배(), 들 = 배자료.배들.slice().sort(function (a, b) { return (a.재고 || a.남은 ? 0 : 1) - (b.재고 || b.남은 ? 0 : 1); });
+  var h = '<h2>🚢 모선 고르기 <span class="hint">— 선적 시트 ' + esc(배자료.t) + ' PC 에서 실음 · 한 번에 한 척</span></h2>' +
+    '<div class="hint">다른 배를 고르면 앱이 닫히고 봇이 그 배 번호(다른 야드 것까지)를 실은 단추를 줘요. 막대 = 야드(초록) · G1(주황) · 남은 생산(회색).</div>';
+  들.forEach(function (b) {
+    var 다 = !b.재고 && !b.남은, 필 = Math.max(1, b.필요);
+    function 몫(n) { return Math.max(0, Math.min(100, Math.round(100 * n / 필))); }
+    h += '<button class="k3 sv' + (배 && 배.id === b.id ? ' on' : '') + (다 ? ' off' : '') + '" data-sv="' + esc(b.id) + '"><span class="nm">' + esc(b.이름) +
+      '</span><span class="wh">' + esc([b.양하지, b.출항, b.시트].filter(Boolean).join(' · ')) + '</span><span class="num2">필요 <b>' + b.필요 + '</b> · 야드 ' +
+      b.야드 + ' · G1 ' + b.G1 + (b.남은 ? ' · 남은 생산 ' + b.남은 : '') + (다 ? ' — 재고 없음' : '') + '</span><span class="sbar"><i class="c-yard" style="width:' +
+      몫(b.야드) + '%"></i><i class="c-g1" style="width:' + 몫(b.G1) + '%"></i><i class="c-make" style="width:' + 몫(b.남은) + '%"></i></span></button>';
+  });
+  h += '<div class="btns">' + (배 ? '<button class="k3" id="svOff">배 안 고름(전체 보기)</button>' : '') + '<button class="k3" id="sheetX">닫기</button></div>';
+  $('sheet').className = 'sheet';
+  $('sheet').innerHTML = h;
+  Array.prototype.forEach.call($('sheet').querySelectorAll('[data-sv]'), function (b) {
+    b.onclick = function () {
+      var id = b.getAttribute('data-sv');
+      if (배자료.고른 === id) { 상태.배끔 = ''; 상태.작지 = '@배'; 닫기(); 저장(); 그리기(); $('grid').scrollTop = 0; return; }   // 이미 실린 배
+      배부탁(id);
+    };
+  });
+  if ($('svOff')) $('svOff').onclick = function () { 상태.배끔 = 배자료.고른; 상태.작지 = ''; 닫기(); 저장(); 그리기(); 토스트('🚢 배를 안 고른 보기 — 다시 [🚢] 로 고를 수 있어요'); };
+  $('sheetX').onclick = 닫기;
+  $('sheetBg').hidden = false;
+}
+/** 다른 배를 봇에 청한다(sendData s) — 앱이 닫히고, 다시 열면 그 배 */
+function 배부탁(id) {
+  var b = 배자료.배들.filter(function (x) { return x.id === id; })[0];
+  var 묻 = (b ? b.이름 : id) + ' 을 고를까요?\n앱이 닫히고, 봇이 그 배 번호(다른 야드 것까지)를 실은 [📍 야드 등록 열기] 단추를 줘요(누른 목록은 태블릿에 그대로).';
+  var 가 = function (ok) {
+    if (!ok) return;
+    저장();
+    var 글 = JSON.stringify({ k: '야드', v: 2, id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7), d: 자료.d, y: {}, s: id });
+    if (텔레그램안) { tg.sendData(글); return; }
+    alert('🧪 시험 — 실제로는 봇에 보냅니다\n' + 글);
+  };
+  if (텔레그램안 && tg.showConfirm) tg.showConfirm(묻, 가); else 가(confirm(묻));
+}
+
+/* ⑫ 🛠 작업(2026-11-24) — [📍 자리 | 🛠 작업] */
+function 모드바꿈(m) { 상태.모드 = m === 'work' ? 'work' : 'yard'; 고침 = null; 저장(); 그리기(); $('grid').scrollTop = 0; }
+function 보기그리기() {
+  var 작 = 상태.모드 === 'work';
+  document.body.classList.toggle('m-work', 작);
+  Array.prototype.forEach.call(document.querySelectorAll('#modeSeg button'), function (b) { b.classList.toggle('on', b.getAttribute('data-m') === (작 ? 'work' : 'yard')); });
+  $('workInfo').hidden = !작;
+  $('wclr').hidden = !작;
+}
+function 작업관들() { return 작업표[상태.작업야드] || []; }
+function 끝작업글() { return 작업글자.split('').filter(function (k) { return 상태.끝작업[k]; }).join(''); }
+function 작업칩그리기() {
+  var 칩 = $('chips'), rs = 작업관들(), c = 작업셈(rs, 상태.작업);
+  칩.innerHTML = '';
+  if (!상태.작업야드 || !rs.length) {
+    칩.innerHTML = '<span class="hint">' + (자료.Wx ? '⚠ 작업 자료가 링크에 다 안 들어갔어요(야드를 한 곳씩 받기) · ' : '') +
+      (상태.작업야드 ? esc(상태.작업야드) + ' 작업이 앱에 없어요 — ＋ 야드 에서 🔎 DB 더미 · 작업 받기'
+      : '＋ 야드 로 작업할 야드를 고르세요(작업이 안 실린 야드는 🔎 DB 더미 · 작업 받기)') + '</span>';
+    return;
+  }
+  var 있는 = 작업글자.split('').filter(function (k) { return c[k].필요; });
+  if (있는.indexOf(상태.작업키) < 0) 상태.작업키 = 있는[0] || '';
+  있는.forEach(function (k) {
+    var x = c[k], 다 = x.끝 >= x.필요, b = document.createElement('button');
+    b.className = 'k3 tk' + (k === 상태.작업키 ? ' on' : '') + (다 ? ' done' : '');
+    b.innerHTML = 작업아이콘[k] + ' ' + 작업이름[k] + ' <small>' + x.끝 + '/' + x.필요 + (x.이번 ? ' · 이번 ' + x.이번 : '') + (다 ? ' ✓' : '') + '</small>';
+    b.onclick = function (e) { if (!눌러도(칩, e)) return; 상태.작업키 = k; 저장(); 그리기(); };
+    칩.appendChild(b);
+  });
+  작업글자.split('').forEach(function (k) {
+    if (c[k].필요) return;
+    var b = document.createElement('button');
+    b.className = 'k3 tk na';
+    b.disabled = true;
+    b.innerHTML = 작업아이콘[k] + ' ' + 작업이름[k] + ' <small>' + (c.모름 === rs.length ? '모름' : '안 함') + '</small>';
+    칩.appendChild(b);
+  });
+}
+function 작업판그리기() {
+  var g = $('grid'), rs = 작업관들(), k = 상태.작업키, 수 = 0, q = _s($('q').value).toUpperCase(), 정 = $('workInfo');
+  g.innerHTML = '';
+  var 시킨 = rs.filter(function (r) { return k && r.글자.indexOf(k) >= 0; });
+  if (k && 시킨.length) {
+    var 남 = 시킨.filter(function (r) { return !작업지금(r, k, 상태.작업).끝; }).length, 첫 = 시킨[0];
+    var 사양 = k === 'm' ? (첫.위치 ? '작지 마킹위치 ' + 첫.위치 : '') : k === 'v' ? (첫.바니쉬 ? '작지 ' + 첫.바니쉬 : '') :
+      k === 'h' ? '현장에서 붙이고 누르면 끝(🖨 = PC 에서 인쇄됨)' : '';
+    정.innerHTML = '<span>' + 작업아이콘[k] + ' <b>' + 작업이름[k] + '</b>' + (사양 ? ' — ' + esc(사양) : '') + ' · 끝난 관을 누르면 ✓ (다시 누르면 풂)</span>' +
+      (남 ? '<button class="k3" id="wAll">이 야드 남은 ' + 남 + '본 전부 ✓</button>' : '');
+    if ($('wAll')) $('wAll').onclick = 작업전부;
+  } else {
+    정.innerHTML = '<span>🛠 ' + (상태.작업야드 ? esc(상태.작업야드) + ' — 작업 칩을 고르세요' : '작업할 야드를 고르세요') + '</span>';
+  }
+  if (상태.작업야드 && !작업표[상태.작업야드]) {
+    var e0 = document.createElement('div');
+    e0.className = 'empty';
+    e0.innerHTML = esc(상태.작업야드) + ' 의 작업이 앱에 없어요<br><button class="k3" id="getWork">🔎 ' + esc(상태.작업야드) + ' DB 더미 · 작업 받기</button>';
+    g.appendChild(e0);
+    $('getWork').onclick = function () { 더미부탁(상태.작업야드); };
+  }
+  var 묶 = {}, 차례 = [];
+  rs.forEach(function (r) { var key = r.작지 || '(작지 없음)'; if (!묶[key]) { 묶[key] = []; 차례.push(key); } 묶[key].push(r); });
+  차례.forEach(function (key) {
+    var xs = 묶[key].filter(function (r) { return !q || r.p.slice(-4).indexOf(q) >= 0 || r.p.indexOf(q.replace('-', '')) >= 0; });
+    if (!xs.length) return;
+    var 시킴 = 묶[key][0].글자, cc = 작업셈(묶[key], 상태.작업), h = document.createElement('div');
+    h.className = 'lot';
+    h.innerHTML = '<b>' + esc(key) + '</b> · ' + 묶[key].length + '본' + (시킴.indexOf('?') >= 0 ? ' · ❔ 작업지시서 없음' : '') +
+      (k ? (시킴.indexOf(k) >= 0 ? ' · ' + 작업이름[k] + ' ' + cc[k].끝 + '/' + cc[k].필요 : ' · ' + 작업이름[k] + ' — 이 작지는 안 함') : '');
+    g.appendChild(h);
+    var box = document.createElement('div');
+    box.className = 'nums';
+    g.appendChild(box);
+    xs.forEach(function (r) {
+      수++;
+      var 함 = !!k && r.글자.indexOf(k) >= 0, x = 함 ? 작업지금(r, k, 상태.작업) : null, b = document.createElement('button');
+      b.className = 'k3 num' + (!함 ? ' wna' : x.이번 === 1 ? ' wnow' : x.이번 === 0 ? ' woff' : x.끝 ? ' wok' : '');
+      b.innerHTML = '<span class="p">' + (r.인쇄 && k === 'h' ? '🖨 ' : '') + r.단 + '단</span><span class="t">' + r.p.slice(-4).replace(/^0/, '') + '</span>';
+      b.title = r.p + ' · ' + (r.작지 || '');
+      b.disabled = !함;
+      b.onclick = function (e) { if (눌러도(g, e)) 작업누름(r); };
+      box.appendChild(b);
+    });
+  });
+  if (!수 && 작업표[상태.작업야드]) {
+    var e1 = document.createElement('div');
+    e1.className = 'empty';
+    e1.textContent = q ? "'" + q + "' 에 맞는 번호가 없어요" : '보일 번호가 없어요';
+    g.appendChild(e1);
+  }
+  $('cnt').textContent = '보이는 번호 ' + 수;
+  레일그리기();
+  $('addTyped').hidden = true;
+  $('infoBtn').hidden = !정보글(q);
+}
+/** 관 하나 — 이번 것이면 되돌리고, 아니면 끝남 ↔ 풂(DB 값의 반대) */
+function 작업누름(r) {
+  var k = 상태.작업키;
+  if (!k) return;
+  if (!상태.작업[k]) 상태.작업[k] = {};
+  var 표 = 상태.작업[k];
+  if (표[r.p] === 1 || 표[r.p] === 0) delete 표[r.p];
+  else 표[r.p] = r.끝.indexOf(k) >= 0 ? 0 : 1;
+  if (!Object.keys(표).length) delete 상태.작업[k];
+  떨림(); 저장(); 그리기();
+}
+/** 이 야드에서 그 작업이 안 끝난 관을 모두 끝남으로 */
+function 작업전부() {
+  var k = 상태.작업키, n = 0;
+  if (!k) return;
+  if (!상태.작업[k]) 상태.작업[k] = {};
+  작업관들().forEach(function (r) {
+    if (r.글자.indexOf(k) < 0 || 작업지금(r, k, 상태.작업).끝) return;
+    if (r.끝.indexOf(k) >= 0) delete 상태.작업[k][r.p]; else 상태.작업[k][r.p] = 1;
+    n++;
+  });
+  저장(); 그리기();
+  토스트(작업아이콘[k] + ' ' + 상태.작업야드 + ' ' + 작업이름[k] + ' ' + n + '본 끝남 — 📤 보내기로 적어요');
+}
+/** 오른쪽 🛠 작업 표 — 작지마다 작업별 끝 / 필요(이번 포함) · 출고 가능까지 남은 것 */
+function 작업상자그리기() {
+  var 박 = $('workBox');
+  박.hidden = 상태.모드 !== 'work';
+  if (박.hidden) return;
+  var y = 상태.작업야드, rs = 작업관들();
+  if (!y || !rs.length) { 박.innerHTML = '<h5>🛠 ' + (y ? esc(y) + ' — 작업이 앱에 없어요' : '야드를 고르세요') + '</h5>'; return; }
+  var c = 작업셈(rs, 상태.작업), 있는 = 작업글자.split('').filter(function (k) { return c[k].필요; });
+  var 남 = 있는.filter(function (k) { return c[k].필요 > c[k].끝; }).map(function (k) { return 작업이름[k] + ' ' + (c[k].필요 - c[k].끝); });
+  var 상 = !남.length && !c.모름 ? '🟢 출고 가능' : 있는.some(function (k) { return c[k].끝; }) ? '🟡 하는 중' : '🔴 남음';
+  var h = '<h5>🛠 ' + esc(y) + ' DB ' + rs.length + '본&nbsp;<span class="hint">' + 상 + '</span></h5><table class="mini"><tr><th>작지</th>' +
+    있는.map(function (k) { return '<th>' + 작업아이콘[k] + '</th>'; }).join('') + '</tr>';
+  var 묶 = {}, 차례 = [];
+  rs.forEach(function (r) { var key = r.작지 || '(작지 없음)'; if (!묶[key]) { 묶[key] = []; 차례.push(key); } 묶[key].push(r); });
+  차례.slice(0, 8).forEach(function (key) {
+    var cc = 작업셈(묶[key], 상태.작업);
+    h += '<tr><td>' + esc(key) + ' ' + 묶[key].length + '</td>' + 있는.map(function (k) {
+      var x = cc[k];
+      if (!x.필요) return '<td style="color:#cbd5e1">—</td>';
+      return '<td class="' + (x.끝 >= x.필요 ? 'wok' : x.끝 ? 'wpt' : 'wno') + '">' + x.끝 + (x.이번 ? '<span class="hint">*</span>' : '') + '</td>';
+    }).join('') + '</tr>';
+  });
+  h += '<tr class="tot"><td>합 ' + rs.length + '</td>' + 있는.map(function (k) { return '<td>' + c[k].끝 + '/' + c[k].필요 + '</td>'; }).join('') + '</tr></table>';
+  h += '<div style="margin-top:4px">' + (남.length ? '출고 가능까지: <b>' + esc(남.join(' · ')) + '</b>' : c.모름 ? '' : '✅ 시킨 작업이 다 끝났어요') +
+    (c.모름 ? ' <span class="hint">· 작업지시서 없는 관 ' + c.모름 + '</span>' : '') + '</div>' +
+    '<div class="hint">* = 이번에 누름(📤 보내기 전) · 작지가 안 시킨 작업은 —</div>';
+  박.innerHTML = h;
+}
+/** 자리 보기 — '🛠 이미 끝난 작업' 칩(켜 두면 새로 누르는 관마다) */
+function 끝작업그리기() {
+  var 박 = $('doneBox');
+  박.hidden = 상태.모드 === 'work' || !상태.야드;
+  if (박.hidden) return;
+  var h = '<h5>🛠 이미 끝난 작업&nbsp;<span class="hint">— 켜 두면 새로 누르는 관마다 같이 · 줄 점으로 그 관만 켜고 끔</span></h5><div class="tks">';
+  작업글자.split('').forEach(function (k) {
+    h += '<button class="k3' + (상태.끝작업[k] ? ' on' : '') + '" data-dk="' + k + '">' + 작업아이콘[k] + ' ' + 작업이름[k] + '</button>';
+  });
+  박.innerHTML = h + '</div>';
+  Array.prototype.forEach.call(박.querySelectorAll('[data-dk]'), function (b) {
+    b.onclick = function () { var k = b.getAttribute('data-dk'); if (상태.끝작업[k]) delete 상태.끝작업[k]; else 상태.끝작업[k] = 1; 저장(); 그리기(); };
+  });
+}
+/** [📤 보내기] 글 — 작업 건수(🛠 작업 보기 · 자리 줄의 이미 끝난 작업) */
+function 보내기단추() {
+  var a = 작업보낼(상태.작업, 상태.야드들), n = 작업건수(a), 모두 = 0;
+  Object.keys(상태.야드들).forEach(function (y) { 모두 += 상태.야드들[y].length; });
+  if (상태.모드 === 'work') {
+    $('send').innerHTML = '📤 보내기 — 작업 ' + n + '건' + (모두 ? '<span class="wide"> · 자리 ' + 모두 + '본</span>' : '');
+    $('send').disabled = !n && !모두;
+    return;
+  }
+  if (n && !모두) { $('send').innerHTML = '📤 보내기 — 작업 ' + n + '건'; $('send').disabled = false; }
+}
 
 /* ② 맞춰 보기 — 더미가 실린 야드: 같음 · 안 누름 · 새로 · 옮김 */
 function 맞춤그리기() {
@@ -1705,7 +2240,14 @@ function 머리단추() {
 /* ⑤ 🔫 스캐너(키보드처럼 치는 블루투스 · M3) · 📷 QR — 라벨 QR 을 받아 번호로 누른다 */
 function QR받음(raw) {
   var x = QR가르기(raw);
-  if (x.꼴 === '번호') { if (누름(x.p, true)) 토스트('🔫 ' + x.p + ' · ' + 상태.야드 + ' ' + 지금줄들().length + '번째'); return; }
+  if (상태.모드 === 'work' && x.꼴 === '번호') {                     // ⑫ 🛠 작업 보기 — 찍은 관을 고른 작업으로
+    var r = 작업관들().filter(function (y) { return y.p === x.p; })[0];
+    if (!r || !상태.작업키 || r.글자.indexOf(상태.작업키) < 0) { 떨림('error'); 토스트('🛠 ' + x.p + ' 는 ' + (r ? '이 작지가 안 시킨 작업이에요' : (상태.작업야드 || '고른 야드') + ' 관이 아니에요')); return; }
+    작업누름(r);
+    토스트('🛠 ' + x.p + ' · ' + 작업이름[상태.작업키] + ' ' + (작업지금(r, 상태.작업키, 상태.작업).끝 ? '끝남' : '풂'));
+    return;
+  }
+  if (x.꼴 === '번호') { if (누름(x.p, true) && (!지금배() || 배몫인가(x.p))) 토스트('🔫 ' + x.p + ' · ' + 상태.야드 + ' ' + 지금줄들().length + '번째'); return; }
   if (x.꼴 === '바코드') {
     if (누름('#B' + x.통, true)) 토스트('🔖 QR 바코드 …' + x.통.slice(-7) + ' · ' + 상태.야드 + ' — 번호는 보낼 때 봇이 찾아요');
     return;
@@ -1740,8 +2282,9 @@ function 카메라() {
 /* 보내기 — sendData 는 앱을 닫는다. 보낸 야드는 봇이 받았다고(r) 알려 오면 지운다 */
 function 보내기() {
   var id = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-  var 묶 = 보낼묶음(상태.야드들, id, 자료.d, 상태.옮김, 상태.해제);
-  if (!묶.n && !묶.m) { 알림('보낼 번호가 없어요'); return; }
+  var 작업a = 작업보낼(상태.작업, 상태.야드들), 배 = 지금배();
+  var 묶 = 보낼묶음(상태.야드들, id, 자료.d, 상태.옮김, 상태.해제, 작업a, 배 ? 배.id : '');
+  if (!묶.n && !묶.m && !묶.a) { 알림('보낼 번호가 없어요'); return; }
   var 남은 = Object.keys(상태.야드들).filter(function (y) { return 상태.야드들[y].length && 묶.야드들.indexOf(y) < 0; });
   var 줄 = [];
   if (묶.n) 줄.push(묶.야드들.join(' · ') + ' — ' + 묶.n + '본을 보낼까요?');
@@ -1753,11 +2296,19 @@ function 보내기() {
   });
   묶.야드들.forEach(function (y) { if ((상태.해제 || {})[y]) 줄.push('🧹 ' + y + ' 기존 재고 해제 — 저장할 때 목록에 없는 DB 재고는 G1 로'); });
   if (남은.length) 줄.push('(목록이 커서 ' + 남은.join(' · ') + ' 는 다음에 보내요)');
+  if (작업a.length) 줄.push('🛠 작업 ' + 작업건수(작업a) + '건(' + 작업a.map(function (e) { return 작업이름[e[0]] + (e[1] ? ' 끝남 ' : ' 풂 ') + 더미풀기(e[2]).length; }).join(' · ') +
+    ') — 봇이 바로 적어요(10분 안에 되돌리기)');
+  if (배 && 묶.n) {                                                  // ⑪ 고른 배 — 이 배 몫 · 다른 배 몫
+    var 이 = 0, 딴 = 0;
+    묶.야드들.forEach(function (y) { 상태.야드들[y].forEach(function (x) { if (x.p.indexOf('#B') === 0) return; if (배몫인가(x.p)) 이++; else 딴++; }); });
+    줄.push('🚢 ' + 배.이름 + ' — 이 배 몫 ' + 이 + (딴 ? ' · 다른 배 몫(또는 모름) ' + 딴 : '') + ' · 채팅 저장 때 이 배 몫 관의 빈 모선명에 배 이름');
+  }
   if (묶.n) 줄.push('봇이 확인해 답하고, 경고 없는 야드는 채팅 [✅ 저장] 으로도 넣어요.');
   var 가 = function (ok) {
     if (!ok) return;
     상태.보냄[id] = { 때: Date.now(), 야드들: 묶.야드들 };
     상태.옮김 = [];                                                // 옮김은 보낸 것으로(봇 답의 [↩ 되돌리기])
+    상태.작업 = {};                                                // ⑫ 작업도(봇이 바로 적음 · [↩ 작업 되돌리기])
     묶.야드들.forEach(function (y) { if (상태.해제) delete 상태.해제[y]; });   // ⑩ 해제 표시는 보낸 것에 실려 갔다
     저장();
     if (텔레그램안) { tg.sendData(묶.글); return; }          // 키보드 단추로 연 앱이면 여기서 닫힌다
@@ -1846,6 +2397,23 @@ function 이어(d, 오류) {
                           w: [['C05', 1, '00X0111', '이미 출고완료'], ['C05', 2, '#B2015050711111', '→ 00X0112']], s: [] } } };
     try { localStorage.setItem(열쇠, JSON.stringify(상태)); } catch (e) {}
   }
+  if (시험 && /^ship/.test(해시.shot || '')) {                      // 시안 그림용(11-24) — 🚢 시험 배를 고른 모습(다른 야드 번호 · 다른 배 몫)
+    자료.B.c = 'TESTSHIP';
+    자료.B.l = [['RB00X003', 30, 'BUYER A', '36" × 9.53 × 40\''], ['RB00X002', 16, 'BUYER B', '36" × 12.7 × 20\'']];
+    자료.B.o = '00X 0133';
+    자료.LY = [['RB00X003', '00X', 'B06C', '0130-0133'], ['RB00X003', '00X', 'A12', '0140,0142']];
+    상태 = { 야드들: { B04C: [{ p: '00X0101', 단: 1 }, { p: '00X0102', 단: 1 }, { p: '00X0201', 단: 1 }, { p: 'P00W0001', 단: 2 }] }, 야드: 'B04C',
+             작지: '@배', 고른: 3, 보냄: {}, 자동: {}, 배본: 'TESTSHIP' };
+    try { localStorage.setItem(열쇠, JSON.stringify(상태)); } catch (e) {}
+  }
+  if (시험 && /^work/.test(해시.shot || '')) {                      // 시안 그림용(11-24) — 🛠 작업 보기(A03 · 바니쉬)
+    상태 = { 야드들: {}, 야드: '', 작지: '', 고른: -1, 보냄: {}, 자동: {}, 모드: 'work', 작업야드: 'A03', 작업키: 'v', 작업: { v: { '00Y0103': 1 } }, 끝작업: {} };
+    if (해시.shot === 'workdone') {                                   // 자리 등록 + 이미 끝난 작업
+      상태 = { 야드들: { A08: [{ p: '00X0101', 단: 1, 작: 'ms' }, { p: '00X0102', 단: 1, 작: 'msp' }, { p: '00X0103', 단: 2, 작: 'ms' }] }, 야드: 'A08',
+               작지: '', 고른: 2, 보냄: {}, 자동: {}, 모드: 'yard', 끝작업: { m: 1, s: 1 } };
+    }
+    try { localStorage.setItem(열쇠, JSON.stringify(상태)); } catch (e) {}
+  }
   자료.L.forEach(function (l) { l.번호들 = 범위풀기(l[3]).map(function (뒤) { return l[2] + 뒤; }); l.번호들.forEach(function (p) { 모든번호[p] = l; }); });
   읽기();
   var 지운 = 받은만큼();
@@ -1856,6 +2424,14 @@ function 이어(d, 오류) {
   Object.keys(자료.Y || {}).forEach(function (y) { 더미[y] = 더미풀기(자료.Y[y]); });   // 봇이 실어 준 DB 더미(② 맞춰 보기 · 회색)
   작지야드 = 작지야드풀기(자료.LY); 작지요청 = 자료.LYq || []; 작지수 = 자료.LN || null;   // ⑨ 작지 전체 번호(재배치 11-23)
   야드번호 = 야드번호합침(더미, 작지야드);
+  배자료 = 배풀기(자료.B);                                             // ⑪ 🚢 모선(11-24)
+  작업표 = 작업풀기(자료.WL, 자료.WY, 더미);                             // ⑫ 🛠 작업(11-24)
+  번호작지표 = {};
+  Object.keys(작지야드).forEach(function (k) { 작지야드[k].forEach(function (r) { 번호작지표[r.p] = k; }); });
+  Object.keys(작업표).forEach(function (y) { 작업표[y].forEach(function (r) { if (!번호작지표[r.p] && r.작지) 번호작지표[r.p] = r.작지; }); });
+  if (배자료 && 배자료.고른 && 상태.배본 !== 배자료.고른) { 상태.배본 = 배자료.고른; 상태.배끔 = ''; 상태.작지 = '@배'; }   // 새로 고른 배 — 이 배 전부
+  if (!배자료 || !배자료.고른) { if (_s(상태.작지).indexOf('@배') === 0) 상태.작지 = ''; 상태.배본 = ''; }
+  if (!상태.작업야드 || (!작업표[상태.작업야드] && Object.keys(작업표).length)) 상태.작업야드 = Object.keys(작업표)[0] || 상태.작업야드 || '';
   부탁.forEach(function (y) {                                        // 부탁한 야드만 탭을 만들어 둔다(남는 자리 더미는 배치도에서 고르면)
     if (!더미[y]) return;
     if (!상태.야드들[y]) 상태.야드들[y] = [];
@@ -1871,7 +2447,7 @@ function 이어(d, 오류) {
   if (실린수 > 부탁실린.length) 노트.push('🗺 그 밖 ' + (실린수 - 부탁실린.length) + '곳 더미도 앱에 있어요(＋ 야드 배치도 초록 점 — 고르면 🔎 맞춰 보기)');
   if (자료.Yx && 자료.Yx.length) 노트.push(자료.Yx.join(' · ') + ' 더미는 너무 커서 못 실었어요');
   if (노트.length) { $('note').hidden = false; $('note').textContent = 노트.join(' · '); }
-  if (!상태.야드 && !Object.keys(상태.야드들).length) setTimeout(야드고르기열기, 0);
+  if (상태.모드 === 'work' ? !상태.작업야드 : !상태.야드 && !Object.keys(상태.야드들).length) setTimeout(야드고르기열기, 0);
   Array.prototype.forEach.call(document.querySelectorAll('.tier .k3'), function (b) { b.onclick = function () { 단고름(parseInt(b.getAttribute('data-t'), 10)); }; });
   $('del').onclick = 빼기;
   $('fix').onclick = function () { 고침켜기('바꿈'); };
@@ -1887,6 +2463,8 @@ function 이어(d, 오류) {
   $('addTyped').onclick = function () { var p = 번호꼴($('q').value); if (p) { 누름(p); $('q').value = ''; 판그리기(); } };
   $('infoBtn').onclick = 정보부탁;
   $('clrBtn').onclick = 해제바꿈;
+  Array.prototype.forEach.call(document.querySelectorAll('#modeSeg button'), function (b) { b.onclick = function () { 모드바꿈(b.getAttribute('data-m')); }; });
+  $('wclr').onclick = function () { 상태.작업 = {}; 저장(); 그리기(); 토스트('↩ 이번에 누른 작업을 지웠어요'); };
   if (시험 && 해시.shot === 'info') 자료.I = { q: '0617', t: '11-23 10:12', x: 0, r: [                       // 시안 그림용(11-23)
     ['00X0617', 'ZK582150', 'B64879003', 'B06C', '1-03', '재고', 'RB26K010', '914 X 12.7 X 12000'],
     ['00Y0617', '25415999', 'B64866802', 'G1', '', '재고', 'RB26J004', '762 X 9.53 X 12000']] };
@@ -1914,6 +2492,7 @@ function 이어(d, 오류) {
   if (시험 && 해시.shot === 'y6sent') 보낸것열기();
   if (시험 && 해시.shot === 'y7') setTimeout(진행열기, 30);            // 시안 그림용(11-21) — 📋 실사 진행판(빈 앱이 여는 야드 고르기 뒤에)
   if (시험 && 해시.shot === 'y7map') setTimeout(function () { 색모드바꿈('prog'); 야드고르기열기(); }, 30);
+  if (시험 && 해시.shot === 'shipmodal') setTimeout(배고르기열기, 30);
 }
 시작();
 </script>
