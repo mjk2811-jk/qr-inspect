@@ -1241,7 +1241,8 @@ function 칩그리기() {
       하나('이 배 전부 <small>필요 ' + 배.필요 + '</small>', '@배');
       배칩들().forEach(function (k) {
         var g = G1수(k), y = (작지야드[k] || []).length || (작지수 && 작지수[k]) || 0;
-        하나(esc(k) + ' <small>' + (g ? 'G1 ' + g : '') + (g && y ? ' · ' : '') + (y ? '<span class="yd">야드 ' + y + '</span>' : '') + '</small>', '@배작:' + k);
+        var 규 = 배규격(k);
+        하나(esc(k) + ' <small>' + (규 ? esc(규) + ' · ' : '') + (g ? 'G1 ' + g : '') + (g && y ? ' · ' : '') + (y ? '<span class="yd">야드 ' + y + '</span>' : '') + '</small>', '@배작:' + k);
       });
       하나('G1 전부 <small>' + 자료.n + '</small>', '');
       return;
@@ -1343,7 +1344,7 @@ function 판그리기() {
     배칩들().forEach(function (k) {
       var rs = (작지야드[k] || []).filter(function (r) { return !q || r.p.slice(-4).indexOf(q) >= 0 || r.p.indexOf(q.replace('-', '')) >= 0; });
       if (rs.length) {
-        묶음('<b>🗂 ' + esc(k) + '</b> 다른 야드 ' + rs.length + '본' + (필요표[기본작지(k)] ? ' · <span class="need">필요 ' + 필요표[기본작지(k)] + '</span>' : '') +
+        묶음('<b>🗂 ' + esc(k) + '</b>' + (배규격(k) ? ' · ' + esc(배규격(k)) : '') + ' 다른 야드 ' + rs.length + '본' + (필요표[기본작지(k)] ? ' · <span class="need">필요 ' + 필요표[기본작지(k)] + '</span>' : '') +
           ' — 호박색 · 누르면 <b>' + esc(상태.야드 || '고른 야드') + '</b> 로, 저장하면 옮겨져요', rs);
       }
     });
@@ -1353,7 +1354,7 @@ function 판그리기() {
     전부.forEach(function (r) { 곳수[r.y] = (곳수[r.y] || 0) + 1; });
     var rs = 전부.filter(function (r) { return !q || r.p.slice(-4).indexOf(q) >= 0 || r.p.indexOf(q.replace('-', '')) >= 0; });
     if (rs.length) {
-      묶음('<b>🗂 ' + esc(작) + '</b> 야드에 놓인 번호 ' + 전부.length + '본(' + esc(Object.keys(곳수).sort().map(function (y) { return y + ' ' + 곳수[y]; }).join(' · ')) +
+      묶음('<b>🗂 ' + esc(작) + '</b>' + (배규격(작) ? ' · ' + esc(배규격(작)) : '') + ' 야드에 놓인 번호 ' + 전부.length + '본(' + esc(Object.keys(곳수).sort().map(function (y) { return y + ' ' + 곳수[y]; }).join(' · ')) +
         ') — 호박색 = 다른 야드 · 누르면 <b>' + esc(상태.야드 || '고른 야드') + '</b> 로, 저장하면 옮겨져요', rs);
     }
     var n = 작지수 ? (작지수[작] || 0) : null;
@@ -1817,6 +1818,11 @@ function 배칩들() {
   배.작지들.forEach(function (k) { if (out.indexOf(k) < 0) out.push(k); });
   return out;
 }
+/** 고른 배 줄(B.l)에서 그 작지의 규격(사이즈) — '36" × 9.53 × 20'' | ''(11-24 '작지 옆에 사이즈도') */
+function 배규격(작) {
+  var k = 기본작지(작), r = 배자료 ? 배자료.줄.filter(function (x) { return x.작지들.indexOf(k) >= 0; })[0] : null;
+  return r ? _s(r.규격) : '';
+}
 function G1수(작) { var n = 0; 자료.L.forEach(function (l) { if (l[0] === 작) n += l.번호들.length; }); return n; }
 /** 누른 번호 가운데 이 배 몫 → {모두, G1}(G1 = 링크 L 에 있던 번호) */
 function 배이번() {
@@ -1851,7 +1857,8 @@ function 배상자그리기() {
     Object.keys(작지야드).forEach(function (r) { if (기본작지(r) === k) 야 += 작지야드[r].length; });
     자료.L.forEach(function (l) { if (기본작지(l[0]) === k) g += l.번호들.length; });
     합.필 += 필[k]; 합.야 += 야; 합.g += g; 합.이 += 이번[k] || 0;
-    h += '<tr><td>' + esc(k) + '</td><td>' + 필[k] + '</td><td>' + (야 || '—') + '</td><td>' + (g || '—') + '</td><td class="now">' + (이번[k] || '') + '</td></tr>';
+    h += '<tr><td>' + esc(k) + (배규격(k) ? ' <span class="hint">' + esc(배규격(k)) + '</span>' : '') + '</td><td>' + 필[k] + '</td><td>' + (야 || '—') +
+      '</td><td>' + (g || '—') + '</td><td class="now">' + (이번[k] || '') + '</td></tr>';
   });
   h += '<tr class="tot"><td>합' + (작들.length > 8 ? '(' + 작들.length + '작지)' : '') + '</td><td>' + 배.필요 + '</td><td>' + 배.야드 + '</td><td>' + 배.G1 +
     '</td><td class="now">' + (합.이 || '') + '</td></tr></table>';
