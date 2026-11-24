@@ -87,11 +87,14 @@
       파랑 = 이번) · [이 야드 남은 n본 전부 ✓]. 자리 보기에서는 '🛠 이미 끝난 작업' 칩을 켜 두면 새로 누르는 관마다 붙고(줄.작) 줄 점으로
       켜고 끔. 보낼 때 a:[[작업, 켬, 번호글]] → 봇이 바로 DB(yard_work) · [↩ 작업 되돌리기]. 쉬핑마크는 현장에서 붙이고 누른 것이 끝
       (인쇄 이력은 🖨 표시만). 야드에 작업이 안 실렸으면 [🔎 DB 더미 · 작업 받기](q).
+  · 2026-11-24 ⑬ 한 작지 한 묶음 — '한 작지에서 길이가 달라도 번호는 한번에'. 봇이 L · LY · LN 작지를 길이 꼬리를 뗀 기본 작지로
+    묶는다(RB00X002(40')S1 · (38.69')S1 → RB00X002). 규격이 다른 번호는 L 다섯째 [[길이글, 범위] …] — 번호 단추 위 작은 글에 그 길이
+    (보라 — 길이풀기) · 칩 · 머리에 '(+38.69' 3)'(다른길이).
   함수  셈: 해시읽기 · b64url풀기 · b64바이트 · 인플레이트 · 풀기 · 범위풀기 · 번호꼴 · 보낼글 · 더미풀기 · 보낼묶음 · 반복켜 ·
             자동켜찾기 · 다음단 · 단자리 · 쌓은자리 · 끝자리 · 바꾼줄 · 끼운줄 · 뺀줄 · 누름인가 · 레일자리 · 손굴림 · 맞춤셈 · 옮김더하기 ·
             QR가르기 · 칸야드 · 칸본수 · 되살릴줄 · 토큰풀기 · 진행풀기 · 까닭글 · 작업날시작 · 확인전야드 · 진행셈 · 진행칸 · 칸진행 ·
             정보글 · 정보열쇠 · 다른더미 · 다른곳 · 작지야드풀기 · 야드번호합침 · 야드만작지 · 기본작지 · 배풀기 · 배작지인가 ·
-            딴배이름 · 배필요 · 비트풀기 · 작업풀기 · 작업지금 · 작업셈 · 작업보낼
+            딴배이름 · 배필요 · 비트풀기 · 작업풀기 · 작업지금 · 작업셈 · 작업보낼 · 다른길이 · 길이풀기
         화면: 그리기 · 칩그리기 · 판그리기 · 야드그리기 · 차례그리기 · 누름 · 단고름 · 야드고르기열기 · 보내기 · 시작 · 이어
             · 지킴 · 눌러도 · 지금고침 · 고침켜기 · 빼기 · 모드그리기 · 토스트 · 보기바꿈 · 레일그리기 · 레일굴림 · 레일잇기
             · 맞춤그리기 · 없는것열기 · 보낸것열기 · 되살리기 · 더미부탁 · 머리단추 · QR받음 · 스캔받기 · 스캔초점 · 카메라
@@ -246,6 +249,7 @@
   /* ⑨ 이미 다른 야드에 DB 등록된 번호(11-23 '색상을 다르게') — 호박색. G1 흰색 · 누름 회색 · 옮김 보라와 안 겹치게 */
   .num.oth { background: #fff4d6; border-color: #f59e0b; color: #78350f; }
   .num.oth .p { color: #b45309; font-weight: bold; }
+  .num .p.ln { color: #7c3aed; font-weight: bold; }                 /* ⑬ 같은 작지 다른 길이(11-24) */
   .chips .yd { color: #b45309; font-weight: bold; }
   /* ⑩ 🧹 기존 재고 해제(11-23) */
   .stackhead .clr { font: inherit; font-size: 13px; padding: 3px 10px; margin-left: 8px; border: 1px solid #b9c2cd; border-radius: 12px;
@@ -468,7 +472,7 @@
 /* ── 셈 ─────────────────────────────────────────────────────────────── */
 var 예시자료 = { v: 2, d: '시험', t: '시험', r: [], n: 46, m: 0, L: [
   ['RB00X003', '000 X 00 X 12M', '00X', '0101-0130'],
-  ['RB00X002', '000 X 00 X 6M', '00X', '0201-0210,0215-0220'],
+  ['RB00X002', '000 X 00 X 6M', '00X', '0201-0210,0215-0220', [['5.8M', '0215-0216']]],
   ['PB00W001', '000 X 00 X 12M', 'P00W', '0001-0004']],
   K: (function () {                                   // 시험 배치도 — 🗺 지도 앱 시험 칸과 같은 꼴(회사 자료 없음)
     var K = [];
@@ -777,6 +781,19 @@ function 작업보낼(고침표, 야드들) {
   });
   return out;
 }
+/** ⑬ L 줄 다섯째 [[길이글, 범위] …] → " (+38.69' 3)"(가장 많은 규격 밖 길이 · 본수) | '' */
+function 다른길이(l) {
+  var g = (l && l[4]) || [];
+  return g.length ? ' (+' + g.map(function (x) { return _s(x[0]) + ' ' + 범위풀기(x[1]).length; }).join(' · ') + ')' : '';
+}
+/** ⑬ L → {번호: 길이글}(가장 많은 규격과 길이가 다른 번호만 — 번호 단추 위 작은 글) */
+function 길이풀기(L) {
+  var out = {};
+  (L || []).forEach(function (l) {
+    ((l && l[4]) || []).forEach(function (x) { 범위풀기(x[1]).forEach(function (뒤) { out[l[2] + 뒤] = _s(x[0]); }); });
+  });
+  return out;
+}
 /** ⑫ 보낼 작업 a → 관 · 작업 건수 */
 function 작업건수(a) { var n = 0; (a || []).forEach(function (e) { n += 더미풀기(e[2]).length; }); return n; }
 /** 한 야드 → '26K 0805 0806.2;26J 0101' — 누른 차례, 접두가 바뀌면 ';'. ⑤ QR 바코드 줄(p '#B통')은 '#B 통' 묶음 */
@@ -1081,6 +1098,7 @@ var 토스트때 = 0;
 var 배자료 = null;            // ⑪ 배풀기(자료.B) — 시작에서(태블릿에 저장 안 함 — 늘 링크의 것)
 var 번호작지표 = {};          // ⑪ 번호 → 작지(작지야드 LY · 작업표) — 다른 배 몫 알림(G1 번호는 모든번호)
 var 작업표 = {};              // ⑫ 작업풀기(WL, WY, 더미) — 야드 → 관들
+var 길이표 = {};              // ⑬ 길이풀기(자료.L) — 같은 작지 다른 길이 번호 → 길이글
 var $ = function (id) { return document.getElementById(id); };
 // ⛶ 전체화면(2026-11-20 '야드등록에서 테블릿 가로 전체화면이 안되') — 태블릿 텔레그램은 미니 앱을 가운데 좁은 창(세로로 긴 창)으로
 // 띄워 가로로 들어도 세로 꼴(orientation)로 그려졌다. 태블릿(화면 짧은 변 600px 이상)은 열 때 전체화면 — 지도 · 검수 앱과 같은 규칙
@@ -1219,7 +1237,7 @@ function 칩그리기() {
     if (배) {
       하나('이 배 전부 <small>필요 ' + 배.필요 + '</small>', '@배');
       배칩들().forEach(function (k) {
-        var g = G1수(k), y = (작지야드[k] || []).length;
+        var g = G1수(k), y = (작지야드[k] || []).length || (작지수 && 작지수[k]) || 0;
         하나(esc(k) + ' <small>' + (g ? 'G1 ' + g : '') + (g && y ? ' · ' : '') + (y ? '<span class="yd">야드 ' + y + '</span>' : '') + '</small>', '@배작:' + k);
       });
       하나('G1 전부 <small>' + 자료.n + '</small>', '');
@@ -1231,7 +1249,7 @@ function 칩그리기() {
   자료.L.forEach(function (l) {
     var 번호들 = l.번호들, 남 = 번호들.filter(function (p) { return !쓴[p]; }).length;
     G1작[l[0]] = 1;
-    하나(esc(l[0]) + ' <small>' + esc(l[1]) + ' · ' + 남 + '/' + 번호들.length +
+    하나(esc(l[0]) + ' <small>' + esc(l[1]) + esc(다른길이(l)) + ' · ' + 남 + '/' + 번호들.length +
       (수표[l[0]] ? ' · <span class="yd">야드 ' + 수표[l[0]] + '</span>' : '') + '</small>', l[0] + '|' + l[2]);
   });
   야드만작지(수표, G1작, 작지요청).forEach(function (작) {           // ⑨ 야드에만 있는 작지(재배치 11-23)
@@ -1280,7 +1298,7 @@ function 판그리기() {
     if (!번호들.length) return;
     var h = document.createElement('div');
     h.className = 'lot';
-    h.innerHTML = '<b>' + esc(l[0]) + '</b> · ' + esc(l[1]) + ' · ' + l.번호들.length + '본 (남은 ' +
+    h.innerHTML = '<b>' + esc(l[0]) + '</b> · ' + esc(l[1]) + esc(다른길이(l)) + ' · ' + l.번호들.length + '본 (남은 ' +
       l.번호들.filter(function (p) { return !쓴[p]; }).length + ')' +
       (배작지인가(배, l[0]) && 필요표[기본작지(l[0])] ? ' · <span class="need">필요 ' + 필요표[기본작지(l[0])] + '</span>' : '');
     g.appendChild(h);
@@ -1291,7 +1309,8 @@ function 판그리기() {
       수++;
       var b = document.createElement('button');
       b.className = 'k3 num' + (쓴[p] ? ' used' : '');
-      b.innerHTML = (쓴[p] ? '<span class="p badge">' + esc(쓴[p]) + '</span>' : '<span class="p">' + esc(p.slice(0, -4)) + '</span>') +
+      b.innerHTML = (쓴[p] ? '<span class="p badge">' + esc(쓴[p]) + '</span>' : 길이표[p] ? '<span class="p ln">' + esc(길이표[p]) + '</span>' :
+        '<span class="p">' + esc(p.slice(0, -4)) + '</span>') +
         '<span class="t">' + p.slice(-4).replace(/^0/, '') + '</span>';
       b.onclick = function (e) { if (눌러도(g, e)) 누름(p); };
       box.appendChild(b);
@@ -1785,12 +1804,14 @@ function 지금배() {
 function 번호작지(p) { return 모든번호[p] ? 모든번호[p][0] : 번호작지표[p] || ''; }
 /** 이 배 몫인가 — 작지가 그 배 것이고 모선명이 다른 배가 아님(작지를 모르는 번호는 아님) */
 function 배몫인가(p) { var 배 = 지금배(); return !!배 && !배자료.다른[p] && 배작지인가(배, 번호작지(p)); }
-/** 고른 배의 작지 칩 — G1 칩 작지(L) 먼저, 그 다음 야드에만 있는 작지(LY) */
+/** 고른 배의 작지 칩 — G1 칩 작지(L) 먼저, 그 다음 야드에만 있는 작지(LY), 끝에 번호가 안 실린 그 배 작지(B — 11-24 '모선 고르고 다시
+ *  열었을 때 작지칸에 작지가 안 보여' — 번호가 링크에 못 실려도 칩은 늘, 누르면 [🔎 받기]) */
 function 배칩들() {
   var 배 = 지금배(), out = [];
   if (!배) return out;
   자료.L.forEach(function (l) { if (배작지인가(배, l[0]) && out.indexOf(l[0]) < 0) out.push(l[0]); });
   Object.keys(작지야드).sort().reverse().forEach(function (k) { if (배작지인가(배, k) && out.indexOf(k) < 0) out.push(k); });
+  배.작지들.forEach(function (k) { if (out.indexOf(k) < 0) out.push(k); });
   return out;
 }
 function G1수(작) { var n = 0; 자료.L.forEach(function (l) { if (l[0] === 작) n += l.번호들.length; }); return n; }
@@ -2415,6 +2436,7 @@ function 이어(d, 오류) {
     try { localStorage.setItem(열쇠, JSON.stringify(상태)); } catch (e) {}
   }
   자료.L.forEach(function (l) { l.번호들 = 범위풀기(l[3]).map(function (뒤) { return l[2] + 뒤; }); l.번호들.forEach(function (p) { 모든번호[p] = l; }); });
+  길이표 = 길이풀기(자료.L);                                           // ⑬ 같은 작지 다른 길이(11-24)
   읽기();
   var 지운 = 받은만큼();
   진행 = 진행풀기(자료.N, 자료.P, 자료.Px, 자료.Pw);                  // ⑦ 오늘 실사 진행(봇 — 링크 P · Px · Pw)
