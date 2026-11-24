@@ -38,9 +38,10 @@
   · ⛶ 전체화면(2026-11-20 '야드등록에서 테블릿 가로 전체화면이 안되'): 태블릿 텔레그램은 미니 앱을 가운데 좁은 창(세로로 긴 창)으로
     띄워 가로로 들어도 세로 꼴(@media orientation)로 그려졌다 → 태블릿(화면 짧은 변 600px 이상)은 열 때 tg.requestFullscreen()
     (Bot API 8.0) · 머리 줄 [⛶ 전체화면 / 창으로] · body 위아래를 --tg-safe-area-inset · --tg-content-safe-area-inset 만큼 띄움(지도 · 검수와 같다).
-  · 🔒 회전 고정(2026-11-24 '태블릿 화면자동회전을 고정하는 버튼'): 머리 줄 [🔄 자동 회전 / 🔒 회전 고정] — tg.lockOrientation()
-    (Bot API 8.0 — 누른 때의 가로/세로로 고정) · unlockOrientation(). 고른 것을 태블릿(localStorage yard|회전고정)에 기억해 다음에 열 때도
-    고정. 텔레그램 미니 앱 화면만 고정(태블릿 설정의 자동 회전은 그대로). 텔레그램 밖(시험)은 단추 모양만.
+  · 📐 태블릿 세로(2026-11-24 '태블릿 세로화면에서 적재그림을 위에 번호를 하단에'): 세로 화면 · 폭 600 넘음이면 두 칸을 풀어
+    (display: contents) 위 야드 · 쌓은 모양 그림 · 차례(낮게) · 단 → 가운데 작지 칩 · 찾기 · 번호판(남는 높이) → 맨 아래 빼기 · 보내기.
+    폰(폭 600 아래)은 그대로. (같은 날 회전 고정 단추는 뺐다 — 텔레그램 안드로이드가 태블릿에서 lockOrientation 을 무시한다:
+    AndroidUtilities.lockOrientation 이 isTabletInternal() 이면 바로 끝. 태블릿은 빠른 설정 [자동 회전] 끄기로)
   · 2026-11-20 더한 것 여섯(시안 '야드등록_추가기능_시안_20261120'):
     ① 압축 링크 #z=<base64url(zlib(JSON))> 판 2 — DecompressionStream('deflate'), 없는 옛 웹뷰(크롬 79)는 제 풀기(인플레이트).
        옛 #c= (판 1)도 읽는다. 봇이 G1 전부 · 배치도 칸(K · W) · 야드마다 DB 본수(N) · 남는 자리만큼 야드 더미(Y)를 싣는다.
@@ -351,6 +352,20 @@
     .left { flex: 50; border-right: 0; border-bottom: 2px solid var(--sep); }
     .right { flex: 50; }
   }
+  /* 📐 태블릿 세로(2026-11-24 '태블릿 세로화면에서 적재그림을 위에 번호를 하단에') — 두 칸을 풀어(display: contents) 한 줄로:
+     야드 · 그림 · 차례(낮게) · 단 → 작지 칩 · 찾기 · 번호판(남는 높이) → 빼기 · 보내기(맨 아래). 폰(폭 600 아래)은 그대로 */
+  @media (orientation: portrait) and (min-width: 601px) {
+    .left, .right { display: contents; }
+    .left > *, .right > * { flex-shrink: 0; }
+    .yards, .stackhead, .stack, .tier, .foot, .right .box, .chk { background: var(--card); }
+    .yards { order: 1; } .right .box, .chk { order: 2; } .pic { order: 3; }
+    .stackhead { order: 4; } .stack { order: 5; flex: none; height: 128px; border-bottom: 1px solid var(--sep); }
+    .autoline { order: 6; } .tier { order: 7; }
+    .chips { order: 8; border-top: 2px solid var(--sep); } .shipbar, .tinfo { order: 9; } .find { order: 10; }
+    .infobox, .note, .mode { order: 11; } .gridrow { order: 12; flex: 1 1 0; min-height: 220px; }
+    .foot { order: 13; }
+    .tier .k3 { font-size: 20px; padding: 10px 0; }
+  }
   /* 📱 폰(폭 600 아래 — 11-19 '번호 단추를 조금 줄이고 · 사이를 띄워 굴리다 눌림 없게 · 차례 목록이 보이게'). 번호 단추는 위(폰 · 태블릿 같음) */
   @media (max-width: 600px) {
     .bar { padding: 6px 10px; flex-wrap: wrap; }
@@ -423,7 +438,6 @@
   <button type="button" class="k3 hb" id="progBtn" hidden>📋 <span class="wide">실사 </span><span id="progN"></span><span class="wide">곳</span></button>
   <button type="button" class="k3 hb" id="sentBtn" hidden>📨 <span class="wide">보낸 것 </span><span id="sentN"></span></button>
   <button type="button" class="k3 hb" id="qrBtn" hidden>📷 QR</button>
-  <button type="button" class="k3 hb" id="rotBtn" hidden>🔄<span class="wide"> 자동 회전</span></button>
   <button type="button" class="k3 full" id="fullBtn" hidden>⛶ 전체화면</button>
 </div>
 <input id="scanIn" class="scanin" inputmode="none" autocomplete="off" autocapitalize="off" spellcheck="false" tabindex="-1" aria-hidden="true">
@@ -494,7 +508,7 @@ var 예시자료 = { v: 2, d: '시험', t: '시험', r: [], n: 46, m: 0, L: [
   WL: [['RB00Y001', 'mvpsh', '내면 한관단', 'Y (BLACK)'], ['RB00Y002', '?h', '', '']],   // ⑫ 시험 작업(11-24) — A03 더미 여섯 본
   WY: { A03: ['000011', 'PPPNAA', '111100'] } };
 var 보낼한도 = 4096;
-var 앱날 = '2026-11-24h';       // 링크 av(봇 yard_tablet.앱날)가 이보다 새로우면 '예전 판' 알림 — 텔레그램이 옛 앱을 붙들고 있을 때(11-24)
+var 앱날 = '2026-11-24i';       // 링크 av(봇 yard_tablet.앱날)가 이보다 새로우면 '예전 판' 알림 — 텔레그램이 옛 앱을 붙들고 있을 때(11-24)
 
 function 해시읽기() {
   var h = '';
@@ -1120,28 +1134,6 @@ function 전체단추() {
   b.textContent = tg && tg.isFullscreen ? '⛶ 창으로' : '⛶ 전체화면';
 }
 function 전체바꾸기() { try { if (tg.isFullscreen) tg.exitFullscreen(); else tg.requestFullscreen(); } catch (e) {} }
-// 🔒 회전 고정(2026-11-24) — 텔레그램 lockOrientation(Bot API 8.0 — 누른 때의 방향으로) · 태블릿에 기억(다음에 열 때도 고정)
-var 회전열쇠 = 'yard|회전고정';
-function 회전되나() { return 텔레그램안 && 판짓기('8.0') && typeof tg.lockOrientation === 'function'; }
-function 회전기억() { try { return localStorage.getItem(회전열쇠) === '1'; } catch (e) { return false; } }
-function 회전고정인가() { return 회전되나() ? !!tg.isOrientationLocked : 회전기억(); }
-function 지금방향() { return (window.innerWidth || 0) >= (window.innerHeight || 0) ? '가로' : '세로'; }
-function 회전단추() {
-  var b = $('rotBtn');
-  if (!b) return;
-  b.hidden = !(회전되나() || 시험);
-  var 고 = 회전고정인가();
-  b.classList.toggle('on', 고);
-  b.innerHTML = 고 ? '🔒<span class="wide"> 회전 고정</span>' : '🔄<span class="wide"> 자동 회전</span>';
-  b.title = 고 ? '지금 방향으로 고정됨 — 누르면 자동 회전' : '자동 회전 — 누르면 지금 방향으로 고정';
-}
-function 회전바꾸기() {
-  var 고 = 회전고정인가();
-  try { localStorage.setItem(회전열쇠, 고 ? '0' : '1'); } catch (e) {}
-  if (회전되나()) { try { if (고) tg.unlockOrientation(); else tg.lockOrientation(); } catch (e) {} }
-  토스트(고 ? '🔄 자동 회전으로 돌렸어요' : '🔒 지금 방향(' + 지금방향() + ')으로 고정했어요 — 다시 누르면 풀려요');
-  회전단추();
-}
 function 뒤(p) { return _s(p).slice(-4); }
 
 /** 굴리는 판(번호판 · 목록 · 그림 · 작지)에 손 댄 때 · 구른 때를 적어 둔다 — 눌러도(판, e) 가 본다 */
@@ -2424,9 +2416,6 @@ function 이어(d, 오류) {
   }
   전체단추();
   $('fullBtn').addEventListener('click', 전체바꾸기);
-  if (회전되나() && 회전기억() && !tg.isOrientationLocked) { try { tg.lockOrientation(); } catch (e) {} }   // 🔒 기억한 고정(11-24)
-  회전단추();
-  $('rotBtn').addEventListener('click', 회전바꾸기);
   try { 보기 = localStorage.getItem('yard|보기') || 'list'; } catch (e) {}
   보기바꿈(보기);
   $('testStrip').hidden = !시험;
