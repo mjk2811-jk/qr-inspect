@@ -305,18 +305,20 @@
   .sbar { height: 10px; border-radius: 5px; background: #e5e7eb; overflow: hidden; display: flex; margin-top: 4px; }
   .sbar i { display: block; height: 100%; }
   .tinfo { margin: 6px 10px 0; padding: 6px 10px; border-radius: 8px; background: #eff6ff; border: 1px solid #bfdbfe; font-size: 14px;
-           display: flex; align-items: center; flex-wrap: wrap; }
+           display: flex; align-items: center; flex-wrap: wrap; color: #1e3a8a; }   /* 글자색을 박는다 — 텔레그램 다크 테마면 흰 글자(11-24) */
   .tinfo .k3 { margin-left: auto; padding: 6px 12px; font-size: 14px; background: linear-gradient(#22c55e, #16a34a); border-color: #15803d;
                color: #fff; font-weight: bold; }
-  .box { margin: 6px 10px 2px; padding: 6px 10px; border-radius: 10px; background: #fff; border: 1px solid #c7d2fe; font-size: 14px; }
+  .box { margin: 6px 10px 2px; padding: 6px 10px; border-radius: 10px; background: #fff; border: 1px solid #c7d2fe; font-size: 14px;
+         color: #1f2937; }                                   /* 흰 바탕 + 박은 글자색 — 다크 테마에서 흰 글자가 묻혀 '이 배 몫' 표가 비어 보였다(11-24 태블릿) */
+  .box .hint { color: #6b7280; }
   .box h5 { margin: 0 0 4px; font-size: 14px; display: flex; align-items: center; flex-wrap: wrap; }
   .box .mini { width: 100%; border-collapse: collapse; }
   .box .mini td, .box .mini th { padding: 2px 5px; font-size: 13px; border-bottom: 1px solid #eef0f4; text-align: right; white-space: nowrap; }
   .box .mini td:first-child, .box .mini th:first-child { text-align: left; }
-  .box .mini th { color: var(--hint); font-weight: normal; }
+  .box .mini th { color: #6b7280; font-weight: normal; }
   .box .mini tr.tot td { font-weight: bold; border-top: 1px solid #c7d2fe; }
   .box .mini td.now { color: var(--sel); font-weight: bold; }
-  .box .mini td.wok { background: #f0fdf4; color: #166534; } .box .mini td.wpt { background: #fef9c3; } .box .mini td.wno { background: #fee2e2; }
+  .box .mini td.wok { background: #f0fdf4; color: #166534; } .box .mini td.wpt { background: #fef9c3; color: #854d0e; } .box .mini td.wno { background: #fee2e2; color: #991b1b; }
   .box .tks .k3 { padding: 5px 9px; font-size: 14px; margin: 0 5px 4px 0; }
   .box .tks .k3.on { background: linear-gradient(#ecfdf5, #d1fae5); border-color: #10b981; color: #065f46; font-weight: bold; }
   .num.wok { background: #dcfce7; border-color: #86efac; }
@@ -488,6 +490,7 @@ var 예시자료 = { v: 2, d: '시험', t: '시험', r: [], n: 46, m: 0, L: [
   WL: [['RB00Y001', 'mvpsh', '내면 한관단', 'Y (BLACK)'], ['RB00Y002', '?h', '', '']],   // ⑫ 시험 작업(11-24) — A03 더미 여섯 본
   WY: { A03: ['000011', 'PPPNAA', '111100'] } };
 var 보낼한도 = 4096;
+var 앱날 = '2026-11-24e';       // 링크 av(봇 yard_tablet.앱날)가 이보다 새로우면 '예전 판' 알림 — 텔레그램이 옛 앱을 붙들고 있을 때(11-24)
 
 function 해시읽기() {
   var h = '';
@@ -1884,18 +1887,19 @@ function 배고르기열기() {
   Array.prototype.forEach.call($('sheet').querySelectorAll('[data-sv]'), function (b) {
     b.onclick = function () {
       var id = b.getAttribute('data-sv');
-      if (배자료.고른 === id) { 상태.배끔 = ''; 상태.작지 = '@배'; 닫기(); 저장(); 그리기(); $('grid').scrollTop = 0; return; }   // 이미 실린 배
+      if (배자료.고른 === id) { 상태.작지 = '@배'; 상태.모드 = 'yard'; 닫기(); 저장(); 그리기(); $('grid').scrollTop = 0; return; }   // 이미 실린 배
       배부탁(id);
     };
   });
-  if ($('svOff')) $('svOff').onclick = function () { 상태.배끔 = 배자료.고른; 상태.작지 = ''; 닫기(); 저장(); 그리기(); 토스트('🚢 배를 안 고른 보기 — 다시 [🚢] 로 고를 수 있어요'); };
+  if ($('svOff')) $('svOff').onclick = function () { 배부탁(''); };   // 봇에 알려 끈다(앱이 닫힘 — 다시 열면 배 없이)
   $('sheetX').onclick = 닫기;
   $('sheetBg').hidden = false;
 }
 /** 다른 배를 봇에 청한다(sendData s) — 앱이 닫히고, 다시 열면 그 배 */
 function 배부탁(id) {
   var b = 배자료.배들.filter(function (x) { return x.id === id; })[0];
-  var 묻 = (b ? b.이름 : id) + ' 을 고를까요?\n앱이 닫히고, 봇이 그 배 번호(다른 야드 것까지)를 실은 [📍 야드 등록 열기] 단추를 줘요(누른 목록은 태블릿에 그대로).';
+  var 묻 = id ? (b ? b.이름 : id) + ' 을 고를까요?\n앱이 닫히고, 봇이 그 배 번호(다른 야드 것까지)를 실은 [📍 야드 등록 열기] 단추를 줘요(누른 목록은 태블릿에 그대로).'
+    : '배를 안 고른 보기로 돌아갈까요?\n앱이 닫히고, 봇이 배 없이 [📍 야드 등록 열기] 단추를 줘요(누른 목록은 태블릿에 그대로).';
   var 가 = function (ok) {
     if (!ok) return;
     저장();
@@ -2451,7 +2455,8 @@ function 이어(d, 오류) {
   번호작지표 = {};
   Object.keys(작지야드).forEach(function (k) { 작지야드[k].forEach(function (r) { 번호작지표[r.p] = k; }); });
   Object.keys(작업표).forEach(function (y) { 작업표[y].forEach(function (r) { if (!번호작지표[r.p] && r.작지) 번호작지표[r.p] = r.작지; }); });
-  if (배자료 && 배자료.고른 && 상태.배본 !== 배자료.고른) { 상태.배본 = 배자료.고른; 상태.배끔 = ''; 상태.작지 = '@배'; }   // 새로 고른 배 — 이 배 전부
+  상태.배끔 = '';                                                       // [배 안 고름]은 봇에 알려 끈다(태블릿에 남기지 않음 — 11-24)
+  if (배자료 && 배자료.고른 && 상태.배본 !== 배자료.고른) { 상태.배본 = 배자료.고른; 상태.작지 = '@배'; 상태.모드 = 'yard'; }   // 새로 고른 배 — 📍 자리 · 이 배 전부
   if (!배자료 || !배자료.고른) { if (_s(상태.작지).indexOf('@배') === 0) 상태.작지 = ''; 상태.배본 = ''; }
   if (!상태.작업야드 || (!작업표[상태.작업야드] && Object.keys(작업표).length)) 상태.작업야드 = Object.keys(작업표)[0] || 상태.작업야드 || '';
   부탁.forEach(function (y) {                                        // 부탁한 야드만 탭을 만들어 둔다(남는 자리 더미는 배치도에서 고르면)
@@ -2459,9 +2464,10 @@ function 이어(d, 오류) {
     if (!상태.야드들[y]) 상태.야드들[y] = [];
     if (!상태.야드) { 상태.야드 = y; 상태.고른 = 상태.야드들[y].length - 1; }
   });
-  $('info').textContent = (자료.t ? 자료.t + ' 기준 · ' : '') + '쌓은 차례대로 누르세요 · 단을 안 고르면 1단';
+  $('info').textContent = (자료.t ? 자료.t + ' 기준 · ' : '') + '쌓은 차례대로 누르세요 · 단을 안 고르면 1단 · 앱 ' + 앱날;
   var 노트 = [];
   if (지운.length) 노트.push('📥 봇이 받았어요 — ' + 지운.join(' · ') + ' 목록은 📨 보낸 것으로(하루 — 줄마다 봇 확인)');
+  if (_s(자료.av) > 앱날) 노트.unshift('⚠ 앱이 예전 판이에요(' + 앱날 + ' · 봇 ' + _s(자료.av) + ') — 텔레그램을 완전히 껐다 켠 뒤 다시 열어 주세요');
   if (자료.m) 노트.push('옛 작지 ' + 자료.m + '본은 목록에 없어요 — 찾기 칸에 번호 전체(예: 26G-145)를 치고 ＋ 넣기');
   var 실린수 = Object.keys(자료.Y || {}).length, 부탁실린 = 부탁.filter(function (y) { return 더미[y]; });
   if (부탁실린.length) 노트.push('🗂 DB 더미 ' + 부탁실린.map(function (y) { return y + ' ' + 더미[y].length + '본'; }).join(' · ') +
