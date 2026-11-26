@@ -109,6 +109,17 @@
   · 2026-11-24 ⑬ 한 작지 한 묶음 — '한 작지에서 길이가 달라도 번호는 한번에'. 봇이 L · LY · LN 작지를 길이 꼬리를 뗀 기본 작지로
     묶는다(RB00X002(40')S1 · (38.69')S1 → RB00X002). 규격이 다른 번호는 L 다섯째 [[길이글, 범위] …] — 번호 단추 위 작은 글에 그 길이
     (보라 — 길이풀기) · 칩 · 머리에 '(+38.69' 3)'(다른길이).
+  · 2026-11-26 '작지 불러오기가 너무 많아서 못 불러온다' · '이전 선택한 야드가 계속 같이 보여' — 링크 4096자에 부탁한 것이 먼저 들게:
+    ③′ 배치도 기억 — 링크에 늘 Kh(칸 판 열 글자). K · W 는 봇이 태블릿에 그 판이 있는지 모를 때만 실린다. 받으면 태블릿(따로 열쇠
+      'yard|kan')에 {Kh, K, W} 를 두고, K 없이 Kh 만 오면 같은 판의 기억으로 채운다(칸기억맞춤). 기억이 없으면 노트 · 토스트 ·
+      야드 고르기 창에 [🗺 배치도 받기] → sendData kb:1(배치도부탁).
+    봇에 보내는 모든 것(w · q · i · s · 목록 · kb · bl)에 kh(태블릿에 기억한 판 — 없으면 '') — 봇이 그것을 보고 다음 링크에 K 를 뺀다(봇에보냄 ·
+      보낼묶음 의 kh 인자 — 바이트 한도 셈에 든다).
+    ① 모선 목록은 부탁할 때만 — 링크에 B 없이 Bn(척 수)만 오면 칩 줄 맨 앞 [🚢 모선 n척 ▾] → sendData bl:1(모선목록부탁) → 봇이
+      목록을 실은 단추로. B 가 있으면 전과 같다.
+    야드 칩 정리 — 칩은 누른 번호가 있는 야드 + 지금 고른 야드만(빈야드정리 — 그리기 마다: 지금 야드가 아니고 번호 0 · 보냄 기다림
+      아님 · DB 고침 없음이면 지우고 해제 · 자동 표시도). 열 때 부탁(Yq — 봇이 새 것 먼저 셋까지)마다 빈 칩을 만들던 것은 뺐다 —
+      지금 고른 야드가 없을 때만 Yq[0](더미가 실린 것)을 지금 야드로.
   함수  셈: 해시읽기 · b64url풀기 · b64바이트 · 인플레이트 · 풀기 · 범위풀기 · 번호꼴 · 보낼글 · 더미풀기 · 보낼묶음 · 반복켜 ·
             자동켜찾기 · 다음단 · 단자리 · 쌓은자리 · 끝자리 · 바꾼줄 · 끼운줄 · 뺀줄 · 누름인가 · 레일자리 · 손굴림 · 맞춤셈 · 옮김더하기 ·
             QR가르기 · 칸야드 · 칸본수 · 되살릴줄 · 토큰풀기 · 진행풀기 · 까닭글 · 작업날시작 · 확인전야드 · 진행셈 · 진행칸 · 칸진행 ·
@@ -122,6 +133,24 @@
             · 지금배 · 번호작지 · 배몫인가 · 배칩들 · 배띠그리기 · 배상자그리기 · 배알림 · 배고르기열기 · 배부탁 · 모드바꿈 · 작업관들
             · 작업칩그리기 · 작업판그리기 · 작업상자그리기 · 작업누름 · 작업전부 · 끝작업그리기
             · 고른칩들 · 고른작지들 · 길게누름 · 같이보기 · 작지불러오기(⑯)
+            · 봇에보냄 · 칸기억읽기 · 칸기억판 · 칸기억맞춤 · 배치도부탁 · 모선목록부탁 · 빈야드정리(11-26)
+  · 2026-11-26 ⑲ 📲 USB 앱('야드등록은 어플을 만드는게 좋을것같아, 지금 텔레그램은 너무 번거로워' — 설계 docs/설계_야드등록_앱.md).
+    이 파일 하나가 텔레그램 미니 앱과 USB 앱(안드로이드 웹뷰 껍데기 + 다리)을 같이 한다 — 화면은 같고 자료가 들어오고 나가는 곳만 다르다.
+    다리(앱이 window 에 붙인 객체 — 다리이름)가 있으면 링크 대신 다리.readData()(PC 가 꽂을 때 넣은 in/자료.json), 거기 usb:1 이면 USB 모드:
+      자료 = 링크 조각과 같은 칸(한도 없이 전부 — 모든 야드 Y · 모든 작지 LY/LYq · K 늘 · B 늘(c '')) + usb · wd(05시 작업일) · made ·
+      INFO {번호: [HEAT, PRODUCTS_NO, 야드, 자리, 상태, 작지, 규격]} · QR {ERP 바코드: 번호} · UNC [[번호, 작지, 생산일, 경과 일]] ·
+      R [[id, 받은 때, 요약, 바로 저장한 야드, 📝 탭 야드]] · BL {배: l} · BO {배: o}. 비었으면 '📥 PC 에 USB 로 꽂으면 오늘 자료가 들어와요'.
+    📤 보내기 → tg.sendData 대신 다리.saveOut(같은 글) — 앱이 안 닫힘 · '📥 올릴 것에 담았어요 — 꽂으면 PC 로' · 4096 한도 없음 ·
+      보냄 기록(상태.보냄)은 그대로라 다음 자료 r · w · s 로 📨 보낸 것에 옮겨진다. 머리 '📥 USB 자료 MM-DD HH:MM' · '📤 올릴 것 n'(outList).
+    봇 부탁(q · w · i · s · bl · kb)은 보내지 않고 자료 안에서 바로 — 🔎 DB 더미(그 야드로) · 작지 불러오기(칩 · 없으면 '재고에 없는 작지') ·
+      ℹ 정보(정보찾기 — 봇 yard_pipe_info.찾기 와 같은 셈) · 🚢 배(USB배 — BL · BO 로 B.c · l · o, 상태.배고름). 봇에보냄 은 USB 면 알림만.
+    띠 — 자료 wd 가 오늘 작업일이 아니면 노랑 '어제 자료예요 — PC 에 꽂아 새로 받으세요' · R 이면 '📥 지난번 올림'. 📷 QR = 다리.scanQR →
+      소식 'scan' {text} · ERP QR('*P…')은 자료 QR 표로 바로 번호(없으면 전처럼 '#B'). ❓ 미확인 칩(UNC — 번호판에 작지마다 · 경과 일).
+      누름 확인 소리 · 진동(다리.beep('ok' | 'warn') · vibrate(ms) — 겹친 번호 · 다른 배 몫은 warn). 누른 목록 이중 보관(저장 → 다리.keep ·
+      저장소가 비었으면 kept 로 되살림). 소식 'usb'(PC 가 주고받기를 끝냄) → 다시 읽기(location.reload — 누른 목록은 그대로).
+      머리 줄은 USB 면 넘칠 때 둘째 줄로(세로 · 가로 다 — body.usb). 텔레그램 쪽은 그대로(USB 갈래는 다 USB 가 참일 때만).
+  함수  셈(⑲): USB자료풀기 · 작업일글 · 묵은자료글 · 정보찾기 · QR번호 · 미확인묶음 · USB배 · 소식풀기
+        화면(⑲): USB담기 · 올릴것셈 · USB되살리기 · USB준비 · USB띠그리기 · USB끝 · USB배고르기 · 다리소식
 -->
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
@@ -369,6 +398,24 @@
   .fixline .k3 { padding: 2px 8px; font-size: 13px; margin: 2px 0 2px 6px; }
   body.m-work #fixLine, body.m-work #pic, body.m-work .stackhead, body.m-work #stackBox, body.m-work #autoLine, body.m-work .tier, body.m-work #chk,
   body.m-work #del, body.m-work #fix, body.m-work #ins, body.m-work #doneBox, body.m-work #shipBox, body.m-work #shipBar { display: none !important; }
+  /* ⑲ 📲 USB 앱(11-26) — 머리 줄 'USB 자료' · '📤 올릴 것' 이 늘어 줄을 넘기면 둘째 줄로(세로 · 가로 다) · 띠는 머리 줄 아래 한 줄(누르면 펼침) */
+  body.usb .bar { flex-wrap: wrap; }
+  body.usb .bar > * { margin-top: 2px; margin-bottom: 2px; }
+  body.usb .bar #info { flex: 1 1 0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }   /* 가로 — 긴 안내는 남는 폭만(한 줄) */
+  body.usb .right .pic { flex-shrink: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; }
+  body.usb .right .pic > * { flex-shrink: 0; }
+                                       /* 가로(높이 800) — 띠 만큼 모자라면 그림이 줄어(바닥 줄부터 보임) 빼기 · 보내기 줄이 안 잘리게 */
+  .bar .usbt { white-space: nowrap; }
+  .bar .outn { background: #e0f2fe; color: #0c4a6e; font-size: 14px; font-weight: bold; padding: 3px 8px; border-radius: 6px; white-space: nowrap; }
+  .uband { flex: none; padding: 5px 12px; font-size: 14px; border-bottom: 1px solid var(--sep); max-height: 24vh; overflow-y: auto; }
+  .uband.old { background: #fef3c7; color: #92400e; font-weight: bold; }
+  .uband.last { background: #e0f2fe; color: #0c4a6e; }
+  .uband .ul { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .uband.open .ul { white-space: normal; }
+  .uband:not(.open) .ul + .ul { display: none; }
+  .uband .k3 { float: right; padding: 1px 10px; font-size: 13px; margin-left: 8px; }
+  .num.unc { background: #fdf2f8; border-color: #f0abfc; color: #701a75; }
+  .num.unc .p { color: #a21caf; }
   @media (orientation: portrait) {
     #info { display: none; }                         /* 세로는 위 띠가 좁다 — 기본 1단은 차례 칸의 회색 '1단'으로 보인다 */
     .main { flex-direction: column; }
@@ -447,6 +494,8 @@
     .right .box { order: 1; font-size: 12px; margin: 4px 8px 0; padding: 4px 8px; }
     .seg button { font-size: 13px; padding: 4px 8px; }
     .shipbar, .tinfo { font-size: 12px; margin: 4px 8px 0; padding: 4px 8px; }
+    .uband { font-size: 12px; padding: 4px 8px; }
+    .bar .outn { font-size: 12px; padding: 2px 6px; }
   }
 </style>
 </head>
@@ -456,6 +505,8 @@
   <span class="seg" id="modeSeg"><button type="button" data-m="yard">📍 자리</button><button type="button" data-m="work">🛠 작업</button></span>
   <span class="test" id="testStrip" hidden>🧪 시험 모드(텔레그램 밖) — 보내기는 화면에만</span>
   <span class="hint" id="saved"></span>
+  <span class="hint usbt" id="usbT" hidden></span>
+  <span class="outn" id="outN" hidden></span>
   <span class="grow"></span>
   <span class="hint" id="info"></span>
   <button type="button" class="k3 hb" id="progBtn" hidden>📋 <span class="wide">실사 </span><span id="progN"></span><span class="wide">곳</span></button>
@@ -463,6 +514,8 @@
   <button type="button" class="k3 hb" id="qrBtn" hidden>📷 QR</button>
   <button type="button" class="k3 full" id="fullBtn" hidden>⛶ 전체화면</button>
 </div>
+<div class="uband old" id="usbOld" hidden></div>
+<div class="uband last" id="usbLast" hidden></div>
 <input id="scanIn" class="scanin" inputmode="none" autocomplete="off" autocapitalize="off" spellcheck="false" tabindex="-1" aria-hidden="true">
 <div class="main" id="main">
   <div class="left">
@@ -533,7 +586,7 @@ var 예시자료 = { v: 2, d: '시험', t: '시험', r: [], n: 46, m: 0, L: [
   WL: [['RB00Y001', 'mvpsh', '내면 한관단', 'Y (BLACK)'], ['RB00Y002', '?h', '', '']],   // ⑫ 시험 작업(11-24) — A03 더미 여섯 본
   WY: { A03: ['000011', 'PPPNAA', '111100'] } };
 var 보낼한도 = 4096;
-var 앱날 = '2026-11-25c';       // 링크 av(봇 yard_tablet.앱날)가 이보다 새로우면 '예전 판' 알림 — 텔레그램이 옛 앱을 붙들고 있을 때(11-24)
+var 앱날 = '2026-11-26b';       // 링크 av(봇 yard_tablet.앱날)가 이보다 새로우면 '예전 판' 알림 — 텔레그램이 옛 앱을 붙들고 있을 때(11-24)
 
 function 해시읽기() {
   var h = '';
@@ -1056,8 +1109,11 @@ function 더미풀기(글) {
   return out;
 }
 /** 보낼 묶음(판 2) — ② 옮김(m) · ⑫ 작업(a)을 먼저 싣고, 한도 안에서 야드 차례대로(넘는 야드는 다음에). ⑪ 배 = 고른 배 id(b).
+ *  kh(11-26 ③′) = 태블릿에 기억한 배치도 판('' 이면 없음 — 봇이 다음 링크에 K 를 싣는다) · 안 주면 보낼kh(화면이 정함 · null 이면
+ *  안 붙임 — 옛 꼴) — 한도 셈에 든다.
  *  → {글, 야드들, n, m(옮김 묶음 수), a(작업 묶음 수), c(⑮ DB 고침 수)} */
-function 보낼묶음(야드들, id, 날, 옮김, 해제, 작업, 배, 고침) {
+var 보낼kh = null;              // ③′ 화면이 보내기 전에 태블릿에 기억한 배치도 판으로(없으면 '') — kh 인자가 없을 때 쓴다(11-26)
+function 보낼묶음(야드들, id, 날, 옮김, 해제, 작업, 배, 고침, kh) {
   var y = {}, 들 = [], n = 0, m = (옮김 || []).map(function (o) { return [o.에서, o.로, o.ps]; }), a = 작업 || [];
   var c = (고침 || []).map(function (x) { return [x.야드, x.옛, x.새]; });   // ⑮ DB 번호 고침(11-24)
   function 짓기(nn) {
@@ -1067,6 +1123,8 @@ function 보낼묶음(야드들, id, 날, 옮김, 해제, 작업, 배, 고침) {
     if (x.length) d.x = x;                                             // ⑩ 🧹 기존 재고 해제하고 넣을 야드(11-23)
     if (a.length) d.a = a;                                             // ⑫ 🛠 작업(11-24)
     if (배) d.b = 배;                                                   // ⑪ 🚢 고른 배(11-24)
+    var 판 = kh != null ? kh : 보낼kh;
+    if (판 != null) d.kh = 판;                                         // ③′ 태블릿에 기억한 배치도 판(11-26)
     return JSON.stringify(d);
   }
   var 글 = m.length || a.length || c.length ? 짓기(0) : '';
@@ -1209,12 +1267,98 @@ function 진행칸(진행, 확인전, K) {
 function 칸진행(진행, c) {
   return (진행 || {})[c] || (/^B\d{2}[AC]$/.test(c) ? (진행 || {})[c.slice(0, -1)] : null) || null;
 }
+/* ⑲ 📲 USB 앱(2026-11-26 — docs/설계_야드등록_앱.md) — 링크 대신 앱 폴더 자료(in/자료.json) · 봇 부탁 대신 자료 안에서 바로 */
+/** 다리 readData 글 → {d, 오류} — 빈 글(아직 안 꽂음) · 깨진 글 · usb 칸이 없는 자료는 d null(📥 PC 에 꽂으면 들어와요) */
+function USB자료풀기(글) {
+  글 = _s(글);
+  if (!글) return { d: null, 오류: '' };
+  var d = null;
+  try { d = JSON.parse(글); } catch (e) { return { d: null, 오류: '자료가 깨졌어요' }; }
+  if (!d || typeof d !== 'object' || !d.usb) return { d: null, 오류: 'USB 자료가 아니에요' };
+  return { d: d, 오류: '' };
+}
+/** 05시 작업일 'YYYY-MM-DD'(자정 ~ 05시는 아직 어제 — 작업날시작 과 같은 규칙) — PC 자료 wd 와 견준다 */
+function 작업일글(ms) {
+  var d = new Date(작업날시작(ms));
+  return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+}
+/** 자료 작업일(wd)이 오늘 작업일이 아니면 노랑 띠 글(11-26 '오늘 받은 것이 아니면') — 어제 · 그 전(MM-DD) | ''(오늘 것) */
+function 묵은자료글(wd, 지금ms) {
+  wd = _s(wd);
+  if (wd === 작업일글(지금ms)) return '';
+  var 어제 = 작업일글(작업날시작(지금ms) - 3600 * 1000);
+  return (wd === 어제 ? '어제' : wd ? wd.slice(5) : '날을 모르는') + ' 자료예요 — PC 에 꽂아 새로 받으세요';
+}
+/** ℹ 정보를 앱 안에서 — 자료 INFO {번호: [HEAT, PRODUCTS_NO, 야드, 자리, 상태, 작지, 규격]} · 찾기 칸 글 → 링크 I 꼴
+ *  {q, t, r: [[번호, HEAT, PRODUCTS, 야드, 자리, 상태, 작지, 규격]…], x(더 있는 수), o(뺀 나간 관 수)} | null(번호 꼴 아님).
+ *  봇 yard_pipe_info.찾기 와 같은 셈 — 번호 전체면 그 번호, 뒤 네 자리면 정식 번호(접두 + 네 자리) 가운데 뒤가 같은 것 · 뒤로 찾으면
+ *  나간(출고완료) 관은 빼고 수만 · 재고 먼저 · 번호 차례 · 정보최대 본까지 */
+var 정보최대 = 12;
+function 정보찾기(INFO, 글, 때) {
+  var q = 정보글(글);
+  if (!q) return null;
+  var 전체 = !!번호꼴(글), 줄 = [], 나감 = 0;
+  var 차례 = function (s) { return s === '재고' ? 0 : s === '상차중' ? 1 : s === 'DB 없음' ? 3 : 2; };
+  Object.keys(INFO || {}).forEach(function (p) {
+    var P = _s(p).toUpperCase(), v = INFO[p] || [];
+    if (전체 ? P !== q : !(/^[A-Z]*\d{2}[A-Z]\d{4}$/.test(P) && P.slice(-4) === q)) return;
+    var 상 = _s(v[4]) || 'DB 없음';
+    if (!전체 && 상 === '출고완료') { 나감++; return; }
+    줄.push([P, _s(v[0]), _s(v[1]), _s(v[2]), _s(v[3]), 상, _s(v[5]), _s(v[6])]);
+  });
+  줄.sort(function (a, b) { return 차례(a[5]) - 차례(b[5]) || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0); });
+  return { q: q, t: _s(때), r: 줄.slice(0, 정보최대), x: Math.max(0, 줄.length - 정보최대), o: 나감 };
+}
+/** ERP QR('*P…' 바코드 통) → 번호 — 자료 QR {바코드: 번호} 에 있으면 그 번호 | ''(없으면 전처럼 '#B' 로 — PC 가 찾는다).
+ *  PC(yard_tablet.바코드풀기)와 같게 통 앞이 숫자 12자리 이상이면 그 12자리로 찾는다(재고표 barcode 는 12자리) */
+function QR번호(표, 통) {
+  표 = 표 || {}; 통 = _s(통);
+  if (!통) return '';
+  var 열 = /^\d{12}/.test(통) ? 통.slice(0, 12) : 통;
+  return 번호꼴(표[열] || 표[통] || 표[통.toUpperCase()]);
+}
+/** ❓ 미확인 제품 UNC [[번호, 작지, 생산일, 경과 일]] → 작지마다 [{작지, 줄: [{p, 날, 경과}]}](PC 차례 그대로 · 찾기 칸 글로 거름) */
+function 미확인묶음(UNC, q) {
+  q = _s(q).toUpperCase();
+  var out = [], 표 = {};
+  (UNC || []).forEach(function (r) {
+    var p = 번호꼴(r && r[0]) || _s(r && r[0]).toUpperCase();
+    if (!p || (q && p.slice(-4).indexOf(q) < 0 && p.indexOf(q.replace('-', '')) < 0)) return;
+    var 작 = _s(r[1]) || '(작지 없음)';
+    if (!표[작]) { 표[작] = { 작지: 작, 줄: [] }; out.push(표[작]); }
+    표[작].줄.push({ p: p, 날: _s(r[2]), 경과: parseInt(r[3], 10) || 0 });
+  });
+  return out;
+}
+/** 🚢 배는 앱에서 고른다(USB 자료 B.c 는 '') — 고른 배 id 를 넣은 새 B(줄 l = BL[id] · 다른 배 몫 o = BO[id]). 목록에 없는 배면 '' */
+function USB배(B, BL, BO, id) {
+  if (!B) return B;
+  id = _s(id);
+  var 있 = !!id && (B.s || []).some(function (r) { return _s(r && r[0]) === id; }), out = {};
+  Object.keys(B).forEach(function (k) { out[k] = B[k]; });
+  out.c = 있 ? id : '';
+  out.l = 있 ? ((BL || {})[id] || []) : [];
+  out.o = 있 ? _s((BO || {})[id]) : '';
+  return out;
+}
+/** 앱 → 화면 소식의 둘째 값(JSON 글 · 객체) → 객체 — 'scan' 은 {text} */
+function 소식풀기(글) {
+  if (글 && typeof 글 === 'object') return 글;
+  try { var o = JSON.parse(_s(글) || '{}'); return o && typeof o === 'object' ? o : { text: _s(글) }; } catch (e) { return { text: _s(글) }; }
+}
 
 /* ── 화면 ─────────────────────────────────────────────────────────────── */
 var tg = (window.Telegram && window.Telegram.WebApp) || null;
+// ⑲ 📲 USB 앱 다리 — 안드로이드 껍데기(웹뷰)가 window 에 붙인 객체(addJavascriptInterface — 안내판 앱과 같은 이름). 공개 페이지라
+// 회사 글자를 통째로 적지 않는다(tests 회사_자료가_없다). 앱 → 화면 소식은 window['on' + 다리이름](종류, 글)
+var 다리이름 = 'Hi' + 'Steel';
+var 다리 = (function () { try { var h = window[다리이름]; return h && typeof h.readData === 'function' ? h : null; } catch (e) { return null; } })();
+var USB = false;              // ⑲ 다리가 있고 자료에 usb:1 — 시작에서
+var 미확인칩 = '@미확인';      // ⑲ 상태.작지 — ❓ 미확인 칩(자료 UNC)
+var 올릴수 = 0;               // ⑲ 다리.outList() 수 — 머리 '📤 올릴 것 n'
 var 해시 = 해시읽기();
 var 텔레그램안 = !!(tg && tg.platform && tg.platform !== 'unknown');
-var 시험 = !텔레그램안;
+var 시험 = !텔레그램안 && !다리;   // USB 앱은 시험이 아니다(텔레그램은 없지만 진짜로 담는다)
 var 자료 = null;
 var 작지칩 = '@작지:';          // ⑨ 상태.작지 — 야드에만 있는 작지 칩(재배치 11-23 · G1 칩은 '작지|접두')
 var 작지야드 = {}, 작지요청 = [], 작지수 = null, 야드번호 = {};   // ⑨ 링크 LY · LYq · LN · (더미 + LY) — 시작에서
@@ -1263,6 +1407,10 @@ function 지킴(판) {
 }
 function 눌러도(판, e) { return 누름인가(판 && 판._손, { x: e.clientX, y: e.clientY, top: 판.scrollTop, left: 판.scrollLeft }); }
 function 떨림(꼴) {
+  if (USB) {                                                         // ⑲ ⑦ 장갑 · 소음 — 소리 · 진동(겹친 번호 · 다른 배 몫은 'warn')
+    try { if (다리.beep) 다리.beep(꼴 === 'error' ? 'warn' : 'ok'); if (다리.vibrate) 다리.vibrate(꼴 === 'error' ? 300 : 40); } catch (e) {}
+    return;
+  }
   try {
     if (!tg || !tg.HapticFeedback) return;
     if (꼴 === 'error') tg.HapticFeedback.notificationOccurred('error'); else tg.HapticFeedback.selectionChanged();
@@ -1280,6 +1428,7 @@ function 토스트(글, 단추, 할일) {
 
 function 저장() {
   try { localStorage.setItem(열쇠, JSON.stringify(상태)); $('saved').textContent = '💾 태블릿에 저장 ' + 지금(); } catch (e) {}
+  if (USB && 다리.keep) { try { 다리.keep(JSON.stringify(상태)); } catch (e) {} }   // ⑲ ④ 이중 보관 — 앱 폴더에도 사본
 }
 function 읽기() {
   try { var s = JSON.parse(localStorage.getItem(열쇠) || 'null'); if (s && s.야드들) 상태 = s; } catch (e) {}
@@ -1294,6 +1443,68 @@ function 읽기() {
   if (상태.줄세움 !== '야드') 상태.줄세움 = '번호';                     // ⑱ 다른 야드 번호 차례(11-25 — 기본 번호순)
   if (상태.모드 !== 'work') 상태.모드 = 'yard';
 }
+/* ③′ 배치도 기억(11-26) — 칸 자리(K) · 도면(W)은 거의 안 바뀌어 태블릿에 두고, 링크에는 판(Kh)만. 상태와 따로 둔다(목록을 비워도 남게) */
+var 칸열쇠 = 'yard|kan';
+var 칸없음 = false;            // 링크에 Kh 만 있는데 태블릿에 그 판의 칸이 없다(저장이 지워짐) — [🗺 배치도 받기]
+function 칸기억읽기() {
+  try { var s = JSON.parse(localStorage.getItem(칸열쇠) || 'null'); return s && s.Kh && s.K && s.K.length ? s : null; } catch (e) { return null; }
+}
+function 칸기억판() { var s = 칸기억읽기(); return s ? _s(s.Kh) : ''; }
+/** 시작 때 — 링크에 K 가 있으면 기억(판과 함께), K 없이 Kh 만이면 같은 판의 기억으로 자료.K · 자료.W 를 채운다(뒤 코드는 그대로) */
+function 칸기억맞춤() {
+  칸없음 = false;
+  if (자료.K && 자료.K.length) {
+    if (자료.Kh) { try { localStorage.setItem(칸열쇠, JSON.stringify({ Kh: 자료.Kh, K: 자료.K, W: 자료.W || [] })); } catch (e) {} }
+    return;
+  }
+  if (!자료.Kh) return;                                              // 옛 봇(Kh 없음) — 배치도 없이
+  var s = 칸기억읽기();
+  if (s && s.Kh === 자료.Kh) { 자료.K = s.K; 자료.W = s.W; return; }
+  칸없음 = true;
+}
+/** 봇에 한 통(sendData — 앱이 닫힌다) · 텔레그램 밖(시험)이면 알림만. 늘 kh(태블릿에 기억한 배치도 판 — 없으면 '')를 붙인다(11-26) */
+function 봇에보냄(o) {
+  if (USB) { 알림('📲 USB 앱은 봇에 묻지 않아요 — 자료 안에 없으면 PC 에 꽂아 새로 받아 주세요'); return; }   // ⑲ 안전망
+  o.kh = 칸기억판();
+  var 글 = JSON.stringify(o);
+  if (텔레그램안) { tg.sendData(글); return; }
+  alert('🧪 시험 — 실제로는 봇에 보냅니다\n' + 글);
+}
+/** ③′ 태블릿에 배치도가 없을 때 — 봇에 청한다(sendData kb). 앱이 닫히고, 다시 열면 배치도를 실은 단추 */
+function 배치도부탁() {
+  var 묻 = '배치도(야드 칸 자리)를 봇에서 다시 받을까요?\n앱이 닫히고, 봇이 배치도를 실은 [📍 야드 등록 열기] 단추를 줘요(누른 목록은 태블릿에 그대로).';
+  var 가 = function (ok) {
+    if (!ok) return;
+    저장();
+    봇에보냄({ k: '야드', v: 2, id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7), d: 자료.d, y: {}, kb: 1 });
+  };
+  if (텔레그램안 && tg.showConfirm) tg.showConfirm(묻, 가); else 가(confirm(묻));
+}
+/** ① 링크에 모선 목록(B) 없이 척 수(Bn)만 — [🚢 모선 n척] 을 누르면 봇에 목록을 청한다(sendData bl) */
+function 모선목록부탁() {
+  var 묻 = '모선 목록을 봇에서 불러올까요?\n앱이 닫히고, 봇이 모선 목록을 실은 [📍 야드 등록 열기] 단추를 줘요 — 다시 열면 [🚢 모선] 에서 배를 골라요' +
+    '(누른 목록은 태블릿에 그대로).';
+  var 가 = function (ok) {
+    if (!ok) return;
+    저장();
+    봇에보냄({ k: '야드', v: 2, id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7), d: 자료.d, y: {}, bl: 1 });
+  };
+  if (텔레그램안 && tg.showConfirm) tg.showConfirm(묻, 가); else 가(confirm(묻));
+}
+/** 야드 칩 정리(11-26 '이전 선택한 야드가 계속 같이 보여') — 지금 야드가 아니고 누른 번호가 0 이면 지운다(해제 · 자동 표시도).
+ *  보냄 기다리는 야드 · DB 고침이 걸린 야드는 남긴다. → 지운 야드들 */
+function 빈야드정리() {
+  var 고침야드 = {}, 지운 = [];
+  (상태.DB고침 || []).forEach(function (x) { 고침야드[x.야드] = 1; });
+  Object.keys(상태.야드들).forEach(function (y) {
+    if (y === 상태.야드 || (상태.야드들[y] || []).length || 보낸야드(y) || 고침야드[y]) return;
+    delete 상태.야드들[y];
+    if (상태.해제) delete 상태.해제[y];
+    if (상태.자동) delete 상태.자동[y];
+    지운.push(y);
+  });
+  return 지운;
+}
 function 쓴곳() {
   var m = {};
   Object.keys(상태.야드들).forEach(function (y) { 상태.야드들[y].forEach(function (x, i) { m[x.p] = y + '·' + (i + 1); }); });
@@ -1303,6 +1514,7 @@ function 쓴곳() {
 function 지금줄들() { return 상태.야드들[상태.야드] || []; }
 
 function 그리기() {
+  if (상태.모드 !== 'work' && 빈야드정리().length) 저장();            // 지금 야드를 바꾸면 남은 빈 칩은 지운다(11-26)
   보기그리기(); 칩그리기(); 모드그리기(); 판그리기(); 야드그리기(); 맞춤그리기(); 그림그리기(); 차례그리기(); 머리단추();
   배띠그리기(); 배상자그리기(); 끝작업그리기(); 작업상자그리기(); DB고침그리기(); 보내기단추();
 }   // 그림 먼저 — 목록 굴림이 자리를 맞게 잼
@@ -1426,6 +1638,20 @@ function 칩그리기() {
     cb.onclick = function (e) { if (!눌러도(칩, e)) return; 상태.더작지 = []; 저장(); 그리기(); };
     칩.appendChild(cb);
   }
+  function 미확인() {                                                // ⑲ ❓ 미확인 제품(USB 자료 UNC) — 생산됐는데 야드 확인이 안 된 관
+    var n = (자료.UNC || []).length;
+    if (!n) return;
+    var 남 = (자료.UNC || []).filter(function (r) { return !쓴[번호꼴(r[0]) || _s(r[0]).toUpperCase()]; }).length;
+    하나('❓ 미확인 <small>' + 남 + '/' + n + '</small>', 미확인칩);
+  }
+  if (!USB && !배자료 && 자료.Bn) {                                   // ① 모선 목록은 부탁할 때만(11-26) — 링크에 척 수만
+    var bn = document.createElement('button');
+    bn.className = 'k3 ship';
+    bn.innerHTML = '🚢 모선 <small>' + 자료.Bn + '척</small> ▾';
+    bn.title = '누르면 봇에서 모선 목록을 불러와요(앱이 닫혔다 다시 열려요)';
+    bn.onclick = function (e) { if (눌러도(칩, e)) 모선목록부탁(); };
+    칩.appendChild(bn);
+  }
   if (배자료) {                                                      // ⑪ 🚢 모선(11-24) — 맨 앞
     var 배 = 지금배(), sb = document.createElement('button');
     sb.className = 'k3 ship';
@@ -1440,10 +1666,12 @@ function 칩그리기() {
         하나(esc(k) + ' <small>' + (규 ? esc(규) + ' · ' : '') + (g ? 'G1 ' + g : '') + (g && y ? ' · ' : '') + (y ? '<span class="yd">야드 ' + y + '</span>' : '') + '</small>', '@배작:' + k, true);
       });
       하나('G1 전부 <small>' + 자료.n + '</small>', '');
+      미확인();
       return;
     }
   }
   하나('G1 전부 <small>' + 자료.n + '</small>', '');
+  미확인();
   var G1작 = {}, 수표 = 작지수 || {};
   G1칩묶음(자료.L).forEach(function (m) {                            // ⑰ 작지마다 칩 하나 — 생산월(접두)이 달라도(11-25)
     var 남 = m.번호들.filter(function (p) { return !쓴[p]; }).length;
@@ -1516,6 +1744,32 @@ function 판그리기() {
       box.appendChild(b);
     });
   });
+  if (상태.작지 === 미확인칩) {                                         // ⑲ ❓ 미확인(USB 자료 UNC) — 작지마다 · 누르면 지금 야드로(G1 번호처럼)
+    var 짧은날 = function (s) { return /^\d{4}-/.test(s) ? s.slice(5, 10) : s; };
+    미확인묶음(자료.UNC, q).forEach(function (m) {
+      var 날들 = m.줄.map(function (x) { return x.날; }).filter(Boolean).sort(), 첫날 = 날들[0], 끝날 = 날들[날들.length - 1];
+      var uh = document.createElement('div');
+      uh.className = 'lot';
+      uh.innerHTML = '<b>❓ ' + esc(m.작지) + '</b> · 미확인 ' + m.줄.length + '본' +
+        (첫날 ? ' · 생산 ' + esc(짧은날(첫날)) + (끝날 !== 첫날 ? ' ~ ' + esc(짧은날(끝날)) : '') : '') +
+        ' — 찾으면 눌러 <b>' + esc(상태.야드 || '고른 야드') + '</b> 로';
+      g.appendChild(uh);
+      var ubox = document.createElement('div');
+      ubox.className = 'nums';
+      g.appendChild(ubox);
+      m.줄.forEach(function (x) {
+        수++;
+        var b = document.createElement('button');
+        b.className = 'k3 num' + (쓴[x.p] ? ' used' : ' unc');
+        b.innerHTML = (쓴[x.p] ? '<span class="p badge">' + esc(쓴[x.p]) + '</span>' :
+          '<span class="p">' + (x.경과 ? x.경과 + '일' : esc(x.p.slice(0, -4))) + '</span>') +
+          '<span class="t">' + x.p.slice(-4).replace(/^0/, '') + '</span>';
+        b.title = x.p + ' · ' + m.작지 + (x.날 ? ' · 생산 ' + x.날 : '') + (x.경과 ? ' · ' + x.경과 + '일 지남' : '');
+        b.onclick = function (e) { if (눌러도(g, e)) 누름(x.p); };
+        ubox.appendChild(b);
+      });
+    });
+  }
   function 묶음(제목, rs) {                                          // ⑨ 야드에 놓인 번호 — 호박색 '← 야드'(지금 야드 것은 '이 야드')
     var h = document.createElement('div');
     h.className = 'lot';
@@ -1557,7 +1811,7 @@ function 판그리기() {
       }
       var n = 작지수 ? (작지수[작] || 0) : null;
       if ((자료.LYx || []).indexOf(작) >= 0) 받을들.push('🗂 ' + esc(작) + ' 야드 번호는 너무 많아 링크에 못 실었어요 — 번호 전체를 찾기 칸에 쳐서 ＋ 넣기');
-      else if (작지요청.indexOf(작) < 0 && n !== 0 && !(배작지인가(배, 작) && !자료.BYx)) 받을들.push('🗂 ' + esc(작) + (n ? ' — 다른 야드에 ' + n + '본' : '') + ' <button class="k3 getLot" data-lot="' + esc(작) + '">🔎 이 작지 전체 번호 받기</button>');
+      else if (!USB && 작지요청.indexOf(작) < 0 && n !== 0 && !(배작지인가(배, 작) && !자료.BYx)) 받을들.push('🗂 ' + esc(작) + (n ? ' — 다른 야드에 ' + n + '본' : '') + ' <button class="k3 getLot" data-lot="' + esc(작) + '">🔎 이 작지 전체 번호 받기</button>');
       else if (!전부.length) 받을들.push('🗂 ' + esc(작) + ' — 야드에 놓인 번호가 없어요(G1 만)');
     });
     받을 = 받을들.join('<br>');
@@ -1695,7 +1949,7 @@ function 차례그리기() {
 function 누름(p, 스캔) {
   if (!상태.야드) { 야드고르기열기(); return false; }
   var 쓴 = 쓴곳(), xs = 지금줄들(), 지 = 지금고침();
-  var 겹침 = function (글) { if (스캔) { 토스트('⚠ ' + 글); 떨림('error'); } else 알림(글); };
+  var 겹침 = function (글) { if (스캔) { 토스트('⚠ ' + 글); 떨림('error'); } else { if (USB) 떨림('error'); 알림(글); } };   // ⑲ USB 는 손 누름에도 경고 소리
   if (옮길곳(상태.야드)[p]) {                                      // ② 옮김에 담았던 관을 찾았다 — 옮김에서 빼고 넣는다
     상태.옮김 = 옮김더하기(상태.옮김, 상태.야드, '', [p]);
     토스트('🚚 ' + 뒤(p) + ' 를 찾았어요 — 옮김에서 뺐어요');
@@ -1879,7 +2133,7 @@ function 야드고르기열기(목적) {
     var n = 본[고른칸] || 0, 실 = 실린[고른칸];
     var h = '<span class="info"><b>' + esc(고른칸) + '</b> — DB ' + n + '본' + (n ? (실 ? ' · 🗂 더미 있음' : ' · 더미가 앱에 없음') : '') +
       (색모드 === 'prog' ? ' ' + esc(진행한줄(고른칸)) : '') + '</span>';   // esc 가 앞 빈칸을 깎는다 — '없음 · ≠ 다름'(11-21)
-    if (!옮김 && n && (상태.모드 === 'work' ? !작업표[고른칸] : !실)) {
+    if (!USB && !옮김 && n && (상태.모드 === 'work' ? !작업표[고른칸] : !실)) {   // ⑲ USB 자료엔 모든 야드 더미가 있다
       h += '<button class="k3" id="askDummy">' + (상태.모드 === 'work' ? '🔎 DB 더미 · 작업 받기' : '🔎 DB 더미 받기') + '</button>';
     }
     h += '<button class="k3 blue" id="pickOk">' + (옮김 ? '여기로 옮기기' : '이 야드로') + '</button>';
@@ -1917,9 +2171,11 @@ function 야드고르기열기(목적) {
       h += '</div><div class="find"><span class="hint">직접</span><input id="yardTyped" placeholder="예: 2-A01" autocomplete="off">' +
         '<button class="k3" id="yardTypedOk">넣기</button></div>';
     }
-    h += '<div class="btns"><button class="k3" id="sheetX">닫기</button></div>';
+    h += '<div class="btns">' + (칸없음 ? '<button class="k3" id="kanAsk">🗺 배치도 받기</button>' : '') +   // ③′ 태블릿 기억이 지워짐(11-26)
+      '<button class="k3" id="sheetX">닫기</button></div>';
     $('sheet').className = 'sheet' + (탭 === '그림' ? ' wide' : '');
     $('sheet').innerHTML = h;
+    if ($('kanAsk')) $('kanAsk').onclick = 배치도부탁;
     Array.prototype.forEach.call($('sheet').querySelectorAll('[data-tab]'), function (b) { b.onclick = function () { 탭 = b.getAttribute('data-tab'); 그림(); }; });
     Array.prototype.forEach.call($('sheet').querySelectorAll('[data-color]'), function (b) { b.onclick = function () { 색모드바꿈(b.getAttribute('data-color')); 그림(); }; });
     Array.prototype.forEach.call($('sheet').querySelectorAll('[data-line]'), function (b) { b.onclick = function () { 줄 = b.getAttribute('data-line'); 그림(); }; });
@@ -1959,6 +2215,7 @@ function 해제바꿈() {
 }
 /** ⑨ 작지 칩 — 그 작지의 야드에 놓인 번호를 봇에 청한다(sendData w). 앱이 닫히고, 다시 열면 같은 칩에 호박색으로 */
 function 작지부탁(작, 새칩) {
+  if (USB) { 토스트('🗂 ' + [].concat(작).join(' · ') + ' — USB 자료에 없는 작지예요(G1 · 야드 재고에 없음)'); return; }   // ⑲ 자료에 모든 작지가 있다
   var 작들 = [].concat(작), 새칩들 = 새칩 ? [].concat(새칩) : null, 이름 = 작들.join(' · ');   // ⑯ 여럿을 한 번에(11-25)
   var 묻 = 새칩들 ? '작지 ' + 이름 + ' 를 봇에서 불러올까요?\n앱이 닫히고, 봇이 [📍 야드 등록 열기] 단추를 줘요 — 다시 열면 그 작지 칩' +
     (새칩들.length > 1 ? ' ' + 새칩들.length + '개를 같이 골라 두고, ' : '에 ') + 'G1 번호와 다른 야드 번호(호박색)가 보여요(누른 목록은 태블릿에 그대로).'
@@ -1968,9 +2225,7 @@ function 작지부탁(작, 새칩) {
     if (!ok) return;
     if (새칩들) { 상태.작지 = 새칩들[0]; 상태.더작지 = 새칩들.slice(1); $('q').value = ''; }   // ⑭ 다시 열면 그 칩(⑯ 여럿이면 같이 — 시작에서 맞춘 이름으로)
     저장();                                                          // 상태.작지(고른 칩) 그대로 — 다시 열면 같은 칩
-    var 글 = JSON.stringify({ k: '야드', v: 2, id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7), d: 자료.d, y: {}, w: 작들 });
-    if (텔레그램안) { tg.sendData(글); return; }
-    alert('🧪 시험 — 실제로는 봇에 보냅니다\n' + 글);
+    봇에보냄({ k: '야드', v: 2, id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7), d: 자료.d, y: {}, w: 작들 });
   };
   if (텔레그램안 && tg.showConfirm) tg.showConfirm(묻, 가); else 가(confirm(묻));
 }
@@ -1987,23 +2242,31 @@ function 작지불러오기() {
     if (!칩) 없는.push(글);
     else if (칩들.indexOf(칩) < 0) 칩들.push(칩);
   });
+  var 없음글 = '';
+  if (USB && 없는.length) {                                           // ⑲ USB 자료엔 모든 작지(LYq)가 있다 — 없으면 재고에 없는 작지(봇에 안 청함)
+    없음글 = ' · ' + 없는.join(' · ') + ' 는 재고에 없어요';
+    if (!칩들.length) { 떨림('error'); 토스트('🗂 ' + 없는.join(' · ') + ' — USB 자료에 없는 작지예요(G1 · 야드 재고에 없음)'); return; }
+    없는 = [];
+  }
   if (!없는.length) {
     상태.작지 = 칩들[0]; 상태.더작지 = 칩들.slice(1); $('q').value = ''; 상태.모드 = 'yard';
     저장(); 그리기(); $('grid').scrollTop = 0;
-    토스트('🗂 ' + 고른작지들().join(' + ') + (칩들.length > 1 ? ' — 같이 골랐어요' : ' 칩을 골랐어요'));
+    토스트('🗂 ' + 고른작지들().join(' + ') + (칩들.length > 1 ? ' — 같이 골랐어요' : ' 칩을 골랐어요') + 없음글);
     return;
   }
   작지부탁(없는, 칩들.concat(없는.map(function (글) { return 작지칩 + 글; })));
 }
 /** ⑥ 더미가 앱에 없는 야드 — 봇에 청한다(sendData q). 앱이 닫히고 봇이 그 야드를 먼저 실은 단추를 준다 */
 function 더미부탁(y) {
+  if (USB) {                                                         // ⑲ USB 자료엔 모든 야드 더미 · 작업이 있다 — 그 야드로 바로
+    if (상태.모드 === 'work') { 상태.작업야드 = y; 닫기(); 저장(); 그리기(); } else 야드정함(y);
+    return;
+  }
   var 묻 = y + ' 의 지금 DB 더미를 봇에 청할까요?\n앱이 닫히고, 봇이 그 야드를 실은 [📍 야드 등록 열기] 단추를 줘요(누른 목록은 태블릿에 그대로).';
   var 가 = function (ok) {
     if (!ok) return;
     if (상태.모드 === 'work') { 상태.작업야드 = y; 닫기(); 저장(); } else 야드정함(y);   // 다시 열면 그 야드에서(⑫ 작업 보기면 작업 야드)
-    var 글 = JSON.stringify({ k: '야드', v: 2, id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7), d: 자료.d, y: {}, q: [y] });
-    if (텔레그램안) { tg.sendData(글); return; }
-    alert('🧪 시험 — 실제로는 봇에 보냅니다\n' + 글);
+    봇에보냄({ k: '야드', v: 2, id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7), d: 자료.d, y: {}, q: [y] });
   };
   if (텔레그램안 && tg.showConfirm) tg.showConfirm(묻, 가); else 가(confirm(묻));
 }
@@ -2011,14 +2274,18 @@ function 더미부탁(y) {
 function 정보부탁() {
   var q = 정보글($('q').value);
   if (!q) { 토스트('찾기 칸에 뒤 번호(0617) 나 번호 전체(26K0617)를 넣어 주세요'); return; }
+  if (USB) {                                                         // ⑲ USB 자료 INFO 에서 바로(앱이 안 닫힘 · 봇에 안 물음)
+    자료.I = 정보찾기(자료.INFO, $('q').value, 지금());
+    if (상태.정보본 === 정보열쇠(자료.I)) 상태.정보본 = '';          // 같은 분에 닫았다 다시 찾아도 보이게
+    정보그리기();
+    return;
+  }
   var 묻 = q + ' 의 HEAT · PRODUCTS_NO 를 봇에 물을까요?\n앱이 닫히고 봇이 채팅으로 알려 줘요 — [📍 야드 등록 열기] 로 다시 열면 ' +
     '찾기 칸 아래에도 보여요(누른 목록은 태블릿에 그대로).';
   var 가 = function (ok) {
     if (!ok) return;
     저장();
-    var 글 = JSON.stringify({ k: '야드', v: 2, id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7), d: 자료.d, y: {}, i: q });
-    if (텔레그램안) { tg.sendData(글); return; }
-    alert('🧪 시험 — 실제로는 봇에 보냅니다\n' + 글);
+    봇에보냄({ k: '야드', v: 2, id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7), d: 자료.d, y: {}, i: q });
   };
   if (텔레그램안 && tg.showConfirm) tg.showConfirm(묻, 가); else 가(confirm(묻));
 }
@@ -2027,7 +2294,7 @@ function 정보그리기() {
   var I = 자료 && 자료.I, 박 = $('infoBox');
   if (!I || !I.r || 상태.정보본 === 정보열쇠(I)) { 박.hidden = true; 박.innerHTML = ''; return; }
   var h = '<div class="ih"><span><b>ℹ ' + esc(I.q) + '</b> — ' + (I.r.length + (I.x || 0)) + '본' +
-    (I.t ? ' <span class="hint">· ' + esc(I.t) + ' 봇 답</span>' : '') + '</span><span class="grow"></span>' +
+    (I.t ? ' <span class="hint">· ' + esc(I.t) + (USB ? ' USB 자료에서' : ' 봇 답') + '</span>' : '') + '</span><span class="grow"></span>' +
     '<button class="k3" id="infoX">닫기</button></div>';
   if (!I.r.length) h += '<div class="ir">DB 재고표 · ERP 재고 파일에 그런 번호가 없어요</div>';
   I.r.forEach(function (r) {                                         // [번호, HEAT, PRODUCTS, 야드, 자리, 상태, 작지, 규격]
@@ -2036,7 +2303,7 @@ function 정보그리기() {
     h += '<div class="ir"><b class="num">' + esc(r[0]) + '</b>HEAT <b>' + esc(r[1] || '—') + '</b> · PRODUCTS <b>' + esc(r[2] || '—') + '</b>' +
       (덧 ? '<br><small>' + esc(덧) + '</small>' : '') + '</div>';
   });
-  if (I.x) h += '<div class="ir"><small>그 밖 ' + I.x + '본은 채팅에 — 번호 전체로 찾으면 하나만</small></div>';
+  if (I.x) h += '<div class="ir"><small>그 밖 ' + I.x + (USB ? '본 더 있어요' : '본은 채팅에') + ' — 번호 전체로 찾으면 하나만</small></div>';
   if (I.o) h += '<div class="ir"><small>나간(출고완료) 관 ' + I.o + '본은 뺐어요 — 번호 전체로 찾으면 보여요</small></div>';
   박.innerHTML = h;
   박.hidden = false;
@@ -2129,7 +2396,8 @@ function 배고르기열기() {
   if (!배자료) return;
   var 배 = 지금배(), 들 = 배자료.배들.slice().sort(function (a, b) { return (a.재고 || a.남은 ? 0 : 1) - (b.재고 || b.남은 ? 0 : 1); });
   var h = '<h2>🚢 모선 고르기 <span class="hint">— 선적 시트 ' + esc(배자료.t) + ' PC 에서 실음 · 한 번에 한 척</span></h2>' +
-    '<div class="hint">다른 배를 고르면 앱이 닫히고 봇이 그 배 번호(다른 야드 것까지)를 실은 단추를 줘요. 막대 = 야드(초록) · G1(주황) · 남은 생산(회색).</div>';
+    '<div class="hint">' + (USB ? '배를 고르면 바로 그 배 번호(다른 야드 것까지)가 보여요. ' : '다른 배를 고르면 앱이 닫히고 봇이 그 배 번호(다른 야드 것까지)를 실은 단추를 줘요. ') +
+    '막대 = 야드(초록) · G1(주황) · 남은 생산(회색).</div>';
   들.forEach(function (b) {
     var 다 = !b.재고 && !b.남은, 필 = Math.max(1, b.필요);
     function 몫(n) { return Math.max(0, Math.min(100, Math.round(100 * n / 필))); }
@@ -2154,15 +2422,14 @@ function 배고르기열기() {
 }
 /** 다른 배를 봇에 청한다(sendData s) — 앱이 닫히고, 다시 열면 그 배 */
 function 배부탁(id) {
+  if (USB) { USB배고르기(id); return; }                              // ⑲ 배마다 줄 · 다른 배 몫이 자료(BL · BO)에 — 앱에서 바로
   var b = 배자료.배들.filter(function (x) { return x.id === id; })[0];
   var 묻 = id ? (b ? b.이름 : id) + ' 을 고를까요?\n앱이 닫히고, 봇이 그 배 번호(다른 야드 것까지)를 실은 [📍 야드 등록 열기] 단추를 줘요(누른 목록은 태블릿에 그대로).'
     : '배를 안 고른 보기로 돌아갈까요?\n앱이 닫히고, 봇이 배 없이 [📍 야드 등록 열기] 단추를 줘요(누른 목록은 태블릿에 그대로).';
   var 가 = function (ok) {
     if (!ok) return;
     저장();
-    var 글 = JSON.stringify({ k: '야드', v: 2, id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7), d: 자료.d, y: {}, s: id });
-    if (텔레그램안) { tg.sendData(글); return; }
-    alert('🧪 시험 — 실제로는 봇에 보냅니다\n' + 글);
+    봇에보냄({ k: '야드', v: 2, id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7), d: 자료.d, y: {}, s: id });
   };
   if (텔레그램안 && tg.showConfirm) tg.showConfirm(묻, 가); else 가(confirm(묻));
 }
@@ -2183,7 +2450,8 @@ function 작업칩그리기() {
   칩.innerHTML = '';
   if (!상태.작업야드 || !rs.length) {
     칩.innerHTML = '<span class="hint">' + (자료.Wx ? '⚠ 작업 자료가 링크에 다 안 들어갔어요(야드를 한 곳씩 받기) · ' : '') +
-      (상태.작업야드 ? esc(상태.작업야드) + ' 작업이 앱에 없어요 — ＋ 야드 에서 🔎 DB 더미 · 작업 받기'
+      (USB ? (상태.작업야드 ? esc(상태.작업야드) + ' 에 시킨 작업이 없어요 — ＋ 야드 로 다른 야드' : '＋ 야드 로 작업할 야드를 고르세요') :   // ⑲ 모든 야드 작업이 자료에
+      상태.작업야드 ? esc(상태.작업야드) + ' 작업이 앱에 없어요 — ＋ 야드 에서 🔎 DB 더미 · 작업 받기'
       : '＋ 야드 로 작업할 야드를 고르세요(작업이 안 실린 야드는 🔎 DB 더미 · 작업 받기)') + '</span>';
     return;
   }
@@ -2222,9 +2490,10 @@ function 작업판그리기() {
   if (상태.작업야드 && !작업표[상태.작업야드]) {
     var e0 = document.createElement('div');
     e0.className = 'empty';
-    e0.innerHTML = esc(상태.작업야드) + ' 의 작업이 앱에 없어요<br><button class="k3" id="getWork">🔎 ' + esc(상태.작업야드) + ' DB 더미 · 작업 받기</button>';
+    e0.innerHTML = USB ? esc(상태.작업야드) + ' 에 시킨 작업이 없어요(USB 자료 — 모든 야드)' :   // ⑲
+      esc(상태.작업야드) + ' 의 작업이 앱에 없어요<br><button class="k3" id="getWork">🔎 ' + esc(상태.작업야드) + ' DB 더미 · 작업 받기</button>';
     g.appendChild(e0);
-    $('getWork').onclick = function () { 더미부탁(상태.작업야드); };
+    if ($('getWork')) $('getWork').onclick = function () { 더미부탁(상태.작업야드); };
   }
   var 묶 = {}, 차례 = [];
   rs.forEach(function (r) { var key = r.작지 || '(작지 없음)'; if (!묶[key]) { 묶[key] = []; 차례.push(key); } 묶[key].push(r); });
@@ -2456,7 +2725,7 @@ function 없는것열기() {
 /* ③ 📨 보낸 것 — 봇이 받은 목록(하루) · 관마다 확인(w) · 채팅 저장(s) · 고쳐서 다시 보내기 */
 function 보낸것열기() {
   var ids = Object.keys(상태.보낸).sort(function (a, b) { return (상태.보낸[b].때 || 0) - (상태.보낸[a].때 || 0); });
-  var h = '<h2>📨 보낸 것 — 봇이 받은 목록(하루 남김)</h2>';
+  var h = USB ? '<h2>📨 보낸 것 — PC 가 받은 목록(하루 남김)</h2>' : '<h2>📨 보낸 것 — 봇이 받은 목록(하루 남김)</h2>';
   if (!ids.length) h += '<div class="empty">아직 봇이 받은 목록이 없어요</div>';
   ids.forEach(function (id) {
     var x = 상태.보낸[id], d = new Date(x.때 || 0), 때 = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
@@ -2465,7 +2734,7 @@ function 보낸것열기() {
       var 줄 = x.야드들[y], 걸 = (x.w || []).filter(function (e) { return e[0] === y; }), 저 = (x.s || []).indexOf(y) >= 0;
       var 나쁨 = 걸.filter(function (e) { return !/^(옮김 |→ )/.test(_s(e[3])); }).length;
       h += '<div class="sentyard"><div class="hd"><b>' + esc(y) + '</b>&nbsp;' + 줄.length + '본' +
-        (저 ? '<span class="saved">✅ 텔레그램 저장</span>' : '') +
+        (저 ? '<span class="saved">' + (USB ? '✅ PC 저장' : '✅ 텔레그램 저장') + '</span>' : '') +
         (나쁨 ? '<span class="why bad">⚠ ' + 나쁨 + '</span>' : '<span class="why info">✓ 걸릴 것 없음</span>') +
         ((x.되살림 || {})[y] ? '<span class="hint">&nbsp;· 목록으로 되살림</span>' :
           '<button class="k3" data-fix="' + esc(id) + '|' + esc(y) + '">✏ 고쳐서 다시 보내기</button>') + '</div>';
@@ -2574,12 +2843,14 @@ function 머리단추() {
   var n = Object.keys(상태.보낸).length;
   $('sentBtn').hidden = !n;
   $('sentN').textContent = n ? String(n) : '';
-  $('qrBtn').hidden = !(텔레그램안 && 판짓기('6.4') && typeof tg.showScanQrPopup === 'function');
+  $('qrBtn').hidden = USB ? typeof 다리.scanQR !== 'function' : !(텔레그램안 && 판짓기('6.4') && typeof tg.showScanQrPopup === 'function');
+  if (USB) { $('outN').hidden = !올릴수; $('outN').textContent = '📤 올릴 것 ' + 올릴수; }   // ⑲ 꽂으면 PC 로 갈 것
 }
 
 /* ⑤ 🔫 스캐너(키보드처럼 치는 블루투스 · M3) · 📷 QR — 라벨 QR 을 받아 번호로 누른다 */
 function QR받음(raw) {
   var x = QR가르기(raw);
+  if (x.꼴 === '바코드' && QR번호(자료 && 자료.QR, x.통)) x = { 꼴: '번호', p: QR번호(자료.QR, x.통) };   // ⑲ ERP QR — USB 자료 표로 현장에서 바로 번호
   if (상태.모드 === 'work' && x.꼴 === '번호') {                     // ⑫ 🛠 작업 보기 — 찍은 관을 고른 작업으로
     var r = 작업관들().filter(function (y) { return y.p === x.p; })[0];
     if (!r || !상태.작업키 || r.글자.indexOf(상태.작업키) < 0) { 떨림('error'); 토스트('🛠 ' + x.p + ' 는 ' + (r ? '이 작지가 안 시킨 작업이에요' : (상태.작업야드 || '고른 야드') + ' 관이 아니에요')); return; }
@@ -2589,7 +2860,7 @@ function QR받음(raw) {
   }
   if (x.꼴 === '번호') { if (누름(x.p, true) && (!지금배() || 배몫인가(x.p))) 토스트('🔫 ' + x.p + ' · ' + 상태.야드 + ' ' + 지금줄들().length + '번째'); return; }
   if (x.꼴 === '바코드') {
-    if (누름('#B' + x.통, true)) 토스트('🔖 QR 바코드 …' + x.통.slice(-7) + ' · ' + 상태.야드 + ' — 번호는 보낼 때 봇이 찾아요');
+    if (누름('#B' + x.통, true)) 토스트('🔖 QR 바코드 …' + x.통.slice(-7) + ' · ' + 상태.야드 + (USB ? ' — 번호는 PC 가 찾아요' : ' — 번호는 보낼 때 봇이 찾아요'));
     return;
   }
   떨림('error');
@@ -2609,6 +2880,10 @@ function 스캔초점() {
   if (a !== 스캔칸) { try { 스캔칸.focus({ preventScroll: true }); } catch (e) {} }
 }
 function 카메라() {
+  if (USB) {                                                         // ⑲ 앱 카메라(인터넷 없이) — 읽으면 소식 'scan' {text} → 다리소식
+    try { 다리.scanQR(); } catch (e) { 알림('카메라를 못 열었어요 — 앱을 껐다 켜 주세요'); }
+    return;
+  }
   try {
     tg.showScanQrPopup({ text: '관 라벨 QR 을 차례로 — 다 찍으면 닫기' }, function (t) {
       if (t === 스캔앞.raw && Date.now() - 스캔앞.t < 2500) return false;   // 같은 QR 을 잇달아 읽으면 한 번만
@@ -2623,6 +2898,7 @@ function 카메라() {
 function 보내기() {
   var id = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   var 작업a = 작업보낼(상태.작업, 상태.야드들), 배 = 지금배();
+  보낼kh = 칸기억판();                                               // ③′ 보낼묶음 이 한도 셈에 넣는다(11-26)
   var 묶 = 보낼묶음(상태.야드들, id, 자료.d, 상태.옮김, 상태.해제, 작업a, 배 ? 배.id : '', 상태.DB고침);
   if (!묶.n && !묶.m && !묶.a && !묶.c) { 알림('보낼 번호가 없어요'); return; }
   var 남은 = Object.keys(상태.야드들).filter(function (y) { return 상태.야드들[y].length && 묶.야드들.indexOf(y) < 0; });
@@ -2646,15 +2922,18 @@ function 보내기() {
     묶.야드들.forEach(function (y) { 상태.야드들[y].forEach(function (x) { if (x.p.indexOf('#B') === 0) return; if (배몫인가(x.p)) 이++; else 딴++; }); });
     줄.push('🚢 ' + 배.이름 + ' — 이 배 몫 ' + 이 + (딴 ? ' · 다른 배 몫(또는 모름) ' + 딴 : '') + ' · 채팅 저장 때 이 배 몫 관의 빈 모선명에 배 이름');
   }
-  if (묶.n) 줄.push('봇이 확인해 답하고, 경고 없는 야드는 채팅 [✅ 저장] 으로도 넣어요.');
+  if (묶.n) 줄.push(USB ? '📥 올릴 것에 담아요 — PC 에 꽂으면 PC 가 확인해 경고 없는 야드는 바로 저장, 경고는 PC 📝 탭에서.'
+    : '봇이 확인해 답하고, 경고 없는 야드는 채팅 [✅ 저장] 으로도 넣어요.');
   var 가 = function (ok) {
     if (!ok) return;
+    if (USB && !USB담기(묶.글)) return;                              // ⑲ 올릴 것(out)에 못 담으면 목록 · 옮김 · 작업을 그대로 둔다
     상태.보냄[id] = { 때: Date.now(), 야드들: 묶.야드들 };
     상태.옮김 = [];                                                // 옮김은 보낸 것으로(봇 답의 [↩ 되돌리기])
     상태.DB고침 = [];                                              // ⑮ DB 고침도(봇이 바로 반영 · [↩ 고침 되돌리기])
     상태.작업 = {};                                                // ⑫ 작업도(봇이 바로 적음 · [↩ 작업 되돌리기])
     묶.야드들.forEach(function (y) { if (상태.해제) delete 상태.해제[y]; });   // ⑩ 해제 표시는 보낸 것에 실려 갔다
     저장();
+    if (USB) { 그리기(); 토스트('📥 올릴 것에 담았어요 — 꽂으면 PC 로'); return; }   // ⑲ 앱이 안 닫힌다 — 이어서 누른다
     if (텔레그램안) { tg.sendData(묶.글); return; }          // 키보드 단추로 연 앱이면 여기서 닫힌다
     alert('🧪 시험 — 실제로는 텔레그램으로 보냅니다(' + 바이트(묶.글) + ' / ' + 보낼한도 + '바이트)\n\n' + 묶.글.slice(0, 800));
     그리기();
@@ -2685,8 +2964,100 @@ function 받은만큼() {
   return 지운;
 }
 
-/** 링크 풀기 — ① 압축 #z=(판 2 — 비동기) · 옛 #c=(판 1) → 이어 */
+/* ⑲ 📲 USB 앱(2026-11-26) — 다리(앱 껍데기)와 주고받기 */
+/** 📤 보내기 → 올릴 것(out/올림_<id>.json)에 담는다 — 다리.saveOut(글) → 파일 id(빈 글이면 못 담음 — 알림). → 담았나 */
+function USB담기(글) {
+  var 받은 = '';
+  try { 받은 = _s(다리.saveOut(글)); } catch (e) { 받은 = ''; }
+  if (!받은) { 떨림('error'); 알림('📥 올릴 것에 못 담았어요 — 앱을 껐다 켜서 다시 보내 주세요(누른 목록은 태블릿에 그대로)'); return false; }
+  올릴것셈(1);
+  return true;
+}
+/** 올릴 것 수 — 다리.outList()(JSON [id …]) · 그 문이 없으면 담은 만큼 더함(더) → 올릴수 */
+function 올릴것셈(더) {
+  if (typeof 다리.outList !== 'function') { 올릴수 += 더 || 0; return 올릴수; }
+  try { var l = JSON.parse(_s(다리.outList()) || '[]'); 올릴수 = l && l.length ? l.length : 0; } catch (e) {}
+  return 올릴수;
+}
+/** ④ 이중 보관 — 웹뷰 저장소에 누른 목록이 없는데(앱 업데이트 · 정리로 지워짐) 앱 폴더 사본(다리.kept)이 있으면 되살린다. → 되살렸나 */
+function USB되살리기() {
+  var 있음 = null, s = null;
+  try { 있음 = localStorage.getItem(열쇠); } catch (e) {}
+  if (있음 || typeof 다리.kept !== 'function') return false;
+  try { s = JSON.parse(_s(다리.kept()) || 'null'); } catch (e) { s = null; }
+  if (!s || !s.야드들) return false;
+  try { localStorage.setItem(열쇠, JSON.stringify(s)); } catch (e) { 상태 = s; }   // 못 쓰면 읽기가 이 상태를 그대로 쓴다
+  return true;
+}
+/** 자료를 읽은 뒤(읽기 다음 · 배풀기 앞) — 한도 없음 · 머리 'USB 자료' · 고른 배(앱에서 고름 — 상태.배고름) · 자료에 없는 ❓ 칩 끔 · 올릴 것 수 */
+function USB준비() {
+  보낼한도 = 1e9;                                                     // 링크 4096 한도 없음 — 한 번에 다
+  document.body.classList.add('usb');
+  자료.B = USB배(자료.B, 자료.BL, 자료.BO, 상태.배고름);
+  if (상태.작지 === 미확인칩 && !(자료.UNC || []).length) 상태.작지 = '';
+  $('usbT').hidden = !자료.t;
+  $('usbT').textContent = '📥 USB 자료 ' + _s(자료.t);
+  $('usbT').title = 'PC 가 지은 때 ' + _s(자료.made || 자료.t);
+  올릴것셈(0);
+}
+/** 띠 — 오늘(05시 작업일) 자료가 아니면 노랑 · 📥 지난번 올림(R — 바로 저장 · 📝 탭에서 볼 야드 · [닫기] 는 이 자료 동안). 1분마다 다시 */
+function USB띠그리기() {
+  var 묵 = 묵은자료글(자료.wd, Date.now());
+  $('usbOld').hidden = !묵;
+  $('usbOld').textContent = 묵 ? '⚠ ' + 묵 : '';
+  var R = 자료.R || [], 열 = _s(자료.made || 자료.t), 박 = $('usbLast');
+  if (!R.length || 상태.R본 === 열) { 박.hidden = true; 박.innerHTML = ''; return; }
+  박.innerHTML = '<button class="k3" id="usbLastX">닫기</button>' + R.map(function (r) {
+    return '<div class="ul">📥 지난번 올림 ' + esc(r[1]) + ' · ' + esc(r[2]) + (_s(r[3]) ? ' · ✅ 바로 저장 ' + esc(r[3]) : '') +
+      (_s(r[4]) ? ' · 📝 PC 탭에서 볼 것 ' + esc(r[4]) : '') + '</div>';
+  }).join('');
+  박.hidden = false;
+  박.onclick = function () { 박.classList.toggle('open'); };          // 한 줄 ⇄ 다 펼침
+  $('usbLastX').onclick = function (e) { e.stopPropagation(); 상태.R본 = 열; 저장(); USB띠그리기(); };
+}
+/** 열 때 마무리(그리기 다음) — 띠 · 1분 시계(05시를 넘기면 노랑) · 되살림 알림 */
+function USB끝(되살림) {
+  USB띠그리기();
+  setInterval(USB띠그리기, 60000);
+  if (되살림) setTimeout(function () { 토스트('💾 앱 폴더 사본에서 누른 목록을 되살렸어요'); }, 300);
+}
+/** 🚢 배 고르기(앱에서 — 봇에 안 청함) · '' 는 배 안 고름. 새로 고른 배면 📍 자리 · 이 배 전부(봇이 고른 배로 열 때와 같은 규칙) */
+function USB배고르기(id) {
+  상태.배고름 = _s(id);
+  자료.B = USB배(자료.B, 자료.BL, 자료.BO, 상태.배고름);
+  배자료 = 배풀기(자료.B);
+  상태.배끔 = '';
+  if (배자료 && 배자료.고른) { 상태.배본 = 배자료.고른; 상태.작지 = '@배'; 상태.더작지 = []; 상태.모드 = 'yard'; }
+  else {
+    if (_s(상태.작지).indexOf('@배') === 0) 상태.작지 = '';
+    상태.더작지 = (상태.더작지 || []).filter(function (c) { return _s(c).indexOf('@배') !== 0; });
+    상태.배본 = '';
+  }
+  닫기(); 저장(); 그리기(); $('grid').scrollTop = 0;
+  var 배 = 지금배();
+  토스트(배 ? '🚢 ' + 배.이름 + ' — 이 배 전부' : '🚢 배 안 고름 — 전체 보기');
+}
+/** 앱 → 화면 소식 window['on' + 다리이름](종류, 글) — 'usb' PC 가 주고받기를 끝냄(새 자료 · 결과 — 다시 읽기, 누른 목록은 태블릿에
+ *  그대로) · 'scan' 카메라 QR {text}(같은 QR 을 잇달아 읽으면 한 번만) */
+function 다리소식(종류, 글) {
+  if (종류 === 'usb') { location.reload(); return; }
+  if (종류 !== 'scan' || !USB) return;
+  var t = _s(소식풀기(글).text);
+  if (!t || (t === 스캔앞.raw && Date.now() - 스캔앞.t < 2500)) return;
+  스캔앞 = { raw: t, t: Date.now() };
+  QR받음(t);
+}
+
+/** 링크 풀기 — ① 압축 #z=(판 2 — 비동기) · 옛 #c=(판 1) → 이어. ⑲ 다리가 있으면 링크 대신 다리.readData(in/자료.json) */
 function 시작() {
+  if (다리) {
+    window['on' + 다리이름] = 다리소식;
+    var u = { d: null, 오류: '' };
+    try { u = USB자료풀기(다리.readData()); } catch (e) { u.오류 = (e && e.message) || String(e); }
+    USB = !!u.d;
+    이어(u.d, u.오류);
+    return;
+  }
   if (해시.z) {
     풀기(해시.z).then(function (d) { 이어(d, ''); }, function (e) { 이어(null, (e && e.message) || String(e)); });
     return;
@@ -2713,11 +3084,16 @@ function 이어(d, 오류) {
   보기바꿈(보기);
   $('testStrip').hidden = !시험;
   if (!자료 || !자료.L) {
+    if (다리) {                                                       // ⑲ USB 앱 — 아직 안 꽂음(꽂으면 소식 'usb' 로 다시 읽는다)
+      $('main').innerHTML = '<div class="empty">📥 PC 에 USB 로 꽂으면 오늘 자료가 들어와요' + (오류 ? '(' + esc(오류) + ')' : '') +
+        '<br>누른 목록은 태블릿에 그대로 있어요</div>';
+      return;
+    }
     $('main').innerHTML = '<div class="empty">📍 G1 목록이 없어요' + (오류 ? '(' + esc(오류) + ')' : '') +
       "<br>봇 대화 아래 <b>[📍 야드 등록]</b> 단추로 열어 주세요 — 먼저 봇에 '야드'</div>";
     return;
   }
-  if (시험) 열쇠 = 'yard|v1|시험';
+  if (시험) { 열쇠 = 'yard|v1|시험'; 칸열쇠 = 'yard|kan|시험'; }
   if (시험 && 해시.shot === 'tier') {                                  // 시안 그림용 — 기본 · 고름 · 자동 · 끔
     var 예 = [[1, 0, 0], [1, 0, 0], [1, 1, 0], [2, 1, 0], [1, 1, 0], [2, 0, 1], [1, 0, 1], [2, 0, 1], [2, 1, 0], [1, 0, 0]];
     상태 = { 야드들: { 'B06C': 예.map(function (e, i) { return { p: '00X' + ('0' + (101 + i)).slice(-4), 단: e[0], 고름: !!e[1], 자동: !!e[2] }; }) },
@@ -2758,9 +3134,12 @@ function 이어(d, 오류) {
     }
     try { localStorage.setItem(열쇠, JSON.stringify(상태)); } catch (e) {}
   }
+  칸기억맞춤();                                                         // ③′ 배치도 — K 가 오면 기억, Kh 만이면 기억으로 채움(11-26)
   자료.L.forEach(function (l) { l.번호들 = 범위풀기(l[3]).map(function (뒤) { return l[2] + 뒤; }); l.번호들.forEach(function (p) { 모든번호[p] = l; }); });
   길이표 = 길이풀기(자료.L);                                           // ⑬ 같은 작지 다른 길이(11-24)
+  var 되살림 = USB && USB되살리기();                                  // ⑲ ④ 웹뷰 저장소가 비었으면 앱 폴더 사본에서
   읽기();
+  if (USB) USB준비();
   var 지운 = 받은만큼();
   진행 = 진행풀기(자료.N, 자료.P, 자료.Px, 자료.Pw);                  // ⑦ 오늘 실사 진행(봇 — 링크 P · Px · Pw)
   색모드읽기();
@@ -2790,22 +3169,25 @@ function 이어(d, 오류) {
     상태.배본 = '';
   }
   if (!상태.작업야드 || (!작업표[상태.작업야드] && Object.keys(작업표).length)) 상태.작업야드 = Object.keys(작업표)[0] || 상태.작업야드 || '';
-  부탁.forEach(function (y) {                                        // 부탁한 야드만 탭을 만들어 둔다(남는 자리 더미는 배치도에서 고르면)
-    if (!더미[y]) return;
-    if (!상태.야드들[y]) 상태.야드들[y] = [];
-    if (!상태.야드) { 상태.야드 = y; 상태.고른 = 상태.야드들[y].length - 1; }
-  });
+  if (!상태.야드 && 부탁.length && 더미[부탁[0]]) {                    // 지금 야드가 없을 때만 새 부탁(Yq[0])을 지금 야드로 — 부탁마다
+    if (!상태.야드들[부탁[0]]) 상태.야드들[부탁[0]] = [];            // 빈 칩을 만들던 것은 뺐다(11-26 '이전 선택한 야드가 계속 같이 보여')
+    상태.야드 = 부탁[0]; 상태.고른 = 상태.야드들[부탁[0]].length - 1;
+  }
+  빈야드정리();
   $('info').textContent = (자료.t ? 자료.t + ' 기준 · ' : '') + '쌓은 차례대로 누르세요 · 단을 안 고르면 1단 · 앱 ' + 앱날;
   var 노트 = [];
-  if (지운.length) 노트.push('📥 봇이 받았어요 — ' + 지운.join(' · ') + ' 목록은 📨 보낸 것으로(하루 — 줄마다 봇 확인)');
-  if (_s(자료.av) > 앱날) 노트.unshift('⚠ 앱이 예전 판이에요(' + 앱날 + ' · 봇 ' + _s(자료.av) + ') — 텔레그램을 완전히 껐다 켠 뒤 다시 열어 주세요');
+  if (지운.length) 노트.push((USB ? '📥 PC 가 받았어요 — ' : '📥 봇이 받았어요 — ') + 지운.join(' · ') + ' 목록은 📨 보낸 것으로(하루 — 줄마다 ' + (USB ? 'PC' : '봇') + ' 확인)');
+  if (_s(자료.av) > 앱날) 노트.unshift(USB ? '⚠ 화면이 예전 판이에요(' + 앱날 + ' · PC ' + _s(자료.av) + ') — PC 에 꽂으면 새 화면이 들어와요'
+    : '⚠ 앱이 예전 판이에요(' + 앱날 + ' · 봇 ' + _s(자료.av) + ') — 텔레그램을 완전히 껐다 켠 뒤 다시 열어 주세요');
   if (자료.m) 노트.push('옛 작지 ' + 자료.m + '본은 목록에 없어요 — 찾기 칸에 번호 전체(예: 26G-145)를 치고 ＋ 넣기');
   var 실린수 = Object.keys(자료.Y || {}).length, 부탁실린 = 부탁.filter(function (y) { return 더미[y]; });
   if (부탁실린.length) 노트.push('🗂 DB 더미 ' + 부탁실린.map(function (y) { return y + ' ' + 더미[y].length + '본'; }).join(' · ') +
     ' — 회색 · 1-1 이 맨 앞(왼쪽)이라 앞에 추가했으면 그 야드 전체를 다시 조사(번호판 맨 위 DB 번호까지 앞에서부터 누르기)');
-  if (실린수 > 부탁실린.length) 노트.push('🗺 그 밖 ' + (실린수 - 부탁실린.length) + '곳 더미도 앱에 있어요(＋ 야드 배치도 초록 점 — 고르면 🔎 맞춰 보기)');
+  if (!USB && 실린수 > 부탁실린.length) 노트.push('🗺 그 밖 ' + (실린수 - 부탁실린.length) + '곳 더미도 앱에 있어요(＋ 야드 배치도 초록 점 — 고르면 🔎 맞춰 보기)');   // ⑲ USB 는 모든 야드가 실려 있다
   if (자료.Yx && 자료.Yx.length) 노트.push(자료.Yx.join(' · ') + ' 더미는 너무 커서 못 실었어요');
+  if (칸없음) 노트.unshift('🗺 배치도를 다시 받아야 해요(태블릿 기억이 지워짐) — ＋ 야드 창의 [🗺 배치도 받기]');   // ③′(11-26)
   if (노트.length) { $('note').hidden = false; $('note').textContent = 노트.join(' · '); }
+  if (칸없음) setTimeout(function () { 토스트('🗺 배치도가 태블릿에 없어요 — 봇에서 다시 받으면 칸을 그림으로 골라요', '🗺 배치도 받기', 배치도부탁); }, 400);
   if (상태.모드 === 'work' ? !상태.작업야드 : !상태.야드 && !Object.keys(상태.야드들).length) setTimeout(야드고르기열기, 0);
   Array.prototype.forEach.call(document.querySelectorAll('.tier .k3'), function (b) { b.onclick = function () { 단고름(parseInt(b.getAttribute('data-t'), 10)); }; });
   $('del').onclick = 빼기;
@@ -2847,6 +3229,7 @@ function 이어(d, 오류) {
   저장();
   그리기();
   스캔초점();
+  if (USB) USB끝(되살림);
   if (시험 && 해시.shot === 'y6map') 야드고르기열기();
   if (시험 && 해시.shot === 'y6miss') 없는것열기();
   if (시험 && 해시.shot === 'y6sent') 보낸것열기();
